@@ -80,7 +80,7 @@ def test_copy_from_latest_brings_products_and_medications_into_a_new_draft(login
     draft = response.json()
     assert draft["submitted_case_id"] is None
     assert draft["products"] == client.get(f"/api/assessments/{latest}").json()["products"]
-    assert draft["medications"] == [{"name": "Amlodipine"}]
+    assert draft["medications"] == [{"name": "Amlodipine", "scope_status": "in_scope"}]
     assert client.get(f"/api/assessments/drafts/{draft['id']}").json() == draft
 
 

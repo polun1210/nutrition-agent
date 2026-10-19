@@ -133,12 +133,17 @@ def _copy_photos(
     ]
 
 
-def _draft_json(row: tuple) -> dict:
+def _draft_json(row: tuple, ref: ReferenceData, table: DrugNameTable) -> dict:
+    """草稿回應：每個用藥附上後端用藥名表對照出的範圍狀態（不存進草稿，每次現算）。"""
+    medications = [
+        {**m, "scope_status": resolve_medication(m["name"], table, ref.drugs).scope_status}
+        for m in row[3]
+    ]
     return {
         "id": row[0],
         "products": row[1],
         "submitted_case_id": row[2],
-        "medications": row[3],
+        "medications": medications,
     }
 
 
@@ -227,6 +232,8 @@ def create_draft(
     copy_from: Literal["latest"] | None = None,
     user: User = Depends(current_user),
     conn: psycopg.Connection = Depends(get_connection),
+    ref: ReferenceData = Depends(get_reference),
+    table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
     """建立草稿；`copy_from=latest` 時帶入自己最近一次評估的保健食品與用藥。
 
@@ -256,7 +263,7 @@ def create_draft(
             "RETURNING id, products, case_id, medications",
             (Jsonb(_copy_photos(conn, products, user, row[0])), row[0]),
         ).fetchone()
-    return _draft_json(row)
+    return _draft_json(row, ref, table)
 
 
 @router.get("/drafts/{draft_id}")
@@ -264,8 +271,10 @@ def get_draft(
     draft_id: int,
     user: User = Depends(current_user),
     conn: psycopg.Connection = Depends(get_connection),
+    ref: ReferenceData = Depends(get_reference),
+    table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
-    return _draft_json(_draft_row(conn, draft_id, user))
+    return _draft_json(_draft_row(conn, draft_id, user), ref, table)
 
 
 @router.put("/drafts/{draft_id}")
@@ -275,6 +284,7 @@ def save_draft(
     user: User = Depends(current_user),
     conn: psycopg.Connection = Depends(get_connection),
     ref: ReferenceData = Depends(get_reference),
+    table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
     _editable_draft(conn, draft_id, user)
     _check_ingredient_codes(body.products, ref)
@@ -288,7 +298,7 @@ def save_draft(
             draft_id,
         ),
     ).fetchone()
-    return _draft_json(row)
+    return _draft_json(row, ref, table)
 
 
 @router.post("/drafts/{draft_id}/submit", status_code=201)
