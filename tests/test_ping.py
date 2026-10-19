@@ -17,8 +17,12 @@ def test_migration_enabled_pgvector(db):
     assert row is not None
 
 
-def test_gateway_is_injectable_through_app(client, gateway):
-    response = client.post("/api/echo-llm", json={"prompt": "hi"})
+def test_echo_llm_requires_login(client):
+    assert client.post("/api/echo-llm", json={"prompt": "hi"}).status_code == 401
+
+
+def test_gateway_is_injectable_through_app(login_as, gateway):
+    response = login_as().post("/api/echo-llm", json={"prompt": "hi"})
 
     assert response.json() == {"reply": "fake-completion"}
     assert gateway.calls == [("complete", "hi")]
