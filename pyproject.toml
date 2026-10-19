@@ -8,7 +8,9 @@ authors = [
 ]
 requires-python = ">=3.12"
 # 執行時套件等各模組實作時再用 `uv add` 加入。
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.1",
+]
 
 [dependency-groups]
 dev = [
