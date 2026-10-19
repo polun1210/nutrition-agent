@@ -1,0 +1,24 @@
+# 交互作用規則（真實資料）。
+# 這裡的規則一律是草稿（status = "draft"）；審定（approved）只能由開發者手動標記，
+# 並同時填 approved_by。agent 只能草擬，不能審定。
+# 每條規則的欄位與不變式見 src/nutrition_agent/reference/rules.py，出處引文會被完整性檢查逐字比對。
+#
+# 範例（草稿）：
+#
+# [[rule]]
+# id = "metformin-vitamin-b12"
+# condition_type = "drug_ingredient"     # drug_class | drug_ingredient
+# condition_code = "metformin"
+# ingredient_code = "vitamin_b12"
+# interaction_type = "drug_affects_nutrient"   # absorption | pharmacodynamic | drug_affects_nutrient
+# requires_supplement_intake = false           # 「藥物影響營養素」必須為 false，其他兩類必須為 true
+# advice = "inform_provider"   # separate_timing（要有 separation_hours）| inform_provider | consult_before_combining
+# reason_zh = "..."            # 不得含任何數字
+# status = "draft"
+#
+# [[rule.citations]]
+# source_type = "nih_ods_hp"   # tfda_label | nih_ods_hp | nccih（Consumer 版不接受）
+# document = "sources/nih_ods/VitaminB12-HealthProfessional.md"
+# quote = "逐字引文"
+
+version = "2026.10.0-draft"

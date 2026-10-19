@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from nutrition_agent.reference.dris import DriTable
 from nutrition_agent.reference.drugs import DrugCatalog
 from nutrition_agent.reference.ingredients import IngredientCatalog
+from nutrition_agent.reference.rules import RuleSet
 from nutrition_agent.reference.units import UnitConversions
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -39,6 +40,11 @@ def read_dris_csv(path: Path) -> DriTable:
     return DriTable(version=rows[0][1], entries=entries)
 
 
+def load_rule_set(path: Path = DATA_DIR / "rules.toml") -> RuleSet:
+    raw = read_toml(path)
+    return RuleSet(version=raw["version"], rules=raw.get("rule", []))
+
+
 class ReferenceData(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -47,14 +53,16 @@ class ReferenceData(BaseModel):
     drugs: DrugCatalog
     dris: DriTable
     units: UnitConversions
+    rules: RuleSet
 
     @property
     def versions(self) -> dict[str, str]:
         return {
-            "units": self.units.version,
             "ingredients": self.ingredients.version,
             "drugs": self.drugs.version,
             "dris": self.dris.version,
+            "units": self.units.version,
+            "rules": self.rules.version,
         }
 
 
@@ -66,13 +74,13 @@ def load_reference_data(data_dir: Path = DATA_DIR) -> ReferenceData:
     drugs = DrugCatalog(
         version=raw["version"], classes=raw["class"], ingredients=raw["ingredient"]
     )
-    dris = read_dris_csv(data_dir / "dris.csv")
     raw = read_toml(data_dir / "units.toml")
     units = UnitConversions(version=raw["version"], rules=raw["rule"])
     return ReferenceData(
         version=manifest["version"],
         ingredients=ingredients,
         drugs=drugs,
-        dris=dris,
+        dris=read_dris_csv(data_dir / "dris.csv"),
         units=units,
+        rules=load_rule_set(data_dir / "rules.toml"),
     )
