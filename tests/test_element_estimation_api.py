@@ -14,13 +14,12 @@ def compound_product(code="calcium", compound="calcium_citrate_tetrahydrate", am
     return supplement(lines=[line], units_per_time=2)  # 每份 2 粒、每次 2 粒 = 1 份
 
 
-def test_compound_menu_lists_ratios_for_the_form_preview(login_as):
+def test_compound_menu_lists_compounds_by_nutrient(login_as):
     options = login_as().get("/api/assessments/compound-options").json()
 
     citrate = next(o for o in options if o["code"] == "calcium_citrate_tetrahydrate")
     assert citrate["nutrient_code"] == "calcium"
     assert citrate["name"] == "檸檬酸鈣"
-    assert citrate["element_ratio"] == 0.2108
     assert {o["nutrient_code"] for o in options} == {"calcium", "magnesium", "iron"}
 
 
@@ -91,3 +90,47 @@ def test_user_override_is_used_in_the_report_and_not_marked_as_estimate(login_as
 
     assert "系統推估" not in text
     assert "200" in text
+
+
+def test_compound_menu_no_longer_exposes_ratios(login_as):
+    options = login_as().get("/api/assessments/compound-options").json()
+
+    assert all("element_ratio" not in o for o in options)
+
+
+def _estimate(client, **body):
+    payload = {
+        "ingredient_code": "calcium",
+        "compound_code": "calcium_citrate_tetrahydrate",
+        "amount": 1000,
+        "unit": "mg",
+        **body,
+    }
+    return client.post("/api/assessments/estimate", json=payload)
+
+
+def test_estimate_preview_comes_from_the_backend(login_as):
+    response = _estimate(login_as())
+
+    assert response.status_code == 200
+    assert response.json() == {"element_mg": 210.8}
+
+
+def test_estimate_preview_converts_units_first(login_as):
+    response = _estimate(
+        login_as(), ingredient_code="magnesium", compound_code="magnesium_oxide", amount=0.5, unit="g"
+    )
+
+    assert response.json() == {"element_mg": 301.5}
+
+
+def test_estimate_preview_is_null_when_it_cannot_be_estimated(login_as):
+    client = login_as()
+
+    assert _estimate(client, compound_code="magnesium_oxide").json() == {"element_mg": None}
+    assert _estimate(client, compound_code=None).json() == {"element_mg": None}
+    assert _estimate(client, ingredient_code="zinc", compound_code=None).json() == {"element_mg": None}
+
+
+def test_estimate_preview_requires_login(client):
+    assert _estimate(client).status_code == 401

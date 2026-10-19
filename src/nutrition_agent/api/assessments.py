@@ -12,7 +12,7 @@ from typing import Annotated, Literal
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
 from psycopg.types.json import Jsonb
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints
 
 from nutrition_agent.accounts import UnderageError, require_adult
 from nutrition_agent.api.deps import User, current_user, get_connection, get_gateway
@@ -23,6 +23,7 @@ from nutrition_agent.assessment import (
     Product,
     ProfileSnapshot,
     assess,
+    estimate_element_mg,
 )
 from nutrition_agent.assessment.medications import resolve_medication, search_drugs
 from nutrition_agent.reference import IngredientCategory, ReferenceData, load_reference_data
@@ -169,16 +170,31 @@ def drug_search(
 def compound_options(
     _user: User = Depends(current_user), ref: ReferenceData = Depends(get_reference)
 ) -> list[dict]:
-    """化合物選單（鈣、鎂、鐵）：校對頁用比率即時預覽推估值；最終推估仍由後端判定引擎計算。"""
+    """化合物選單（鈣、鎂、鐵）；推估預覽見 POST /estimate。"""
     return [
-        {
-            "code": c.code,
-            "nutrient_code": c.nutrient_code,
-            "name": c.display_name_zh,
-            "element_ratio": c.element_ratio,
-        }
+        {"code": c.code, "nutrient_code": c.nutrient_code, "name": c.display_name_zh}
         for c in ref.compounds.compounds
     ]
+
+
+class EstimateBody(BaseModel):
+    ingredient_code: str
+    compound_code: str | None = None
+    amount: Annotated[float, Field(ge=0)]
+    unit: str
+
+
+@router.post("/estimate")
+def estimate(
+    body: EstimateBody,
+    _user: User = Depends(current_user),
+    ref: ReferenceData = Depends(get_reference),
+) -> dict:
+    """化合物重量的元素量推估預覽；與送出時判定引擎用同一套計算，前端不自己算。"""
+    element_mg = estimate_element_mg(
+        body.ingredient_code, body.compound_code, body.amount, body.unit, ref
+    )
+    return {"element_mg": element_mg}
 
 
 @router.get("")

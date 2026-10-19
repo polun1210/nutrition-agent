@@ -1,6 +1,6 @@
 """判定引擎：對外只有 `assess(評估個案快照, 參考資料) -> Assessment`。"""
 
-from nutrition_agent.assessment.engine import assess
+from nutrition_agent.assessment.engine import assess, estimate_element_mg
 from nutrition_agent.assessment.models import (
     DOSE_UNITS,
     ANTACID_REMINDER,
@@ -56,4 +56,5 @@ __all__ = [
     "TriggeringDrug",
     "UlComparison",
     "assess",
+    "estimate_element_mg",
 ]

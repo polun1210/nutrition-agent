@@ -17,6 +17,7 @@ from nutrition_agent.assessment.models import (
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
+    Basis,
     Frequency,
     IngredientLine,
     Intake,
@@ -194,6 +195,24 @@ def _estimated_amount(
         return _exact(ref.units.convert(code, float(element_mg), "mg", target_unit))
     except UnitNotConvertible:
         return None
+
+
+def estimate_element_mg(
+    code: str, compound_code: str | None, amount: float, unit: str, ref: ReferenceData
+) -> float | None:
+    """化合物重量 → 元素量（mg，四捨五入到小數 2 位）；表內查不到或單位無法換算 → None。
+
+    校對頁的推估預覽用它，與判定時的推估走同一套計算。
+    """
+    line = IngredientLine(
+        ingredient_code=code,
+        amount=amount,
+        unit=unit,
+        basis=Basis.COMPOUND,
+        compound_code=compound_code,
+    )
+    estimate = _estimated_amount(code, line, "mg", ref)
+    return None if estimate is None else round(float(estimate), 2)
 
 
 ANTACID_CLASS = "calcium_magnesium_antacid"
