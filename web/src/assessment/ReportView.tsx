@@ -1,3 +1,4 @@
+import PhotoThumbs from "./PhotoThumbs";
 import type { AssessmentCase } from "./types";
 
 /** 報告：後端模板已把每段渲染成文字行，前端只負責呈現。 */
@@ -5,6 +6,19 @@ export default function ReportView({ report, goHome }: { report: AssessmentCase;
   return (
     <main className="page">
       <h1>評估報告</h1>
+      {report.products.some((p) => (p.photo_ids ?? []).length > 0) && (
+        <section data-section="photos">
+          <h2>評估的保健食品</h2>
+          <ul>
+            {report.products.map((p, i) => (
+              <li key={i}>
+                {p.name}
+                <PhotoThumbs name={p.name} photoIds={p.photo_ids} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {report.report.sections.map((s) => (
         <section key={s.key} data-section={s.key}>
           <h2>{s.title}</h2>

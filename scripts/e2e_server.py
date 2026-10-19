@@ -7,6 +7,8 @@
 
 import os
 import sys
+import tempfile
+from pathlib import Path
 
 import psycopg
 import uvicorn
@@ -14,7 +16,24 @@ from alembic import command
 from alembic.config import Config
 from psycopg import conninfo, sql
 
-from nutrition_agent.config import to_sqlalchemy_url
+from nutrition_agent.api.app import create_app
+from nutrition_agent.config import get_settings, to_sqlalchemy_url
+from nutrition_agent.photos import PhotoStore
+
+RECORDED_VLM = Path(__file__).resolve().parents[1] / "evals" / "vlm" / "recorded" / "vlm"
+
+
+class RecordedVlmGateway:
+    """煙霧測試用的假模型閘道：看照片一律回錄製的 p01 辨識結果，不打外部 API。"""
+
+    def vision(self, prompt: str, image: bytes, mime_type: str) -> str:
+        return (RECORDED_VLM / "p01-img01.json").read_text(encoding="utf-8")
+
+    def complete(self, prompt: str, system: str | None = None) -> str:
+        return "fake-completion"
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [[0.0] * 4 for _ in texts]
 
 DEFAULT_URL = "postgresql://nutrition:nutrition@127.0.0.1:55432/nutrition_e2e"
 
@@ -34,10 +53,15 @@ def main() -> None:
     url = os.environ.get("E2E_DATABASE_URL", DEFAULT_URL)
     recreate_database(url)
     os.environ["DATABASE_URL"] = url
+    get_settings.cache_clear()  # import app 時已用預設連線建立過設定
     config = Config("alembic.ini")
     config.attributes["url"] = to_sqlalchemy_url(url)
     command.upgrade(config, "head")
-    uvicorn.run("nutrition_agent.api.app:app", host="127.0.0.1", port=port)
+    app = create_app(
+        gateway=RecordedVlmGateway(),
+        photo_store=PhotoStore(Path(tempfile.mkdtemp(prefix="nutrition-e2e-photos-"))),
+    )
+    uvicorn.run(app, host="127.0.0.1", port=port)
 
 
 if __name__ == "__main__":
