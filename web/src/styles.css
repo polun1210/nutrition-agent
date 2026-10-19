@@ -1,0 +1,26 @@
+/* 手機優先：單欄、大字、觸控友善 */
+:root {
+  font-size: 20px;
+  line-height: 1.6;
+  font-family: system-ui, "Noto Sans TC", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+}
+
+button {
+  min-height: 3rem;
+  font-size: 1rem;
+  width: 100%;
+}
