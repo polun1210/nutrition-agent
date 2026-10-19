@@ -20,6 +20,9 @@ if TYPE_CHECKING:
     from nutrition_agent.reference.checks import Violation
     from nutrition_agent.reference.drugs import DrugCatalog
 
+DATA_DIR = Path(__file__).parent / "data"
+FULL_TABLE = "drug_names.csv"  # 開發者用 TFDA 匯出腳本產生；存在時優先採用
+SAMPLE_TABLE = "drug_names_sample.csv"  # repo 內的小量夾具
 COLUMNS = ("name", "lang", "ingredients", "out_of_scope")
 _SEPARATOR = "|"
 _BANNED_NAMES = ("ranitidine", "雷尼替丁")  # NDMA 汙染已全球下架
@@ -115,3 +118,9 @@ def check_drug_names(table: DrugNameTable, catalog: DrugCatalog) -> list[Violati
                     Violation("ranitidine_in_scope", entry.name, "Ranitidine 已下架，不得列入範圍")
                 )
     return found
+
+
+def load_drug_names(data_dir: Path = DATA_DIR) -> DrugNameTable:
+    """載入藥名表：有完整匯出檔就用它，否則退回 repo 內的小量夾具。"""
+    full = data_dir / FULL_TABLE
+    return read_drug_names(full if full.exists() else data_dir / SAMPLE_TABLE)

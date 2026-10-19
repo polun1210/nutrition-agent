@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { request, type Me, type Profile } from "../api";
 import ProfileFields from "../ProfileFields";
+import MedicationStep from "./MedicationStep";
 import ProductForm from "./ProductForm";
 import ReportView from "./ReportView";
-import type { AssessmentCase, Draft, IngredientOption, Product } from "./types";
+import type { AssessmentCase, Draft, IngredientOption, MedicationInput, Product } from "./types";
 
 /** 步驟條。之後的票（用藥等）在陣列中插入新步驟即可。 */
 const STEPS = [
   { key: "profile", label: "個人資料" },
   { key: "supplements", label: "保健食品" },
+  { key: "medications", label: "用藥" },
   { key: "submit", label: "送出" },
 ] as const;
 type StepKey = (typeof STEPS)[number]["key"];
@@ -60,11 +62,16 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
     }
   };
 
-  const saveProducts = (products: Product[]) =>
+  const saveDraft = (products: Product[], medications: MedicationInput[]) =>
     guarded(async () => {
       if (!draft) return;
-      setDraft(await request<Draft>("PUT", `/api/assessments/drafts/${draft.id}`, { products }));
+      setDraft(
+        await request<Draft>("PUT", `/api/assessments/drafts/${draft.id}`, { products, medications }),
+      );
     });
+
+  const saveProducts = (products: Product[]) => saveDraft(products, draft?.medications ?? []);
+  const saveMedications = (medications: MedicationInput[]) => saveDraft(draft?.products ?? [], medications);
 
   const saveProfileAndNext = () =>
     guarded(async () => {
@@ -84,6 +91,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
   if (report) return <ReportView report={report} goHome={goHome} />;
 
   const products = draft?.products ?? [];
+  const medications = draft?.medications ?? [];
   return (
     <main className="page">
       <StepBar current={step} />
@@ -124,19 +132,27 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
             ))}
           </ul>
           <ProductForm options={options} onAdd={(p) => void saveProducts([...products, p])} />
-          <button type="button" disabled={products.length === 0 || busy} onClick={() => setStep("submit")}>
+          <button type="button" disabled={products.length === 0 || busy} onClick={() => setStep("medications")}>
             下一步
           </button>
         </section>
       )}
+      {step === "medications" && (
+        <MedicationStep
+          medications={medications}
+          busy={busy}
+          onChange={(next) => void saveMedications(next)}
+          onNext={() => setStep("submit")}
+        />
+      )}
       {step === "submit" && (
         <section>
           <h1>送出評估</h1>
-          <p>共 {products.length} 項保健食品。送出後會產生報告，且評估內容無法再修改。</p>
+          <p>共 {products.length} 項保健食品、{medications.length} 項用藥。送出後會產生報告，且評估內容無法再修改。</p>
           <button type="button" disabled={busy} onClick={() => void submit()}>
             {busy ? "計算中…" : "送出評估"}
           </button>
-          <button type="button" className="secondary" onClick={() => setStep("supplements")}>
+          <button type="button" className="secondary" onClick={() => setStep("medications")}>
             上一步
           </button>
         </section>
