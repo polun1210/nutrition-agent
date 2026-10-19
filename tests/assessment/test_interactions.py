@@ -6,6 +6,7 @@
 import pytest
 
 from nutrition_agent.assessment import IngredientLine, assess
+from nutrition_agent.reference import RuleSet, RuleStatus
 from tests.assessment.conftest import drug, line, make_case, make_rule, product, with_rules
 
 METFORMIN = drug("Glucophage", ("metformin", "biguanide"))
@@ -214,3 +215,19 @@ def test_compound_weight_line_counts_as_supplemented(fx_ref, code, compound):
     assert f is not None
     assert f.rule_ids == ["r-supp"]
     assert f.supplemented is True
+
+
+def test_只有PPI用藥時真實規則全審定也不產生鈣的發現(ref):
+    live = tuple(
+        r.model_copy(update={"status": RuleStatus.APPROVED, "approved_by": "test"})
+        if r.status is RuleStatus.DRAFT
+        else r
+        for r in ref.rules.rules
+    )
+    all_live = ref.model_copy(update={"rules": RuleSet(version="t", rules=live)})
+
+    result = assess(make_case(medications=(PPI,)), all_live)
+
+    assert finding(result, "calcium") is None
+    assert finding(result, "magnesium") is not None
+    assert finding(result, "vitamin_b12") is not None

@@ -1,5 +1,5 @@
 # 交互作用規則（真實資料）。
-# 這裡的規則一律是草稿（status = "draft"）；審定（approved）只能由開發者手動標記，
+# 這裡的規則是草稿（status = "draft"）或已退役（status = "retired"，不進入判定）；審定（approved）只能由開發者手動標記，
 # 並同時填 approved_by。agent 只能草擬，不能審定。
 # 每條規則的欄位與不變式見 src/nutrition_agent/reference/rules.py，出處引文會被完整性檢查逐字比對。
 # 出處只用 NIH ODS HealthProfessional 版（TFDA 仿單 raw 尚未取得，沒有引用）。
@@ -105,8 +105,13 @@ ingredient_code = "calcium"
 interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
-reason_zh = "文獻把質子幫浦抑制劑列為可能造成血鈣偏低的藥物之一，證據描述較簡略，審定時請再確認是否保留。"
-status = "draft"
+# 退役（2026-10-19 人工審查）：不核准作為 v1 通用規則，不可進入正式判定；也不建立「PPI 與鈣錯開幾小時」規則。
+# 不核准原因：NIH ODS 只把 PPI 列為可能相關的藥物；直接吸收試驗結果不一致，2019 年隨機雙盲試驗未見具臨床意義的差異；
+# 2022 年 ACG GERD 指引不建議無骨病風險者例行補鈣或維生素 D；仿單警示限於長期或高劑量使用、骨質疏鬆風險，
+# 或低血鎂造成的次發性低血鈣。現有輸入模型沒有療程、劑量、骨骼風險，無法安全建立條件式規則。
+# 這不代表「PPI 絕不影響鈣」，只是目前資料無法支持一條通用提醒。
+reason_zh = "已退役、不核准：現有證據只把質子幫浦抑制劑列為可能相關的藥物，各項研究結果不一致，且只在長期或高劑量、有骨質疏鬆風險等條件下才有仿單警示，目前的輸入資料無法判斷這些條件。"
+status = "retired"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
