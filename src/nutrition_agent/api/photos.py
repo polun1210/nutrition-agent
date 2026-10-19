@@ -3,9 +3,6 @@
 照片與辨識結果都以 user.id 過濾；別人的草稿或照片一律 404，不洩漏是否存在。
 """
 
-import logging
-
-import httpx
 import psycopg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from psycopg.types.json import Jsonb
@@ -18,26 +15,13 @@ from nutrition_agent.api.deps import (
     get_gateway,
     get_photo_store,
 )
+from nutrition_agent.api.uploads import check_photo_count, model_service_errors, read_upload
 from nutrition_agent.extraction import VlmReading, build_extraction, read_label
 from nutrition_agent.gateway import ModelGateway
-from nutrition_agent.photos import MAX_PHOTO_BYTES, PhotoStore, sniff_image
+from nutrition_agent.photos import PhotoStore
 from nutrition_agent.reference import ReferenceData
 
 router = APIRouter(prefix="/api")
-log = logging.getLogger(__name__)
-
-MAX_PHOTOS_PER_PRODUCT = 8
-
-
-def _read_upload(upload: UploadFile) -> tuple[bytes, str, str]:
-    data = upload.file.read(MAX_PHOTO_BYTES + 1)
-    if len(data) > MAX_PHOTO_BYTES:
-        raise HTTPException(status_code=413, detail="照片太大，請壓縮到 10 MB 以下再上傳")
-    kind = sniff_image(data)
-    if kind is None:
-        raise HTTPException(status_code=422, detail="只能上傳 JPEG、PNG 或 WebP 照片")
-    return data, kind[0], kind[1]
-
 
 def _existing_readings(
     conn: psycopg.Connection, user: User, draft_id: int, photo_ids: list[int]
@@ -66,19 +50,13 @@ def recognize_photos(
 ) -> dict:
     """同一項產品的多張照片（新上傳的檔案＋先前已辨識的照片編號）合併成一筆預填結果。"""
     _editable_draft(conn, draft_id, user)
-    if not files and not photo_ids:
-        raise HTTPException(status_code=422, detail="請至少選一張照片")
-    if len(files) + len(photo_ids) > MAX_PHOTOS_PER_PRODUCT:
-        raise HTTPException(status_code=422, detail=f"同一項產品最多 {MAX_PHOTOS_PER_PRODUCT} 張照片")
-    uploads = [_read_upload(f) for f in files]
+    check_photo_count(len(files) + len(photo_ids), "同一項產品")
+    uploads = [read_upload(f) for f in files]
     readings = _existing_readings(conn, user, draft_id, photo_ids)
 
     # 先全部辨識完才存檔：模型服務出錯時不會留下沒用的照片。
-    try:
+    with model_service_errors("VLM"):
         new_readings = [read_label(gateway, data, mime) for data, mime, _ in uploads]
-    except httpx.HTTPError as err:
-        log.exception("VLM 呼叫失敗")
-        raise HTTPException(status_code=502, detail="辨識服務暫時無法使用，請稍後再試") from err
 
     for (data, mime, ext), reading in zip(uploads, new_readings, strict=True):
         stored_name = store.save(data, ext)
