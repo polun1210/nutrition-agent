@@ -28,9 +28,9 @@ function StepBar({ current }: { current: StepKey }) {
   );
 }
 
-type Props = { me: Me; onProfileSaved: () => void; goHome: () => void };
+type Props = { copyFromLatest?: boolean; me: Me; onProfileSaved: () => void; goHome: () => void };
 
-export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
+export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSaved, goHome }: Props) {
   const [step, setStep] = useState<StepKey>("profile");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
@@ -43,7 +43,10 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
   useEffect(() => {
     void (async () => {
       try {
-        setDraft(await request<Draft>("POST", "/api/assessments/drafts"));
+        setDraft(await request<Draft>(
+            "POST",
+            copyFromLatest ? "/api/assessments/drafts?copy_from=latest" : "/api/assessments/drafts",
+          ));
         setOptions(await request<IngredientOption[]>("GET", "/api/assessments/ingredient-options"));
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));

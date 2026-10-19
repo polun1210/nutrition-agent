@@ -47,4 +47,25 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await expect(page.getByText(/你服用當日來自補充劑的攝取量已達上限的 40%/)).toBeVisible();
   await expect(page.getByText("已超過上限")).toHaveCount(0);
   await expect(page.getByText(/用藥 Amlodipine：在評估範圍內.*氨氯地平/)).toBeVisible();
+  await page.getByRole("button", { name: "回首頁" }).click();
+
+  // 從上一次評估複製：用藥與兩項保健食品帶進新草稿，刪掉一項後送出
+  await page.getByRole("button", { name: "從上一次評估複製" }).click();
+  await page.getByRole("button", { name: "資料正確，下一步" }).click();
+  await expect(page.getByRole("button", { name: "刪除 Amlodipine" })).toBeVisible();
+  await page.getByRole("button", { name: "下一步" }).click();
+  await expect(page.getByRole("button", { name: "刪除 家裡的鈣片" })).toBeVisible();
+  await page.getByRole("button", { name: "刪除 隔天吃的鈣片" }).click();
+  await expect(page.getByRole("button", { name: "刪除 隔天吃的鈣片" })).toHaveCount(0);
+  await page.getByRole("button", { name: "下一步" }).click();
+  await page.getByRole("button", { name: "送出評估" }).click();
+  await expect(page.getByText(/佔上限 2500 mg 的 20%/)).toBeVisible();
+  await page.getByRole("button", { name: "回首頁" }).click();
+
+  // 歷史報告：兩筆，點開舊的那筆仍是 40%，且顯示參考資料版本
+  await page.getByRole("button", { name: "歷史報告" }).click();
+  await expect(page.getByRole("button", { name: /的評估（/ })).toHaveCount(2);
+  await page.getByRole("button", { name: /的評估（2 項保健食品/ }).click();
+  await expect(page.getByText(/已達上限的 40%/)).toBeVisible();
+  await expect(page.getByTestId("reference-versions")).toContainText("dris");
 });

@@ -59,8 +59,18 @@ export type Draft = {
 
 export type ReportSection = { key: string; title: string; lines: string[] };
 
+export type HistoryItem = {
+  id: number;
+  created_at: string;
+  assessed_on: string;
+  product_count: number;
+  medication_count: number;
+  reference_versions: Record<string, string>;
+};
+
 export type AssessmentCase = {
   id: number;
   age: number;
+  reference_versions?: Record<string, string>;
   report: { sections: ReportSection[] };
 };
