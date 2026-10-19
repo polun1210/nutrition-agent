@@ -165,6 +165,14 @@ def test_DRIs不能當規則出處類型的替身(data, fixture_rules):
     assert "source_type_mismatch" in codes(check_integrity(data, rules))
 
 
+def test_TFDA仿單出處不得放在未納入版控的raw目錄(data, fixture_rules):
+    bad = raw_rule(fixture_rules, "fx-ppi-magnesium")
+    bad["citations"][0]["source_type"] = "tfda_label"
+    bad["citations"][0]["document"] = "raw/tfda/高血壓/Losartan/CCC003_20250101.md"
+    rules = fixture_rules.model_copy(update={"rules": (type(fixture_rules.rules[0]).model_validate(bad),)})
+    assert "source_type_mismatch" in codes(check_integrity(data, rules))
+
+
 @pytest.mark.parametrize(
     ("field", "value", "expected"),
     [

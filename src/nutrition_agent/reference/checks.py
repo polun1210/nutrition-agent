@@ -26,7 +26,7 @@ KNOWLEDGE_DIR = Path(__file__).parents[3] / "knowledge"
 # 各出處類型的文件必須放的位置（相對於 knowledge/）。
 _NIH_ODS_DIR = "sources/nih_ods/"
 _SOURCE_DIRS: dict[SourceType, tuple[str, ...]] = {
-    SourceType.TFDA_LABEL: ("raw/tfda/", "processed/tfda/"),
+    SourceType.TFDA_LABEL: ("processed/tfda/",),  # raw/ 不進版控，引文無法重現
     SourceType.NIH_ODS_HP: (_NIH_ODS_DIR,),
     SourceType.NCCIH: ("sources/nccih/",),
 }
