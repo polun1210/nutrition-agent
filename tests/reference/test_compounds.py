@@ -4,6 +4,7 @@ import pytest
 
 from nutrition_agent.reference import IngredientCategory, check_integrity, load_reference_data
 from nutrition_agent.reference.compounds import evaluate_expression
+from nutrition_agent.reference.ingredients import normalize_name
 
 
 @pytest.fixture(scope="module")
@@ -16,9 +17,9 @@ def _with_compound(data, compound):
     return data.model_copy(update={"compounds": table})
 
 
-def test_table_covers_only_calcium_magnesium_iron_with_10_to_15_compounds(data):
+def test_table_covers_only_calcium_magnesium_iron(data):
     compounds = data.compounds.compounds
-    assert 10 <= len(compounds) <= 15
+    assert 10 <= len(compounds) <= 20  # 15 種化合物，其中 3 種另列結晶水型態
     assert {c.nutrient_code for c in compounds} == {"calcium", "magnesium", "iron"}
 
 
@@ -77,3 +78,31 @@ def test_expression_evaluator_is_arithmetic_only():
     assert evaluate_expression("2*(1.5+0.5)") == 4
     with pytest.raises(ValueError):
         evaluate_expression("__import__('os')")
+
+
+@pytest.mark.parametrize(
+    ("generic", "explicit_high", "explicit_low"),
+    [
+        ("硫酸亞鐵", "乾燥硫酸亞鐵", "七水硫酸亞鐵"),
+        ("乳酸鈣", "無水乳酸鈣", "五水乳酸鈣"),
+        ("磷酸氫鈣", "無水磷酸氫鈣", "二水磷酸氫鈣"),
+    ],
+)
+def test_unspecified_hydrate_defaults_to_the_higher_ratio_form(
+    data, generic, explicit_high, explicit_low
+):
+    # 標示沒寫結晶水型態時取比率較高者：超量檢查寧可多算，不要少算。
+    default = data.compounds.find(generic)
+    high = data.compounds.find(explicit_high)
+    low = data.compounds.find(explicit_low)
+    assert default == high
+    assert low is not None and low.code != high.code
+    assert high.element_ratio > low.element_ratio
+
+
+def test_compound_names_are_unique_across_the_table(data):
+    seen: dict[str, str] = {}
+    for c in data.compounds.compounds:
+        for name in (c.display_name_zh, *c.synonyms):
+            key = normalize_name(name)
+            assert seen.setdefault(key, c.code) == c.code, name

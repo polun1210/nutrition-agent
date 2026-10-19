@@ -2,10 +2,13 @@
 # 每列必附分子量計算式（molecular_weight_expr）與元素質量計算式（element_mass_expr）；
 # element_ratio = element_mass / molecular_weight，四捨五入到小數 4 位，完整性檢查會重算比對。
 # 原子量採 IUPAC 常用值：H 1.008、C 12.011、N 14.007、O 15.999、Mg 24.305、P 30.974、S 32.06、Ca 40.078、Fe 55.845。
-# 結晶水：標示未載明時採本表所列最常見型態（檸檬酸鈣四水、硫酸亞鐵七水等）；結晶水型態不同時比率會不同，推估只是近似。
+# 結晶水（2026-10-19 人工決定）：標示未載明型態時，取常見型態中元素比率較高者——超量檢查寧可多算，不要少算。
+# 硫酸亞鐵（乾燥／七水）、乳酸鈣（無水／五水）、磷酸氫鈣（無水／二水）差距大，另列兩種型態讓校對頁可選；
+# 通用名稱對到比率較高的那一列。其餘化合物各型態差距小，或目前預設已是較高者（碳酸鎂正鹽、檸檬酸鎂無水、
+# 甘胺酸鎂／亞鐵理論值，市售品實際比率通常較低）。乾燥硫酸亞鐵的結晶水約一到一點五個，以一水計。推估只是近似。
 # 鋅等其他營養素不在表內：只標化合物時判定為「無法判定」。
 
-version = "2026.10.0"
+version = "2026.10.1"
 
 [[compound]]
 code = "calcium_carbonate"
@@ -28,10 +31,20 @@ element_mass_expr = "3*40.078"
 element_ratio = 0.2108
 
 [[compound]]
-code = "calcium_lactate_pentahydrate"
+code = "calcium_lactate_anhydrous"
 nutrient_code = "calcium"
 display_name_zh = "乳酸鈣"
-synonyms = ["Calcium Lactate"]
+synonyms = ["Calcium Lactate", "無水乳酸鈣", "乳酸鈣（無水）", "Calcium Lactate Anhydrous"]
+formula = "Ca(C3H5O3)2"
+molecular_weight_expr = "40.078 + 2*(3*12.011 + 5*1.008 + 3*15.999)"
+element_mass_expr = "40.078"
+element_ratio = 0.1837
+
+[[compound]]
+code = "calcium_lactate_pentahydrate"
+nutrient_code = "calcium"
+display_name_zh = "五水乳酸鈣"
+synonyms = ["乳酸鈣（五水）", "Calcium Lactate Pentahydrate"]
 formula = "Ca(C3H5O3)2·5H2O"
 molecular_weight_expr = "40.078 + 2*(3*12.011 + 5*1.008 + 3*15.999) + 5*(2*1.008 + 15.999)"
 element_mass_expr = "40.078"
@@ -58,10 +71,20 @@ element_mass_expr = "3*40.078"
 element_ratio = 0.3876
 
 [[compound]]
-code = "calcium_hydrogen_phosphate_dihydrate"
+code = "calcium_hydrogen_phosphate_anhydrous"
 nutrient_code = "calcium"
 display_name_zh = "磷酸氫鈣"
-synonyms = ["Dicalcium Phosphate", "磷酸二鈣"]
+synonyms = ["Dicalcium Phosphate", "磷酸二鈣", "Calcium Hydrogen Phosphate", "無水磷酸氫鈣", "磷酸氫鈣（無水）", "Dicalcium Phosphate Anhydrous"]
+formula = "CaHPO4"
+molecular_weight_expr = "40.078 + 1.008 + 30.974 + 4*15.999"
+element_mass_expr = "40.078"
+element_ratio = 0.2946
+
+[[compound]]
+code = "calcium_hydrogen_phosphate_dihydrate"
+nutrient_code = "calcium"
+display_name_zh = "二水磷酸氫鈣"
+synonyms = ["磷酸氫鈣（二水）", "Dicalcium Phosphate Dihydrate"]
 formula = "CaHPO4·2H2O"
 molecular_weight_expr = "40.078 + 1.008 + 30.974 + 4*15.999 + 2*(2*1.008 + 15.999)"
 element_mass_expr = "40.078"
@@ -128,10 +151,20 @@ element_mass_expr = "55.845"
 element_ratio = 0.3287
 
 [[compound]]
-code = "ferrous_sulfate_heptahydrate"
+code = "ferrous_sulfate_dried"
 nutrient_code = "iron"
 display_name_zh = "硫酸亞鐵"
-synonyms = ["Ferrous Sulfate", "Ferrous Sulphate"]
+synonyms = ["Ferrous Sulfate", "Ferrous Sulphate", "乾燥硫酸亞鐵", "硫酸亞鐵（乾燥）", "Dried Ferrous Sulfate"]
+formula = "FeSO4·H2O"
+molecular_weight_expr = "55.845 + 32.06 + 4*15.999 + (2*1.008 + 15.999)"
+element_mass_expr = "55.845"
+element_ratio = 0.3287
+
+[[compound]]
+code = "ferrous_sulfate_heptahydrate"
+nutrient_code = "iron"
+display_name_zh = "七水硫酸亞鐵"
+synonyms = ["硫酸亞鐵（七水）", "Ferrous Sulfate Heptahydrate"]
 formula = "FeSO4·7H2O"
 molecular_weight_expr = "55.845 + 32.06 + 4*15.999 + 7*(2*1.008 + 15.999)"
 element_mass_expr = "55.845"
