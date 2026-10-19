@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { request, upload } from "../api";
-import type { DrugCandidate, MedicationInput, MedicationPackResult } from "./types";
+import type { DrugCandidate, MedicationInput, MedicationPackResult, ScopeStatus } from "./types";
 
 const SCOPE_TEXT = {
   in_scope: "在評估範圍內",
   out_of_scope: "不在本系統評估範圍",
   unconfirmed: "無法確認",
 } as const;
-
-type ScopeStatus = keyof typeof SCOPE_TEXT;
 
 type Props = {
   draftId: number;
@@ -27,7 +25,6 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
   const [files, setFiles] = useState<File[]>([]);
   const [reading, setReading] = useState(false);
   const [hints, setHints] = useState<string[]>([]);
-  const [statuses, setStatuses] = useState<Record<string, ScopeStatus>>({});
   const [replacing, setReplacing] = useState<string | null>(null);
 
   const readPhotos = async () => {
@@ -44,12 +41,10 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
       setHints(
         result.photos.flatMap((p, i) => (p.readable ? [] : [`第 ${i + 1} 張：${p.hint ?? "讀不到藥名，請重拍"}`])),
       );
-      setStatuses((prev) => ({
-        ...prev,
-        ...Object.fromEntries(result.medications.map((m) => [m.raw_name, m.scope_status])),
-      }));
       const known = new Set(medications.map((m) => m.name));
-      const added = result.medications.filter((m) => !known.has(m.raw_name)).map((m) => ({ name: m.raw_name }));
+      const added = result.medications
+        .filter((m) => !known.has(m.raw_name))
+        .map((m) => ({ name: m.raw_name, scope_status: m.scope_status }));
       if (added.length > 0) onChange([...medications, ...added]);
       setFiles([]);
     } catch (err) {
@@ -73,10 +68,9 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
     }
   };
 
-  const add = (name: string, status?: ScopeStatus) => {
+  const add = (name: string) => {
     const trimmed = name.trim();
     if (!trimmed || medications.some((m) => m.name === trimmed)) return;
-    setStatuses((prev) => ({ ...prev, [trimmed]: status ?? "unconfirmed" }));
     onChange(
       replacing === null
         ? [...medications, { name: trimmed }]
@@ -148,7 +142,7 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
                   </div>
                 )}
                 {c.brand_names.length > 0 && <div>常見商品名：{c.brand_names.join("、")}</div>}
-                <button type="button" onClick={() => add(c.name, c.scope_status)}>
+                <button type="button" onClick={() => add(c.name)}>
                   加入 {c.name}
                 </button>
               </li>
@@ -168,7 +162,7 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
         {medications.map((m) => (
           <li key={m.name}>
             {m.name}
-            {statuses[m.name] && <span>（{SCOPE_TEXT[statuses[m.name]]}）</span>}
+            {m.scope_status && <span>（{SCOPE_TEXT[m.scope_status]}）</span>}
             <button
               type="button"
               className="secondary"

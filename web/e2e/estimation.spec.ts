@@ -15,6 +15,8 @@ test("化合物重量推估元素量，可覆寫，報告註明系統推估", as
   await page.getByRole("button", { name: "資料正確，下一步" }).click();
   await page.getByRole("button", { name: "我沒有用藥" }).click();
 
+  await page.getByRole("button", { name: "新增一項" }).click();
+  await page.getByRole("button", { name: "手動輸入" }).click();
   const form = page.getByRole("form", { name: "新增保健食品" });
   await form.getByLabel("產品名稱").fill("檸檬酸鈣片");
   await form.getByLabel("成分", { exact: true }).selectOption({ label: "鈣" });
@@ -29,10 +31,19 @@ test("化合物重量推估元素量，可覆寫，報告註明系統推估", as
   await estimate.fill("200");
   await expect(form.getByText("：使用者提供")).toBeVisible();
 
-  await form.getByRole("button", { name: "還原系統推估" }).click();
-  await expect(estimate).toHaveValue("210.8");
-
   await form.getByRole("button", { name: "加入這項保健食品" }).click();
+
+  // 覆寫後重新編輯：覆寫標記、化合物與化合物重量都還在，且仍可還原系統推估
+  await page.getByRole("button", { name: "修改 檸檬酸鈣片" }).click();
+  const edit = page.getByRole("form", { name: "新增保健食品" });
+  await expect(edit.getByLabel("化合物", { exact: true })).toHaveValue("calcium_citrate_tetrahydrate");
+  await expect(edit.getByLabel("化合物重量")).toHaveValue("1000");
+  await expect(edit.getByLabel("元素量")).toHaveValue("200");
+  await expect(edit.getByText("：使用者提供")).toBeVisible();
+  await edit.getByRole("button", { name: "還原系統推估" }).click();
+  await expect(edit.getByLabel("元素量")).toHaveValue("210.8");
+  await edit.getByRole("button", { name: "儲存修改" }).click();
+
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
 

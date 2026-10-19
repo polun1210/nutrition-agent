@@ -37,12 +37,18 @@ function StepBar({ current }: { current: StepKey }) {
   );
 }
 
+/** 保健食品步驟的子頁：清單 → 新增（選方式）／修改（單獨一頁）。 */
+type SupplementView =
+  | { kind: "list" }
+  | { kind: "add"; method: "photo" | "manual" | null }
+  | { kind: "edit"; index: number };
+
 type Props = { copyFromLatest?: boolean; me: Me; onProfileSaved: () => void; goHome: () => void };
 
 export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSaved, goHome }: Props) {
   const [step, setStep] = useState<StepKey>("profile");
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [editing, setEditing] = useState<number | null>(null);
+  const [supplementView, setSupplementView] = useState<SupplementView>({ kind: "list" });
   const [options, setOptions] = useState<IngredientOption[]>([]);
   const [compounds, setCompounds] = useState<CompoundOption[]>([]);
   const [report, setReport] = useState<AssessmentCase | null>(null);
@@ -86,6 +92,10 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
     });
 
   const saveProducts = (products: Product[]) => saveDraft(products, draft?.medications ?? []);
+  const addProduct = (product: Product) => {
+    void saveProducts([...(draft?.products ?? []), product]);
+    setSupplementView({ kind: "list" });
+  };
   const saveMedications = (medications: MedicationInput[]) => saveDraft(draft?.products ?? [], medications);
 
   const saveProfileAndNext = () =>
@@ -128,7 +138,7 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
           </form>
         </section>
       )}
-      {step === "supplements" && (
+      {step === "supplements" && supplementView.kind === "list" && (
         <section>
           <h1>保健食品</h1>
           <ul>
@@ -140,7 +150,7 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
                   type="button"
                   className="secondary"
                   disabled={busy}
-                  onClick={() => setEditing(i)}
+                  onClick={() => setSupplementView({ kind: "edit", index: i })}
                 >
                   修改 {p.name}
                 </button>
@@ -148,38 +158,64 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
                   type="button"
                   className="secondary"
                   disabled={busy}
-                  onClick={() => {
-                    setEditing(null);
-                    void saveProducts(products.filter((_, j) => j !== i));
-                  }}
+                  onClick={() => void saveProducts(products.filter((_, j) => j !== i))}
                 >
                   刪除 {p.name}
                 </button>
               </li>
             ))}
+            {products.length === 0 && <li>尚未加入任何保健食品</li>}
           </ul>
-          {draft && (
-            <PhotoProductForm draftId={draft.id} options={options} onAdd={(p) => void saveProducts([...products, p])} />
-          )}
-          <h2>手動輸入</h2>
-          {editing !== null && products[editing] ? (
-            <ProductForm
-              key={editing}
-              options={options}
-              compounds={compounds}
-              initial={products[editing]}
-              onAdd={(p) => {
-                void saveProducts(products.map((old, j) => (j === editing ? p : old)));
-                setEditing(null);
-              }}
-              onCancel={() => setEditing(null)}
-            />
-          ) : (
-            <ProductForm options={options} compounds={compounds} onAdd={(p) => void saveProducts([...products, p])} />
-          )}
+          <button type="button" disabled={busy || !draft} onClick={() => setSupplementView({ kind: "add", method: null })}>
+            新增一項
+          </button>
           <button type="button" disabled={products.length === 0 || busy} onClick={() => setStep("submit")}>
             下一步
           </button>
+          <button type="button" className="secondary" onClick={() => setStep("medications")}>
+            上一步
+          </button>
+        </section>
+      )}
+      {step === "supplements" && supplementView.kind === "add" && draft && (
+        <section>
+          <h1>新增一項保健食品</h1>
+          {supplementView.method === null && (
+            <div role="group" aria-label="新增方式">
+              <button type="button" onClick={() => setSupplementView({ kind: "add", method: "photo" })}>
+                用照片新增
+              </button>
+              <button type="button" onClick={() => setSupplementView({ kind: "add", method: "manual" })}>
+                手動輸入
+              </button>
+            </div>
+          )}
+          {supplementView.method === "photo" && (
+            <PhotoProductForm draftId={draft.id} options={options} onAdd={(p) => addProduct(p)} />
+          )}
+          {supplementView.method === "manual" && (
+            <ProductForm options={options} compounds={compounds} onAdd={(p) => addProduct(p)} />
+          )}
+          <button type="button" className="secondary" onClick={() => setSupplementView({ kind: "list" })}>
+            返回清單
+          </button>
+        </section>
+      )}
+      {step === "supplements" && supplementView.kind === "edit" && products[supplementView.index] && (
+        <section>
+          <h1>修改保健食品</h1>
+          <ProductForm
+            key={supplementView.index}
+            options={options}
+            compounds={compounds}
+            initial={products[supplementView.index]}
+            onAdd={(p) => {
+              const index = supplementView.index;
+              void saveProducts(products.map((old, j) => (j === index ? p : old)));
+              setSupplementView({ kind: "list" });
+            }}
+            onCancel={() => setSupplementView({ kind: "list" })}
+          />
         </section>
       )}
       {step === "medications" && draft && (
