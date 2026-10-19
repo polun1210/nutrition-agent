@@ -10,7 +10,25 @@ export type Product = {
   dose_unit: (typeof DOSE_UNITS)[number];
   units_per_serving: number;
   ingredients: IngredientLine[];
-  intake: { frequency: "daily"; times_per_day: number; units_per_time: number };
+  intake: Intake;
+};
+
+export const FREQUENCIES = [
+  { value: "daily", label: "每天" },
+  { value: "every_other_day", label: "每兩天" },
+  { value: "weekly_days", label: "每週指定天數" },
+  { value: "cycle", label: "週期性服用／停用" },
+] as const;
+
+export type Frequency = (typeof FREQUENCIES)[number]["value"];
+
+export type Intake = {
+  frequency: Frequency;
+  times_per_day: number;
+  units_per_time: number;
+  days_per_week?: number | null;
+  cycle_on_days?: number | null;
+  cycle_off_days?: number | null;
 };
 
 export type MedicationInput = { name: string };
