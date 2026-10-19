@@ -35,6 +35,10 @@ class IngredientLine(Frozen):
     ingredient_code: str  # 成分目錄代碼，或 UNKNOWN_INGREDIENT
     amount: Annotated[float, Field(ge=0)]  # 每份含量
     unit: str
+    # labeled = amount 是標示載明的元素量；compound = amount 是化合物重量（元素量由系統推估）。
+    # 校對頁上使用者覆寫推估值後，這一行就改回 labeled（視為使用者提供的值）。
+    basis: Literal["labeled", "compound"] = "labeled"
+    compound_code: str | None = None  # basis 為 compound 時的化合物；None = 不在表內
 
 
 class Intake(Frozen):
@@ -72,6 +76,7 @@ class UlComparison(Frozen):
     ul_percent: float | None
     exceeded: bool
     supplement_only: bool  # 鎂、鐵：UL 只計補充劑來源
+    estimated: bool = False  # 加總中含系統推估值（非標示值）
 
 
 class ListedIngredient(Frozen):
@@ -81,6 +86,18 @@ class ListedIngredient(Frozen):
     ingredient_code: str
 
 
+class NutrientSource(Frozen):
+    """一項產品中某個目標營養素的元素量來源。
+
+    只看「有沒有」的交互作用規則用這份清單判斷：source 為 undetermined 時營養素仍算存在。
+    """
+
+    product_name: str
+    nutrient_code: str
+    source: Literal["labeled", "estimated", "undetermined"]
+    compound_code: str | None = None  # source 為 estimated 時的化合物
+
+
 class Assessment(Frozen):
     """判定：確定性程式的產出，報告只能解釋它。"""
 
@@ -88,5 +105,6 @@ class Assessment(Frozen):
     ul_comparisons: list[UlComparison]
     out_of_scope_ingredients: list[ListedIngredient]
     unconfirmed_ingredients: list[ListedIngredient]
-    undetermined_nutrients: list[str]  # 單位無法換算、未計入上限比對的營養素
+    undetermined_nutrients: list[str]  # 元素量無法判定、未計入上限比對的營養素
+    nutrient_sources: list[NutrientSource] = []  # 各產品目標營養素的來源（標示／推估／無法判定）
     disclosures: list[str]  # 揭露事項代碼，由報告模板渲染
