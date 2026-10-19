@@ -63,3 +63,31 @@ def test_compound_must_belong_to_the_chosen_nutrient_and_exist(login_as):
         compound_product(compound="no_such_compound"),
     ):
         assert client.put(url, json={"products": [bad]}).status_code == 422
+
+
+def test_user_override_keeps_compound_weight_so_the_estimate_can_be_restored(login_as):
+    client = login_as()
+    draft = client.post("/api/assessments/drafts").json()
+    url = f"/api/assessments/drafts/{draft['id']}"
+    product = compound_product()
+    product["ingredients"][0]["element_override_mg"] = 200
+
+    assert client.put(url, json={"products": [product]}).status_code == 200
+
+    saved = client.get(url).json()["products"][0]["ingredients"][0]
+    assert saved["basis"] == "compound"
+    assert saved["compound_code"] == "calcium_citrate_tetrahydrate"
+    assert saved["amount"] == 1000
+    assert saved["element_override_mg"] == 200
+
+
+def test_user_override_is_used_in_the_report_and_not_marked_as_estimate(login_as):
+    client = login_as()
+    product = compound_product()
+    product["ingredients"][0]["element_override_mg"] = 200
+    _, response = submit(client, product)
+
+    text = report_text(client, response.json()["id"])
+
+    assert "系統推估" not in text
+    assert "200" in text

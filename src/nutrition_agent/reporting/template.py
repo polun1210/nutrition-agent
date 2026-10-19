@@ -213,7 +213,10 @@ def _ingredient_text(item: IngredientLine, names: _Names, ref: ReferenceData) ->
     if item.basis is Basis.LABELED:
         return f"{names(item.ingredient_code)} {amount}"
     compound = _compound_name(ref, item.compound_code) if item.compound_code else "化合物未確定"
-    return f"{names(item.ingredient_code)}（標示化合物：{compound}）化合物重量 {amount}"
+    text = f"{names(item.ingredient_code)}（標示化合物：{compound}）化合物重量 {amount}"
+    if item.element_override_mg is not None:
+        text += f"，元素量由使用者提供 {_num(item.element_override_mg)} mg"
+    return text
 
 
 def _product_line(product: Product, names: _Names, ref: ReferenceData) -> str:

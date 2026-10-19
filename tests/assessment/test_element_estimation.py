@@ -123,3 +123,15 @@ def test_unconvertible_labeled_unit_is_still_undetermined(ref):
 
     assert result.undetermined_nutrients == ["calcium"]
     assert source(result, "鈣片", "calcium").source == "undetermined"
+
+
+def test_user_override_replaces_the_estimate_and_counts_as_user_provided(ref):
+    overridden = compound_line("calcium", "calcium_citrate_tetrahydrate", 1000).model_copy(
+        update={"element_override_mg": 200}
+    )
+
+    result = assess(make_case(product("鈣片", [overridden])), ref)
+
+    assert row(result, "calcium").intake == 200
+    assert row(result, "calcium").estimated is False
+    assert source(result, "鈣片", "calcium").source == "labeled"

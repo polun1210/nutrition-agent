@@ -17,7 +17,6 @@ from nutrition_agent.assessment.models import (
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
-    Basis,
     Frequency,
     IngredientLine,
     Intake,
@@ -157,7 +156,7 @@ def _resolve_nutrient(
         )
         return _Resolved(record, amount)
 
-    labeled = [_labeled_amount(code, i, target_unit, ref) for i in lines if i.basis is Basis.LABELED]
+    labeled = [_labeled_amount(code, i, target_unit, ref) for i in lines if i.is_user_provided]
     if labeled and all(a is not None for a in labeled):
         return result(SourceKind.LABELED, sum(labeled, Fraction(0)))
     estimates = [_estimated_amount(code, i, target_unit, ref) for i in lines]
@@ -170,8 +169,12 @@ def _resolve_nutrient(
 def _labeled_amount(
     code: str, item: IngredientLine, target_unit: str, ref: ReferenceData
 ) -> Fraction | None:
+    amount, unit = (
+        (item.element_override_mg, "mg") if item.element_override_mg is not None
+        else (item.amount, item.unit)
+    )
     try:
-        return _exact(ref.units.convert(code, item.amount, item.unit, target_unit))
+        return _exact(ref.units.convert(code, amount, unit, target_unit))
     except UnitNotConvertible:
         return None
 
@@ -180,7 +183,7 @@ def _estimated_amount(
     code: str, item: IngredientLine, target_unit: str, ref: ReferenceData
 ) -> Fraction | None:
     """標示載明的行直接換算；化合物行用元素比率推估，表內查不到或營養素不符 → None。"""
-    if item.basis is Basis.LABELED:
+    if item.is_user_provided:
         return _labeled_amount(code, item, target_unit, ref)
     compound = ref.compounds.get(item.compound_code) if item.compound_code else None
     if compound is None or compound.nutrient_code != code:

@@ -65,10 +65,24 @@ class IngredientLine(Frozen):
     ingredient_code: str  # 成分目錄代碼，或 UNKNOWN_INGREDIENT
     amount: Annotated[float, Field(ge=0)]  # 每份含量
     unit: str
-    # labeled = amount 是標示載明的元素量；compound = amount 是化合物重量（元素量由系統推估）。
-    # 校對頁上使用者覆寫推估值後，這一行就改回 labeled（視為使用者提供的值）。
+    # labeled = amount 是標示載明的元素量；compound = amount 是化合物重量（元素量由系統推估，
+    # 除非使用者以 element_override_mg 覆寫）。
     basis: Basis = Basis.LABELED
     compound_code: str | None = None  # basis 為 compound 時的化合物；None = 不在表內
+    # 使用者在校對頁覆寫推估值（mg 元素量）；設了就視為使用者提供的標示值。
+    # 化合物與化合物重量照舊保留，使用者可再還原系統推估。
+    element_override_mg: Annotated[float, Field(ge=0)] | None = None
+
+    @model_validator(mode="after")
+    def _override_only_for_compound(self) -> "IngredientLine":
+        if self.element_override_mg is not None and self.basis is not Basis.COMPOUND:
+            raise ValueError("只有標示化合物重量的成分行可以覆寫元素量")
+        return self
+
+    @property
+    def is_user_provided(self) -> bool:
+        """元素量是標示載明或使用者提供的，不需要系統推估。"""
+        return self.basis is Basis.LABELED or self.element_override_mg is not None
 
 
 class Intake(Frozen):
