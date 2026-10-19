@@ -13,7 +13,7 @@ export const unitLabel = (unit: string) => UNIT_LABELS[unit] ?? unit;
 
 export type IngredientOption = { code: string; name: string; unit: string };
 
-export type CompoundOption = { code: string; nutrient_code: string; name: string; element_ratio: number };
+export type CompoundOption = { code: string; nutrient_code: string; name: string };
 
 /** 只標化合物重量時可選「化合物」的礦物質；鋅不在比率表內，會被判定為無法判定。 */
 export const MINERALS = ["calcium", "magnesium", "iron", "zinc"] as const;
@@ -24,6 +24,8 @@ export type IngredientLine = {
   unit: string;
   basis?: "labeled" | "compound";
   compound_code?: string | null;
+  /** 使用者覆寫的元素量（mg）；化合物與化合物重量照舊保留，可還原系統推估。 */
+  element_override_mg?: number | null;
 };
 
 export type Product = {
@@ -73,7 +75,8 @@ export type Intake = {
   cycle_off_days?: number | null;
 };
 
-export type MedicationInput = { name: string };
+/** 送出只需 name；scope_status 是後端用藥名表對照後附上的，唯讀。 */
+export type MedicationInput = { name: string; scope_status?: ScopeStatus };
 
 export type DrugIngredient = {
   code: string;

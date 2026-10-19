@@ -62,7 +62,7 @@ def test_submit_freezes_a_case_with_age_versions_and_report(login_as):
     assert case["age"] == date.today().year - 1950 - (1 if date.today().month < 6 else 0)
     assert case["profile"]["sex"] == "female"
     assert case["products"][0]["name"] == "鈣片"
-    assert set(case["reference_versions"]) >= {"dris", "ingredients", "rules"}
+    assert set(case["reference_versions"]) >= {"manifest", "dris", "ingredients", "rules"}
     assert [s["key"] for s in case["report"]["sections"]][:2] == ["profile", "interaction"]
 
 

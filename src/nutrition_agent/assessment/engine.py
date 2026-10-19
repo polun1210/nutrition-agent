@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 
 from nutrition_agent.accounts import NO_CONDITION
@@ -17,11 +17,14 @@ from nutrition_agent.assessment.models import (
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
+    Basis,
+    Frequency,
     IngredientLine,
     Intake,
     ListedIngredient,
     NutrientSource,
     Product,
+    SourceKind,
     UlComparison,
 )
 from nutrition_agent.reference import (
@@ -41,11 +44,11 @@ def _exact(value: float) -> Fraction:
 
 def taking_day_fraction(intake: Intake) -> Fraction:
     """服用日佔全部日子的比例，用來由峰值算平均。"""
-    if intake.frequency == "every_other_day":
+    if intake.frequency is Frequency.EVERY_OTHER_DAY:
         return Fraction(1, 2)
-    if intake.frequency == "weekly_days":
+    if intake.frequency is Frequency.WEEKLY_DAYS:
         return Fraction(intake.days_per_week, 7)
-    if intake.frequency == "cycle":
+    if intake.frequency is Frequency.CYCLE:
         return Fraction(intake.cycle_on_days, intake.cycle_on_days + intake.cycle_off_days)
     return Fraction(1)
 
@@ -56,62 +59,83 @@ def daily_servings(product: Product) -> Fraction:
     return daily_units / _exact(product.units_per_serving)
 
 
+@dataclass
+class _Tally:
+    """跨產品累計的中間結果。"""
+
+    totals: dict[str, Fraction] = field(default_factory=dict)  # 峰值加總
+    averages: dict[str, Fraction] = field(default_factory=dict)
+    non_daily: set[str] = field(default_factory=set)
+    estimated_codes: set[str] = field(default_factory=set)
+    undetermined: set[str] = field(default_factory=set)
+    sources: list[NutrientSource] = field(default_factory=list)
+    out_of_scope: list[ListedIngredient] = field(default_factory=list)
+    unconfirmed: list[ListedIngredient] = field(default_factory=list)
+
+
+def _classify_ingredients(
+    product: Product, ref: ReferenceData, tally: _Tally
+) -> dict[str, list[IngredientLine]]:
+    """把產品的成分行分流：範圍外與無法確認的記入揭露清單，目標營養素按代碼回傳。"""
+    target_lines: dict[str, list[IngredientLine]] = {}
+    for item in product.ingredients:
+        code = item.ingredient_code
+        listed = ListedIngredient(product_name=product.name, ingredient_code=code)
+        ingredient = None if code == UNKNOWN_INGREDIENT else ref.ingredients.get(code)
+        if ingredient is None:
+            tally.unconfirmed.append(listed)
+        elif ingredient.category is IngredientCategory.OUT_OF_SCOPE:
+            tally.out_of_scope.append(listed)
+        elif ingredient.category is IngredientCategory.TARGET_NUTRIENT:
+            target_lines.setdefault(code, []).append(item)
+    return target_lines
+
+
+def _accumulate_product(
+    product: Product, case: AssessmentCase, ref: ReferenceData, sex: Sex, tally: _Tally
+) -> None:
+    servings = daily_servings(product)
+    for code, lines in _classify_ingredients(product, ref, tally).items():
+        ul = ref.dris.lookup(code, DriKind.UL, age=case.age, sex=sex)
+        target_unit = ul.unit if ul else ref.ingredients.get(code).canonical_unit
+        source = _resolve_nutrient(product.name, code, lines, target_unit, ref)
+        tally.sources.append(source.record)
+        if source.amount is None:
+            tally.undetermined.add(code)
+            continue
+        peak = source.amount * servings
+        tally.totals[code] = tally.totals.get(code, Fraction(0)) + peak
+        tally.averages[code] = tally.averages.get(code, Fraction(0)) + (
+            peak * taking_day_fraction(product.intake)
+        )
+        if not product.intake.is_daily:
+            tally.non_daily.add(code)
+        if source.record.source is SourceKind.ESTIMATED:
+            tally.estimated_codes.add(code)
+
+
 def assess(case: AssessmentCase, ref: ReferenceData) -> Assessment:
     sex = Sex(case.profile.sex)
-    totals: dict[str, Fraction] = {}  # 跨產品的峰值加總
-    averages: dict[str, Fraction] = {}
-    non_daily: set[str] = set()
-    estimated_codes: set[str] = set()
-    undetermined: set[str] = set()
-    sources: list[NutrientSource] = []
-    out_of_scope: list[ListedIngredient] = []
-    unconfirmed: list[ListedIngredient] = []
-
+    tally = _Tally()
     for product in case.products:
-        servings = daily_servings(product)
-        target_lines: dict[str, list[IngredientLine]] = {}
-        for item in product.ingredients:
-            code = item.ingredient_code
-            listed = ListedIngredient(product_name=product.name, ingredient_code=code)
-            ingredient = None if code == UNKNOWN_INGREDIENT else ref.ingredients.get(code)
-            if ingredient is None:
-                unconfirmed.append(listed)
-            elif ingredient.category is IngredientCategory.OUT_OF_SCOPE:
-                out_of_scope.append(listed)
-            elif ingredient.category is IngredientCategory.TARGET_NUTRIENT:
-                target_lines.setdefault(code, []).append(item)
-        for code, lines in target_lines.items():
-            ul = ref.dris.lookup(code, DriKind.UL, age=case.age, sex=sex)
-            target_unit = ul.unit if ul else ref.ingredients.get(code).canonical_unit
-            source = _resolve_nutrient(product.name, code, lines, target_unit, ref)
-            sources.append(source.record)
-            if source.amount is None:
-                undetermined.add(code)
-                continue
-            peak = source.amount * servings
-            totals[code] = totals.get(code, Fraction(0)) + peak
-            averages[code] = (
-                averages.get(code, Fraction(0)) + peak * taking_day_fraction(product.intake)
-            )
-            if not product.intake.is_daily:
-                non_daily.add(code)
-            if source.record.source == "estimated":
-                estimated_codes.add(code)
-
+        _accumulate_product(product, case, ref, sex, tally)
     comparisons = [
-        _compare(code, intake, averages[code], code in non_daily, case, ref, sex, code in estimated_codes)
-        for code, intake in sorted(totals.items(), key=lambda kv: _order(ref, kv[0]))
-        if code not in undetermined
+        _compare(
+            code, intake, tally.averages[code], code in tally.non_daily, case, ref, sex,
+            code in tally.estimated_codes,
+        )
+        for code, intake in sorted(tally.totals.items(), key=lambda kv: _order(ref, kv[0]))
+        if code not in tally.undetermined
     ]
     return Assessment(
         reference_version=ref.version,
         ul_comparisons=comparisons,
-        out_of_scope_ingredients=out_of_scope,
-        unconfirmed_ingredients=unconfirmed,
-        undetermined_nutrients=sorted(undetermined),
-        nutrient_sources=sources,
+        out_of_scope_ingredients=tally.out_of_scope,
+        unconfirmed_ingredients=tally.unconfirmed,
+        undetermined_nutrients=sorted(tally.undetermined),
+        nutrient_sources=tally.sources,
         disclosures=_disclosures(case),
-        interactions=find_interactions(case, ref, comparisons, undetermined),
+        interactions=find_interactions(case, ref, comparisons, tally.undetermined),
         approved_rule_count=len(ref.rules.approved()),
     )
 
@@ -127,27 +151,31 @@ def _resolve_nutrient(
 ) -> _Resolved:
     """一項產品裡同一營養素的元素量：標示載明 > 推估 > 無法判定。"""
 
-    def result(kind: str, amount: Fraction | None, compound: str | None = None) -> _Resolved:
+    def result(kind: SourceKind, amount: Fraction | None, compound: str | None = None) -> _Resolved:
         record = NutrientSource(
             product_name=product_name, nutrient_code=code, source=kind, compound_code=compound
         )
         return _Resolved(record, amount)
 
-    labeled = [_labeled_amount(code, i, target_unit, ref) for i in lines if i.basis == "labeled"]
+    labeled = [_labeled_amount(code, i, target_unit, ref) for i in lines if i.is_user_provided]
     if labeled and all(a is not None for a in labeled):
-        return result("labeled", sum(labeled, Fraction(0)))
+        return result(SourceKind.LABELED, sum(labeled, Fraction(0)))
     estimates = [_estimated_amount(code, i, target_unit, ref) for i in lines]
     if not estimates or any(a is None for a in estimates):
-        return result("undetermined", None)
+        return result(SourceKind.UNDETERMINED, None)
     compounds = sorted({i.compound_code for i in lines if i.compound_code})
-    return result("estimated", sum(estimates, Fraction(0)), compounds[0])
+    return result(SourceKind.ESTIMATED, sum(estimates, Fraction(0)), compounds[0])
 
 
 def _labeled_amount(
     code: str, item: IngredientLine, target_unit: str, ref: ReferenceData
 ) -> Fraction | None:
+    amount, unit = (
+        (item.element_override_mg, "mg") if item.element_override_mg is not None
+        else (item.amount, item.unit)
+    )
     try:
-        return _exact(ref.units.convert(code, item.amount, item.unit, target_unit))
+        return _exact(ref.units.convert(code, amount, unit, target_unit))
     except UnitNotConvertible:
         return None
 
@@ -156,7 +184,7 @@ def _estimated_amount(
     code: str, item: IngredientLine, target_unit: str, ref: ReferenceData
 ) -> Fraction | None:
     """標示載明的行直接換算；化合物行用元素比率推估，表內查不到或營養素不符 → None。"""
-    if item.basis == "labeled":
+    if item.is_user_provided:
         return _labeled_amount(code, item, target_unit, ref)
     compound = ref.compounds.get(item.compound_code) if item.compound_code else None
     if compound is None or compound.nutrient_code != code:
@@ -167,6 +195,24 @@ def _estimated_amount(
         return _exact(ref.units.convert(code, float(element_mg), "mg", target_unit))
     except UnitNotConvertible:
         return None
+
+
+def estimate_element_mg(
+    code: str, compound_code: str | None, amount: float, unit: str, ref: ReferenceData
+) -> float | None:
+    """化合物重量 → 元素量（mg，四捨五入到小數 2 位）；表內查不到或單位無法換算 → None。
+
+    校對頁的推估預覽用它，與判定時的推估走同一套計算。
+    """
+    line = IngredientLine(
+        ingredient_code=code,
+        amount=amount,
+        unit=unit,
+        basis=Basis.COMPOUND,
+        compound_code=compound_code,
+    )
+    estimate = _estimated_amount(code, line, "mg", ref)
+    return None if estimate is None else round(float(estimate), 2)
 
 
 ANTACID_CLASS = "calcium_magnesium_antacid"

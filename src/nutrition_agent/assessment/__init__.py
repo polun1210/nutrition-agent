@@ -1,6 +1,6 @@
 """判定引擎：對外只有 `assess(評估個案快照, 參考資料) -> Assessment`。"""
 
-from nutrition_agent.assessment.engine import assess
+from nutrition_agent.assessment.engine import assess, estimate_element_mg
 from nutrition_agent.assessment.models import (
     DOSE_UNITS,
     ANTACID_REMINDER,
@@ -12,6 +12,8 @@ from nutrition_agent.assessment.models import (
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
+    Basis,
+    Frequency,
     IngredientLine,
     InteractionFinding,
     Intake,
@@ -22,6 +24,7 @@ from nutrition_agent.assessment.models import (
     Product,
     ProfileSnapshot,
     RecommendedTotal,
+    SourceKind,
     TriggeringDrug,
     UlComparison,
 )
@@ -37,6 +40,8 @@ __all__ = [
     "UNKNOWN_INGREDIENT",
     "Assessment",
     "AssessmentCase",
+    "Basis",
+    "Frequency",
     "IngredientLine",
     "InteractionFinding",
     "Intake",
@@ -47,7 +52,9 @@ __all__ = [
     "Product",
     "ProfileSnapshot",
     "RecommendedTotal",
+    "SourceKind",
     "TriggeringDrug",
     "UlComparison",
     "assess",
+    "estimate_element_mg",
 ]

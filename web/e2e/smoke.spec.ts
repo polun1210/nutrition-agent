@@ -19,6 +19,12 @@ async function registerAndOpenMedications(page: Page) {
   await page.getByRole("button", { name: "資料正確，下一步" }).click();
 }
 
+/** 保健食品清單頁 → 新增一項 → 手動輸入。 */
+async function addManually(page: Page) {
+  await page.getByRole("button", { name: "新增一項" }).click();
+  await page.getByRole("button", { name: "手動輸入" }).click();
+}
+
 test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) => {
   await registerAndOpenMedications(page);
 
@@ -30,6 +36,12 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
 
   await page.getByRole("button", { name: "下一步" }).click();
 
+  // 保健食品清單頁：可回上一步（用藥），新增要按「新增一項」進入單獨一頁
+  await page.getByRole("button", { name: "上一步" }).click();
+  await expect(page.getByRole("heading", { name: "用藥", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "下一步" }).click();
+
+  await addManually(page);
   const form = page.getByRole("form", { name: "新增保健食品" });
   await form.getByLabel("產品名稱").fill("家裡的鈣片");
   await form.getByLabel("成分", { exact: true }).selectOption({ label: "鈣" });
@@ -38,6 +50,7 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await expect(page.getByRole("button", { name: "刪除 家裡的鈣片" })).toBeVisible();
 
   // 第二項：每兩天服用的鈣片，檢查跨產品加總與「服用當日」措辭
+  await addManually(page);
   await form.getByLabel("產品名稱").fill("隔天吃的鈣片");
   await form.getByLabel("成分", { exact: true }).selectOption({ label: "鈣" });
   await form.getByLabel("含量").fill("500");
@@ -71,6 +84,8 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await page.getByRole("button", { name: "從上一次評估複製" }).click();
   await page.getByRole("button", { name: "資料正確，下一步" }).click();
   await expect(page.getByRole("button", { name: "刪除 Amlodipine" })).toBeVisible();
+  // 複製來的用藥重新載入後仍顯示範圍狀態（由後端附上，不靠前端暫存）
+  await expect(page.getByRole("listitem").filter({ hasText: "Amlodipine" })).toContainText("在評估範圍內");
   await page.getByRole("button", { name: "下一步" }).click();
   await expect(page.getByRole("button", { name: "刪除 家裡的鈣片" })).toBeVisible();
   await page.getByRole("button", { name: "刪除 隔天吃的鈣片" }).click();
@@ -92,6 +107,8 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
 test("用一張照片新增保健食品：辨識 → 逐列確認 → 送出", async ({ page }) => {
   await registerAndOpenMedications(page);
   await page.getByRole("button", { name: "我沒有用藥" }).click(); // 直接進保健食品
+  await page.getByRole("button", { name: "新增一項" }).click();
+  await page.getByRole("button", { name: "用照片新增" }).click();
 
   await page.getByLabel("標示照片").setInputFiles({
     name: "label.jpg",
@@ -132,6 +149,7 @@ test("交互作用的白話解釋附腳註，點開看到原文與來源", async
   await page.getByRole("button", { name: /^加入 Metformin/ }).first().click();
   await page.getByRole("button", { name: "下一步" }).click();
 
+  await addManually(page);
   const form = page.getByRole("form", { name: "新增保健食品" });
   await form.getByLabel("產品名稱").fill("B12 錠");
   await form.getByLabel("成分", { exact: true }).selectOption({ label: "維生素 B12" });

@@ -25,6 +25,8 @@ services:
     environment:
       DATABASE_URL: postgresql://nutrition:nutrition@db:5432/nutrition
       PHOTO_DIR: /app/data/photos
+      # 本機開發堆疊；實際部署請改 production 並提供 SESSION_SECRET。
+      APP_ENV: ${APP_ENV:-development}
     volumes:
       - photos:/app/data/photos
     depends_on:

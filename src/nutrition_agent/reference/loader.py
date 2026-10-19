@@ -60,6 +60,7 @@ class ReferenceData(BaseModel):
     @property
     def versions(self) -> dict[str, str]:
         return {
+            "manifest": self.version,  # 參考資料整體版本（manifest.toml）
             "ingredients": self.ingredients.version,
             "drugs": self.drugs.version,
             "compounds": self.compounds.version,

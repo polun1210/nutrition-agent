@@ -3,15 +3,12 @@
 照片不落地：只為了讀出藥名，使用者在清單上確認後，送出時後端仍以藥名原文重新對照。
 """
 
-import logging
-
-import httpx
 import psycopg
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 
 from nutrition_agent.api.assessments import _editable_draft, get_drug_names, get_reference
 from nutrition_agent.api.deps import User, current_user, get_connection, get_gateway
-from nutrition_agent.api.photos import MAX_PHOTOS_PER_PRODUCT, _read_upload
+from nutrition_agent.api.uploads import check_photo_count, model_service_errors, read_upload
 from nutrition_agent.assessment.medications import resolve_medication
 from nutrition_agent.extraction.medication_pack import UNREADABLE_HINT, read_medication_pack
 from nutrition_agent.gateway import ModelGateway
@@ -19,8 +16,6 @@ from nutrition_agent.reference import ReferenceData
 from nutrition_agent.reference.drug_names import DrugNameTable, normalize_name
 
 router = APIRouter(prefix="/api")
-log = logging.getLogger(__name__)
-
 
 @router.post("/assessments/drafts/{draft_id}/medication-photos")
 def recognize_medication_photos(
@@ -34,17 +29,11 @@ def recognize_medication_photos(
 ) -> dict:
     """一批藥包照片 → 每張讀出的藥名，加上跨照片去重後的對照結果（範圍狀態）。"""
     _editable_draft(conn, draft_id, user)
-    if not files:
-        raise HTTPException(status_code=422, detail="請至少選一張照片")
-    if len(files) > MAX_PHOTOS_PER_PRODUCT:
-        raise HTTPException(status_code=422, detail=f"一次最多 {MAX_PHOTOS_PER_PRODUCT} 張照片")
-    uploads = [_read_upload(f) for f in files]
+    check_photo_count(len(files), "一次")
+    uploads = [read_upload(f) for f in files]
 
-    try:
+    with model_service_errors("藥包 VLM"):
         readings = [read_medication_pack(gateway, data, mime) for data, mime, _ in uploads]
-    except httpx.HTTPError as err:
-        log.exception("藥包 VLM 呼叫失敗")
-        raise HTTPException(status_code=502, detail="辨識服務暫時無法使用，請稍後再試") from err
 
     photos = [
         {"readable": r.readable, "names": r.names, "hint": None if r.readable else UNREADABLE_HINT}

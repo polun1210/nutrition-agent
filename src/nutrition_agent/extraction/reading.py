@@ -1,6 +1,7 @@
 """VLM 讀標示：只讀字，不猜；回覆解析失敗一律視為整張讀不到。"""
 
 import json
+import logging
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -28,6 +29,8 @@ PROMPT = """你是保健食品標示的讀字工具。請只回報照片上看�
 }
 規則：同一列有多種單位並列時（例如微克與 IU），只取第一個數字與單位；讀不清楚的欄位填 null，不要猜。
 """
+
+log = logging.getLogger(__name__)
 
 UNREADABLE_HINT = "這張照片看不清楚標示，請重拍：對準成分欄與營養標示，光線充足、避免反光，字要清晰、整張都在畫面內。"
 
@@ -65,6 +68,7 @@ def parse_reading(reply: str) -> VlmReading:
     try:
         return VlmReading.model_validate(json.loads(_json_text(reply)))
     except (ValueError, ValidationError):
+        log.warning("模型回覆無法解析，視為讀不到：%.200r", reply, exc_info=True)
         return UNREADABLE
 
 

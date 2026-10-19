@@ -142,7 +142,7 @@ def test_medication_can_be_removed_and_is_saved_with_draft(login_as):
     save(client, draft["id"], [med("Norvasc"), med("Lipitor")])
     saved = save(client, draft["id"], [med("Lipitor")]).json()
 
-    assert saved["medications"] == [{"name": "Lipitor"}]
+    assert [m["name"] for m in saved["medications"]] == ["Lipitor"]
 
 
 def test_blank_medication_name_is_rejected(login_as):
@@ -150,3 +150,38 @@ def test_blank_medication_name_is_rejected(login_as):
     draft = client.post("/api/assessments/drafts").json()
 
     assert save(client, draft["id"], [med("  ")]).status_code == 422
+
+
+def statuses(draft):
+    return {m["name"]: m["scope_status"] for m in draft["medications"]}
+
+
+def test_saved_draft_returns_scope_status_of_each_medication(login_as):
+    client = login_as()
+    draft = client.post("/api/assessments/drafts").json()
+    # 「amlodipine」是使用者自由輸入但其實在藥名表內的名稱；「亂打的藥」查不到。
+    saved = save(client, draft["id"], [med("amlodipine"), med("亂打的藥")])
+    assert saved.status_code == 200, saved.text
+
+    assert statuses(saved.json()) == {"amlodipine": "in_scope", "亂打的藥": "unconfirmed"}
+    reloaded = client.get(f"/api/assessments/drafts/{draft['id']}").json()
+    assert statuses(reloaded) == {"amlodipine": "in_scope", "亂打的藥": "unconfirmed"}
+
+
+def test_copied_draft_returns_scope_status_of_each_medication(login_as):
+    client = login_as()
+    case_id = submit_case(client, [med("Amlodipine"), med("亂打的藥")])
+    assert case_id
+
+    copied = client.post("/api/assessments/drafts", params={"copy_from": "latest"}).json()
+
+    assert statuses(copied) == {"Amlodipine": "in_scope", "亂打的藥": "unconfirmed"}
+
+
+def test_client_supplied_scope_status_is_ignored_when_saving(login_as):
+    client = login_as()
+    draft = client.post("/api/assessments/drafts").json()
+
+    saved = save(client, draft["id"], [med("亂打的藥", scope_status="in_scope")])
+
+    assert statuses(saved.json()) == {"亂打的藥": "unconfirmed"}

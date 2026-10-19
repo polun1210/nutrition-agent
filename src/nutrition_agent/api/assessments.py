@@ -12,7 +12,7 @@ from typing import Annotated, Literal
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
 from psycopg.types.json import Jsonb
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints
 
 from nutrition_agent.accounts import UnderageError, require_adult
 from nutrition_agent.api.deps import User, current_user, get_connection, get_gateway
@@ -23,6 +23,7 @@ from nutrition_agent.assessment import (
     Product,
     ProfileSnapshot,
     assess,
+    estimate_element_mg,
 )
 from nutrition_agent.assessment.medications import resolve_medication, search_drugs
 from nutrition_agent.reference import IngredientCategory, ReferenceData, load_reference_data
@@ -132,12 +133,17 @@ def _copy_photos(
     ]
 
 
-def _draft_json(row: tuple) -> dict:
+def _draft_json(row: tuple, ref: ReferenceData, table: DrugNameTable) -> dict:
+    """草稿回應：每個用藥附上後端用藥名表對照出的範圍狀態（不存進草稿，每次現算）。"""
+    medications = [
+        {**m, "scope_status": resolve_medication(m["name"], table, ref.drugs).scope_status}
+        for m in row[3]
+    ]
     return {
         "id": row[0],
         "products": row[1],
         "submitted_case_id": row[2],
-        "medications": row[3],
+        "medications": medications,
     }
 
 
@@ -169,16 +175,31 @@ def drug_search(
 def compound_options(
     _user: User = Depends(current_user), ref: ReferenceData = Depends(get_reference)
 ) -> list[dict]:
-    """化合物選單（鈣、鎂、鐵）：校對頁用比率即時預覽推估值；最終推估仍由後端判定引擎計算。"""
+    """化合物選單（鈣、鎂、鐵）；推估預覽見 POST /estimate。"""
     return [
-        {
-            "code": c.code,
-            "nutrient_code": c.nutrient_code,
-            "name": c.display_name_zh,
-            "element_ratio": c.element_ratio,
-        }
+        {"code": c.code, "nutrient_code": c.nutrient_code, "name": c.display_name_zh}
         for c in ref.compounds.compounds
     ]
+
+
+class EstimateBody(BaseModel):
+    ingredient_code: str
+    compound_code: str | None = None
+    amount: Annotated[float, Field(ge=0)]
+    unit: str
+
+
+@router.post("/estimate")
+def estimate(
+    body: EstimateBody,
+    _user: User = Depends(current_user),
+    ref: ReferenceData = Depends(get_reference),
+) -> dict:
+    """化合物重量的元素量推估預覽；與送出時判定引擎用同一套計算，前端不自己算。"""
+    element_mg = estimate_element_mg(
+        body.ingredient_code, body.compound_code, body.amount, body.unit, ref
+    )
+    return {"element_mg": element_mg}
 
 
 @router.get("")
@@ -211,6 +232,8 @@ def create_draft(
     copy_from: Literal["latest"] | None = None,
     user: User = Depends(current_user),
     conn: psycopg.Connection = Depends(get_connection),
+    ref: ReferenceData = Depends(get_reference),
+    table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
     """建立草稿；`copy_from=latest` 時帶入自己最近一次評估的保健食品與用藥。
 
@@ -240,7 +263,7 @@ def create_draft(
             "RETURNING id, products, case_id, medications",
             (Jsonb(_copy_photos(conn, products, user, row[0])), row[0]),
         ).fetchone()
-    return _draft_json(row)
+    return _draft_json(row, ref, table)
 
 
 @router.get("/drafts/{draft_id}")
@@ -248,8 +271,10 @@ def get_draft(
     draft_id: int,
     user: User = Depends(current_user),
     conn: psycopg.Connection = Depends(get_connection),
+    ref: ReferenceData = Depends(get_reference),
+    table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
-    return _draft_json(_draft_row(conn, draft_id, user))
+    return _draft_json(_draft_row(conn, draft_id, user), ref, table)
 
 
 @router.put("/drafts/{draft_id}")
@@ -259,6 +284,7 @@ def save_draft(
     user: User = Depends(current_user),
     conn: psycopg.Connection = Depends(get_connection),
     ref: ReferenceData = Depends(get_reference),
+    table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
     _editable_draft(conn, draft_id, user)
     _check_ingredient_codes(body.products, ref)
@@ -272,7 +298,7 @@ def save_draft(
             draft_id,
         ),
     ).fetchone()
-    return _draft_json(row)
+    return _draft_json(row, ref, table)
 
 
 @router.post("/drafts/{draft_id}/submit", status_code=201)

@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { request } from "../api";
 import {
   AMOUNT_UNITS,
   DOSE_UNITS,
@@ -29,17 +30,6 @@ type LineDraft = {
   override: string | null; // 使用者覆寫推估值（mg）；null = 沿用系統推估
 };
 
-const TO_MG: Record<string, number> = { mg: 1, g: 1000, ug: 0.001 };
-
-/** 校對頁即時預覽；最終推估值仍由後端判定引擎計算。 */
-export function estimateMg(line: LineDraft, compounds: CompoundOption[]): number | null {
-  const ratio = compounds.find((c) => c.code === line.compound)?.element_ratio;
-  const factor = TO_MG[line.unit];
-  const amount = Number(line.amount);
-  if (ratio === undefined || factor === undefined || line.amount === "" || Number.isNaN(amount)) return null;
-  return Math.round(amount * factor * ratio * 100) / 100;
-}
-
 const emptyLine = (options: IngredientOption[]): LineDraft => ({
   code: options[0]?.code ?? "",
   amount: "",
@@ -55,7 +45,7 @@ const draftFromLine = (i: IngredientLine): LineDraft => ({
   unit: i.unit,
   basis: i.basis ?? "labeled",
   compound: i.compound_code ?? "",
-  override: null,
+  override: i.element_override_mg == null ? null : String(i.element_override_mg),
 });
 
 /** 手動新增一項保健食品：成分只能從選單挑選。 */
@@ -83,11 +73,8 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
     updateLine(index, { code, unit: option?.unit ?? "mg", basis: "labeled", compound: "", override: null });
   };
 
-  // 覆寫推估值後，這一行視為使用者提供的標示值。
+  // 覆寫推估值時，化合物與化合物重量照舊保留，另存覆寫的元素量，使用者之後可以還原系統推估。
   const toIngredientLine = (l: LineDraft): IngredientLine => {
-    if (l.basis === "compound" && l.override !== null && l.override !== "") {
-      return { ingredient_code: l.code, amount: Number(l.override), unit: "mg" };
-    }
     if (l.basis === "compound") {
       return {
         ingredient_code: l.code,
@@ -95,6 +82,7 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
         unit: l.unit,
         basis: "compound",
         compound_code: l.compound || null,
+        element_override_mg: l.override !== null && l.override !== "" ? Number(l.override) : null,
       };
     }
     return { ingredient_code: l.code, amount: Number(l.amount), unit: l.unit };
@@ -218,7 +206,7 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
                 ))}
               </select>
             </label>
-            {l.basis === "compound" && <EstimateField line={l} compounds={compounds} onOverride={(v) => updateLine(i, { override: v })} />}
+            {l.basis === "compound" && <EstimateField line={l} onOverride={(v) => updateLine(i, { override: v })} />}
             {lines.length > 1 && (
               <button type="button" className="secondary" onClick={() => setLines(lines.filter((_, j) => j !== i))}>
                 刪除這個成分
@@ -302,17 +290,15 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
   );
 }
 
-/** 推估元素量：不同底色標示「推估」，可直接覆寫（覆寫後視為使用者提供的值）。 */
+/** 推估元素量：數值由後端計算（與送出時同一套），不同底色標示「推估」，可覆寫（覆寫後視為使用者提供的值）。 */
 function EstimateField({
   line,
-  compounds,
   onOverride,
 }: {
   line: LineDraft;
-  compounds: CompoundOption[];
   onOverride: (value: string | null) => void;
 }) {
-  const estimate = estimateMg(line, compounds);
+  const estimate = useEstimate(line);
   if (!line.compound) {
     return <p className="undetermined">此營養素的元素量無法判定，不會計入上限比對。</p>;
   }
@@ -335,4 +321,32 @@ function EstimateField({
       )}
     </label>
   );
+}
+
+/** 向後端取推估預覽；輸入變動後稍等一下才送出請求，過期的回應丟掉。 */
+function useEstimate(line: LineDraft): number | null {
+  const [estimate, setEstimate] = useState<number | null>(null);
+  const { code, compound, amount, unit } = line;
+  useEffect(() => {
+    if (!compound || amount === "" || Number.isNaN(Number(amount))) {
+      setEstimate(null);
+      return;
+    }
+    let stale = false;
+    const timer = setTimeout(() => {
+      request<{ element_mg: number | null }>("POST", "/api/assessments/estimate", {
+        ingredient_code: code,
+        compound_code: compound,
+        amount: Number(amount),
+        unit,
+      })
+        .then((r) => !stale && setEstimate(r.element_mg))
+        .catch(() => !stale && setEstimate(null));
+    }, 200);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [code, compound, amount, unit]);
+  return estimate;
 }

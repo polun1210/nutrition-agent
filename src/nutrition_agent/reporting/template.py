@@ -20,10 +20,12 @@ from nutrition_agent.assessment import (
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
+    Basis,
     InteractionFinding,
     Medication,
     IngredientLine,
     Product,
+    SourceKind,
     UlComparison,
 )
 from nutrition_agent.reference import IngredientCategory, ReferenceData
@@ -208,10 +210,13 @@ def _medication_line(m: Medication) -> str:
 
 def _ingredient_text(item: IngredientLine, names: _Names, ref: ReferenceData) -> str:
     amount = f"{_num(item.amount)} {item.unit}"
-    if item.basis == "labeled":
+    if item.basis is Basis.LABELED:
         return f"{names(item.ingredient_code)} {amount}"
     compound = _compound_name(ref, item.compound_code) if item.compound_code else "化合物未確定"
-    return f"{names(item.ingredient_code)}（標示化合物：{compound}）化合物重量 {amount}"
+    text = f"{names(item.ingredient_code)}（標示化合物：{compound}）化合物重量 {amount}"
+    if item.element_override_mg is not None:
+        text += f"，元素量由使用者提供 {_num(item.element_override_mg)} mg"
+    return text
 
 
 def _product_line(product: Product, names: _Names, ref: ReferenceData) -> str:
@@ -229,7 +234,7 @@ def _ul_lines(assessment: Assessment, ref: ReferenceData, names: _Names) -> list
         f"{s.product_name} 的{names(s.nutrient_code)}：依化合物「{_compound_name(ref, s.compound_code)}」"
         f"重量推估元素量（{ESTIMATE_NOTE}）"
         for s in assessment.nutrient_sources
-        if s.source == "estimated"
+        if s.source is SourceKind.ESTIMATED
     )
     lines.extend(
         f"{names(code)}：無法判定元素量（標示單位無法換算，或只標化合物而無法推估），"
