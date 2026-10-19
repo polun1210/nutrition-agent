@@ -90,6 +90,21 @@ def _check_compound(item: IngredientLine, ref: ReferenceData) -> None:
         raise HTTPException(status_code=422, detail=f"化合物與成分不符：{item.compound_code}")
 
 
+def _check_photo_ids(
+    conn: psycopg.Connection, products: list[Product], user: User, draft_id: int
+) -> None:
+    """產品掛的照片必須是這位使用者在這份草稿上傳的。"""
+    wanted = {pid for p in products for pid in p.photo_ids}
+    if not wanted:
+        return
+    found = conn.execute(
+        "SELECT id FROM product_photos WHERE id = ANY(%s) AND user_id = %s AND draft_id = %s",
+        (list(wanted), user.id, draft_id),
+    ).fetchall()
+    if wanted != {row[0] for row in found}:
+        raise HTTPException(status_code=422, detail="產品只能掛自己在這份評估上傳的照片")
+
+
 def _draft_json(row: tuple) -> dict:
     return {
         "id": row[0],
@@ -169,6 +184,7 @@ def save_draft(
 ) -> dict:
     _editable_draft(conn, draft_id, user)
     _check_ingredient_codes(body.products, ref)
+    _check_photo_ids(conn, body.products, user, draft_id)
     row = conn.execute(
         "UPDATE assessment_drafts SET products = %s, medications = %s, updated_at = now() "
         "WHERE id = %s RETURNING id, products, case_id, medications",

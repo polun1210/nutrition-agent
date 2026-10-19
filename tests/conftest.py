@@ -2,6 +2,7 @@
 
 import os
 from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import psycopg
 import pytest
@@ -13,6 +14,7 @@ from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
 from nutrition_agent.config import to_sqlalchemy_url
+from nutrition_agent.photos import PhotoStore
 from tests.fakes import FakeGateway
 
 TEST_DATABASE_URL = os.environ.get(
@@ -54,8 +56,10 @@ def gateway() -> FakeGateway:
 
 
 @pytest.fixture
-def app(db: psycopg.Connection, gateway: FakeGateway) -> FastAPI:
-    return create_app(connection_provider=lambda: db, gateway=gateway)
+def app(db: psycopg.Connection, gateway: FakeGateway, tmp_path: Path) -> FastAPI:
+    return create_app(
+        connection_provider=lambda: db, gateway=gateway, photo_store=PhotoStore(tmp_path / "photos")
+    )
 
 
 @pytest.fixture

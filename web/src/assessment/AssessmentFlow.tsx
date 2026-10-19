@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { request, type Me, type Profile } from "../api";
 import ProfileFields from "../ProfileFields";
+import PhotoProductForm from "./PhotoProductForm";
+import PhotoThumbs from "./PhotoThumbs";
 import MedicationStep from "./MedicationStep";
 import ProductForm from "./ProductForm";
 import ReportView from "./ReportView";
@@ -130,6 +132,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
             {products.map((p, i) => (
               <li key={i}>
                 {p.name}
+                <PhotoThumbs name={p.name} photoIds={p.photo_ids} />
                 <button
                   type="button"
                   className="secondary"
@@ -152,6 +155,10 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
               </li>
             ))}
           </ul>
+          {draft && (
+            <PhotoProductForm draftId={draft.id} options={options} onAdd={(p) => void saveProducts([...products, p])} />
+          )}
+          <h2>手動輸入</h2>
           {editing !== null && products[editing] ? (
             <ProductForm
               key={editing}

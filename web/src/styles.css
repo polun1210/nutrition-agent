@@ -111,3 +111,21 @@ label.estimated input {
 .undetermined {
   color: #8a4b00;
 }
+
+.thumbs {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.thumb {
+  width: 3rem;
+  height: 3rem;
+  object-fit: cover;
+  border: 1px solid #999;
+}
+
+.ingredient-row[data-confirmed="true"] {
+  background: #eef7ee;
+}

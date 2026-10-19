@@ -85,6 +85,7 @@ class Product(Frozen):
     units_per_serving: PositiveNumber  # 每份幾個劑型單位
     ingredients: list[IngredientLine]
     intake: Intake
+    photo_ids: list[int] = Field(default_factory=list)  # 標示照片（product_photos.id）
 
 
 ScopeStatus = Literal["in_scope", "out_of_scope", "unconfirmed"]

@@ -39,10 +39,19 @@ function describe(detail: unknown): string {
 }
 
 export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  return send<T>(method, path, body === undefined ? undefined : JSON.stringify(body), body !== undefined);
+}
+
+/** 上傳檔案（multipart）；瀏覽器自己帶 boundary，不能手動設 Content-Type。 */
+export async function upload<T>(path: string, form: FormData): Promise<T> {
+  return send<T>("POST", path, form, false);
+}
+
+async function send<T>(method: string, path: string, body: BodyInit | undefined, json: boolean): Promise<T> {
   const res = await fetch(path, {
     method,
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: json ? { "Content-Type": "application/json" } : undefined,
+    body,
   });
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { detail?: unknown };
