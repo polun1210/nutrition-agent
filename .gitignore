@@ -18,3 +18,6 @@ knowledge/raw/*
 
 # Google 雲端硬碟同步產生的檔案
 desktop.ini
+
+# agent worktree 目錄
+.claude/worktrees/
