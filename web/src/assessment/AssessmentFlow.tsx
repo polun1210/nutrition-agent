@@ -31,6 +31,7 @@ type Props = { me: Me; onProfileSaved: () => void; goHome: () => void };
 export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
   const [step, setStep] = useState<StepKey>("profile");
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [editing, setEditing] = useState<number | null>(null);
   const [options, setOptions] = useState<IngredientOption[]>([]);
   const [compounds, setCompounds] = useState<CompoundOption[]>([]);
   const [report, setReport] = useState<AssessmentCase | null>(null);
@@ -118,14 +119,39 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
                   type="button"
                   className="secondary"
                   disabled={busy}
-                  onClick={() => void saveProducts(products.filter((_, j) => j !== i))}
+                  onClick={() => setEditing(i)}
+                >
+                  修改 {p.name}
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setEditing(null);
+                    void saveProducts(products.filter((_, j) => j !== i));
+                  }}
                 >
                   刪除 {p.name}
                 </button>
               </li>
             ))}
           </ul>
-          <ProductForm options={options} compounds={compounds} onAdd={(p) => void saveProducts([...products, p])} />
+          {editing !== null && products[editing] ? (
+            <ProductForm
+              key={editing}
+              options={options}
+              compounds={compounds}
+              initial={products[editing]}
+              onAdd={(p) => {
+                void saveProducts(products.map((old, j) => (j === editing ? p : old)));
+                setEditing(null);
+              }}
+              onCancel={() => setEditing(null)}
+            />
+          ) : (
+            <ProductForm options={options} compounds={compounds} onAdd={(p) => void saveProducts([...products, p])} />
+          )}
           <button type="button" disabled={products.length === 0 || busy} onClick={() => setStep("submit")}>
             下一步
           </button>

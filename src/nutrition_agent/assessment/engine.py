@@ -12,6 +12,7 @@ from nutrition_agent.assessment.models import (
     Assessment,
     AssessmentCase,
     IngredientLine,
+    Intake,
     ListedIngredient,
     NutrientSource,
     Product,
@@ -32,15 +33,28 @@ def _exact(value: float) -> Fraction:
     return Fraction(str(value))
 
 
+def taking_day_fraction(intake: Intake) -> Fraction:
+    """服用日佔全部日子的比例，用來由峰值算平均。"""
+    if intake.frequency == "every_other_day":
+        return Fraction(1, 2)
+    if intake.frequency == "weekly_days":
+        return Fraction(intake.days_per_week, 7)
+    if intake.frequency == "cycle":
+        return Fraction(intake.cycle_on_days, intake.cycle_on_days + intake.cycle_off_days)
+    return Fraction(1)
+
+
 def daily_servings(product: Product) -> Fraction:
-    """每日份數 ＝ 每日劑型單位數 ÷ 每份劑型單位數。"""
+    """服用當日份數（峰值）＝ 當日劑型單位數 ÷ 每份劑型單位數。"""
     daily_units = product.intake.times_per_day * _exact(product.intake.units_per_time)
     return daily_units / _exact(product.units_per_serving)
 
 
 def assess(case: AssessmentCase, ref: ReferenceData) -> Assessment:
     sex = Sex(case.profile.sex)
-    totals: dict[str, Fraction] = {}
+    totals: dict[str, Fraction] = {}  # 跨產品的峰值加總
+    averages: dict[str, Fraction] = {}
+    non_daily: set[str] = set()
     estimated_codes: set[str] = set()
     undetermined: set[str] = set()
     sources: list[NutrientSource] = []
@@ -68,12 +82,18 @@ def assess(case: AssessmentCase, ref: ReferenceData) -> Assessment:
             if source.amount is None:
                 undetermined.add(code)
                 continue
-            totals[code] = totals.get(code, Fraction(0)) + source.amount * servings
+            peak = source.amount * servings
+            totals[code] = totals.get(code, Fraction(0)) + peak
+            averages[code] = (
+                averages.get(code, Fraction(0)) + peak * taking_day_fraction(product.intake)
+            )
+            if not product.intake.is_daily:
+                non_daily.add(code)
             if source.record.source == "estimated":
                 estimated_codes.add(code)
 
     comparisons = [
-        _compare(code, intake, case, ref, sex, code in estimated_codes)
+        _compare(code, intake, averages[code], code in non_daily, case, ref, sex, code in estimated_codes)
         for code, intake in sorted(totals.items(), key=lambda kv: _order(ref, kv[0]))
         if code not in undetermined
     ]
@@ -156,6 +176,8 @@ def _order(ref: ReferenceData, code: str) -> int:
 def _compare(
     code: str,
     intake: Fraction,
+    average: Fraction,
+    non_daily: bool,
     case: AssessmentCase,
     ref: ReferenceData,
     sex: Sex,
@@ -168,6 +190,8 @@ def _compare(
     return UlComparison(
         nutrient_code=code,
         intake=float(intake),
+        average_intake=float(average),
+        non_daily=non_daily,
         unit=unit,
         ul=ul.value if has_ul else None,
         ul_percent=float(intake / ul_value * 100) if ul_value else None,

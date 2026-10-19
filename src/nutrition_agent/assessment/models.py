@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # 「無法確定」選單項目的成分代碼：使用者無法判斷標示成分是哪一種時選它。
 UNKNOWN_INGREDIENT = "unknown"
@@ -42,11 +42,40 @@ class IngredientLine(Frozen):
 
 
 class Intake(Frozen):
-    """服用方式。目前只有「每天服用」；之後的票在這裡加頻率。"""
+    """服用方式：封閉的四種頻率。沒有「需要時才吃」，因為它無法量化。
 
-    frequency: Literal["daily"] = "daily"
+    times_per_day／units_per_time 描述「服用當日」的劑量（峰值）；頻率決定平均。
+    - daily：每天
+    - every_other_day：每兩天
+    - weekly_days：每週 days_per_week 天（1–6）
+    - cycle：服用 cycle_on_days 天、停用 cycle_off_days 天，週期性重複
+    """
+
+    frequency: Literal["daily", "every_other_day", "weekly_days", "cycle"] = "daily"
     times_per_day: Annotated[int, Field(ge=1, le=24)]
     units_per_time: PositiveNumber  # 每次幾個劑型單位
+    days_per_week: Annotated[int, Field(ge=1, le=6)] | None = None
+    cycle_on_days: Annotated[int, Field(ge=1, le=365)] | None = None
+    cycle_off_days: Annotated[int, Field(ge=1, le=365)] | None = None
+
+    @model_validator(mode="after")
+    def _check_frequency_parameters(self) -> "Intake":
+        needed = {
+            "weekly_days": {"days_per_week"},
+            "cycle": {"cycle_on_days", "cycle_off_days"},
+        }.get(self.frequency, set())
+        given = {
+            name
+            for name in ("days_per_week", "cycle_on_days", "cycle_off_days")
+            if getattr(self, name) is not None
+        }
+        if given != needed:
+            raise ValueError(f"頻率 {self.frequency} 需要的參數是 {sorted(needed)}")
+        return self
+
+    @property
+    def is_daily(self) -> bool:
+        return self.frequency == "daily"
 
 
 class Product(Frozen):
@@ -70,7 +99,9 @@ class UlComparison(Frozen):
     """一個目標營養素的上限比對。ul 為 None = 無已知上限攝取量。"""
 
     nutrient_code: str
-    intake: float  # 跨產品加總的單日峰值攝取量（DRIs 單位）
+    intake: float  # 跨產品加總的單日峰值攝取量（DRIs 單位）；上限比對一律用它
+    average_intake: float  # 跨產品加總的平均每日攝取量，只用於一般呈現
+    non_daily: bool  # 有非每日服用的產品貢獻此營養素
     unit: str
     ul: float | None
     ul_percent: float | None
