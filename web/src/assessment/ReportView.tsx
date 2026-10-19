@@ -1,5 +1,28 @@
 import PhotoThumbs from "./PhotoThumbs";
-import type { AssessmentCase } from "./types";
+import type { AssessmentCase, InteractionCard } from "./types";
+
+function Card({ card }: { card: InteractionCard }) {
+  return (
+    <article className="interaction-card" data-testid="interaction-card">
+      <h3>{card.ingredient}</h3>
+      <p>因為你正在服用 {card.drugs.join(" 與 ")}</p>
+      {card.reasons.map((r, i) => (
+        <p key={i}>{r}</p>
+      ))}
+      {card.values.length > 0 && (
+        <dl>
+          {card.values.map((v) => (
+            <div key={v.label}>
+              <dt>{v.label}</dt>
+              <dd>{v.text}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <p className="card-advice">建議行動：{card.advice.join("；")}</p>
+    </article>
+  );
+}
 
 /** 報告：後端模板已把每段渲染成文字行，前端只負責呈現。 */
 export default function ReportView({
@@ -30,11 +53,15 @@ export default function ReportView({
       {report.report.sections.map((s) => (
         <section key={s.key} data-section={s.key}>
           <h2>{s.title}</h2>
-          <ul>
-            {s.lines.map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
+          {s.cards && s.cards.length > 0 ? (
+            s.cards.map((c, i) => <Card key={i} card={c} />)
+          ) : (
+            <ul>
+              {s.lines.map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
+            </ul>
+          )}
         </section>
       ))}
       {report.reference_versions && (
@@ -45,7 +72,10 @@ export default function ReportView({
             .join("、")}
         </p>
       )}
-      <button type="button" className="secondary" onClick={goHome}>
+      <button type="button" className="no-print" onClick={() => window.print()}>
+        列印報告
+      </button>
+      <button type="button" className="secondary no-print" onClick={goHome}>
         {backLabel}
       </button>
     </main>

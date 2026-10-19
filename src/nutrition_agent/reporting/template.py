@@ -11,7 +11,12 @@ from pydantic import BaseModel, ConfigDict
 
 from nutrition_agent.accounts import NO_CONDITION
 from nutrition_agent.assessment import (
+    ANTACID_REMINDER,
     HEALTHY_POPULATION,
+    MEDICATION_SOURCE_EXCLUDED,
+    PREGNANCY_LACTATION,
+    SAME_DAY_ASSUMPTION,
+    SCOPE_COVERAGE,
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
@@ -21,7 +26,7 @@ from nutrition_agent.assessment import (
     Product,
     UlComparison,
 )
-from nutrition_agent.reference import ReferenceData
+from nutrition_agent.reference import IngredientCategory, ReferenceData
 
 CONDITION_LABELS = {
     "hypertension": "高血壓",
@@ -52,7 +57,47 @@ ADVICE_TEXT = {
 
 DISCLOSURE_TEXT = {
     HEALTHY_POPULATION: "DRIs 的參考值適用於健康族群；你勾選了慢性病，這些數值僅供對照。",
+    SAME_DAY_ASSUMPTION: (
+        "你有非每天服用的產品；跨產品加總假設所有產品在同一天服用，"
+        "實際服用日不同時，加總會高估。"
+    ),
+    MEDICATION_SOURCE_EXCLUDED: (
+        "鈣、鎂、鐵的攝取量沒有計入藥品來源（例如含鈣或含鎂的制酸劑、軟便劑），"
+        "只計算你填寫的保健食品。"
+    ),
+    ANTACID_REMINDER: (
+        "特別提醒：你的用藥中有含鈣或含鎂的制酸劑，它的鈣、鎂不在上述攝取量內，"
+        "實際攝取量可能比報告上的數字更高，建議諮詢藥師。"
+    ),
+    PREGNANCY_LACTATION: "本系統不評估孕期和哺乳期。",
 }
+UNCOVERED_DRUGS = (
+    "DPP-4 抑制劑",
+    "磺醯脲類",
+    "傳統 NSAIDs",
+    "抗凝血與抗血小板藥",
+    "骨鬆用藥",
+)
+CONSULT_TEXT = "若有以上藥物，或有其他本系統未涵蓋的疾病、用藥與身體狀況，請諮詢醫師、藥師或營養師。"
+
+
+class CardValue(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    label: str
+    text: str
+
+
+class Card(BaseModel):
+    """交互作用卡片的結構化內容（前端渲染成卡片）；`lines` 仍保留同樣的純文字。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    ingredient: str
+    drugs: list[str]
+    reasons: list[str]
+    advice: list[str]
+    values: list[CardValue]
 
 
 class Section(BaseModel):
@@ -61,6 +106,7 @@ class Section(BaseModel):
     key: str
     title: str
     lines: list[str]
+    cards: list[Card] = []
 
 
 class Report(BaseModel):
@@ -75,19 +121,20 @@ def render_report(case: AssessmentCase, assessment: Assessment, ref: ReferenceDa
         sections=[
             Section(key="profile", title="你的資料", lines=_profile_lines(case, names, ref)),
             Section(
+                key="interaction",
+                title="交互作用",
+                lines=_interaction_lines(case, assessment, names),
+                cards=[_card(f, names) for f in assessment.interactions],
+            ),
+            Section(
                 key="ul_comparison",
                 title="上限比對",
                 lines=_ul_lines(assessment, ref, names),
             ),
             Section(
-                key="interaction",
-                title="交互作用",
-                lines=_interaction_lines(case, assessment, names),
-            ),
-            Section(
                 key="scope",
                 title="評估範圍與揭露",
-                lines=_scope_lines(assessment, names),
+                lines=_scope_lines(assessment, names, ref),
             ),
         ]
     )
@@ -212,12 +259,23 @@ def _interaction_lines(
     return [NO_HIT_TEXT if assessment.approved_rule_count else NO_RULES_TEXT]
 
 
+def _card(f: InteractionFinding, names: _Names) -> Card:
+    return Card(
+        ingredient=names(f.ingredient_code),
+        drugs=[d.raw_name for d in f.triggering_drugs],
+        reasons=list(f.reasons_zh),
+        advice=[_advice_text(f, a) for a in f.advice],
+        values=_card_values(f),
+    )
+
+
 def _card_lines(f: InteractionFinding, names: _Names) -> list[str]:
-    drugs = " 與 ".join(d.raw_name for d in f.triggering_drugs)
-    lines = [f"{names(f.ingredient_code)}：因為你正在服用 {drugs}", *f.reasons_zh]
-    lines.append("建議行動：" + "；".join(_advice_text(f, a) for a in f.advice))
-    if f.unit is not None:
-        lines.append(_values_line(f))
+    card = _card(f, names)
+    drugs = " 與 ".join(card.drugs)
+    lines = [f"{card.ingredient}：因為你正在服用 {drugs}", *card.reasons]
+    lines.append("建議行動：" + "；".join(card.advice))
+    if card.values:
+        lines.append("參考數值：" + "；".join(f"{v.label} {v.text}" for v in card.values))
     return lines
 
 
@@ -227,12 +285,12 @@ def _advice_text(f: InteractionFinding, advice: str) -> str:
     return ADVICE_TEXT[advice]
 
 
-def _values_line(f: InteractionFinding) -> str:
-    """三個數值並列，不判斷高低、不說不足。"""
+def _card_values(f: InteractionFinding) -> list[CardValue]:
+    """三個數值並列，不判斷高低、不說不足。允許成分（無 DRIs）沒有數值。"""
+    if f.unit is None:
+        return []
     intake = (
-        f"{_num(f.supplement_intake)} {f.unit}"
-        if f.supplement_intake is not None
-        else "無法判定"
+        f"{_num(f.supplement_intake)} {f.unit}" if f.supplement_intake is not None else "無法判定"
     )
     total = (
         f"{_num(f.recommended_total.value)} {f.recommended_total.unit}"
@@ -240,19 +298,40 @@ def _values_line(f: InteractionFinding) -> str:
         if f.recommended_total
         else "無"
     )
-    ul = f"上限 {_num(f.ul)} {f.unit}" if f.ul is not None else "無已知上限攝取量"
-    return f"參考數值：來自補充劑 {intake}；建議總攝取量（含飲食）{total}；{ul}"
+    ul = f"{_num(f.ul)} {f.unit}" if f.ul is not None else "無已知上限攝取量"
+    return [
+        CardValue(label="來自補充劑", text=intake),
+        CardValue(label="建議總攝取量（含飲食）", text=total),
+        CardValue(label="上限", text=ul),
+    ]
 
 
-def _scope_lines(assessment: Assessment, names: _Names) -> list[str]:
+def _scope_lines(assessment: Assessment, names: _Names, ref: ReferenceData) -> list[str]:
     lines = [
         f"{i.product_name} 含「{names(i.ingredient_code)}」：不在本系統評估範圍，已如實保留"
         for i in assessment.out_of_scope_ingredients
     ]
     lines.extend(
-        f"{i.product_name} 有無法確認的成分：系統無法確認它是什麼，"
+        f"注意：{i.product_name} 有無法確認的成分：系統無法確認它是什麼，"
         "可能是範圍內成分的其他寫法，建議諮詢藥師"
         for i in assessment.unconfirmed_ingredients
     )
-    lines.extend(DISCLOSURE_TEXT[code] for code in assessment.disclosures)
+    for code in assessment.disclosures:
+        if code == SCOPE_COVERAGE:
+            lines.extend(_coverage_lines(ref))
+        else:
+            lines.append(DISCLOSURE_TEXT[code])
     return lines
+
+
+def _coverage_lines(ref: ReferenceData) -> list[str]:
+    conditions = list(CONDITION_LABELS.values())
+    classes = [c.name_zh for c in ref.drugs.classes]
+    nutrients = [i.display_name_zh for i in ref.ingredients.by_category(IngredientCategory.TARGET_NUTRIENT)]
+    return [
+        f"本系統涵蓋 {len(conditions)} 種慢性病：{'、'.join(conditions)}",
+        f"本系統涵蓋 {len(classes)} 類用藥：{'、'.join(classes)}",
+        f"本系統涵蓋 {len(nutrients)} 項營養素：{'、'.join(nutrients)}",
+        f"台灣常見但本系統未涵蓋的藥：{'、'.join(UNCOVERED_DRUGS)}",
+        CONSULT_TEXT,
+    ]

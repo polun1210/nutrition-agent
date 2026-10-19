@@ -15,6 +15,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 UNKNOWN_INGREDIENT = "unknown"
 # 揭露事項代碼（報告模板依代碼渲染文字）
 HEALTHY_POPULATION = "healthy_population"
+SAME_DAY_ASSUMPTION = "same_day_assumption"
+MEDICATION_SOURCE_EXCLUDED = "medication_source_excluded"
+ANTACID_REMINDER = "antacid_reminder"
+PREGNANCY_LACTATION = "pregnancy_lactation"
+SCOPE_COVERAGE = "scope_coverage"
 DOSE_UNITS =("粒", "錠", "包", "匙", "毫升")
 
 PositiveNumber = Annotated[float, Field(gt=0)]

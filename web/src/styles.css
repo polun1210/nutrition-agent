@@ -129,3 +129,57 @@ label.estimated input {
 .ingredient-row[data-confirmed="true"] {
   background: #eef7ee;
 }
+
+.interaction-card {
+  border: 1px solid #999;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  break-inside: avoid;
+}
+
+.interaction-card h3 {
+  margin: 0 0 0.25rem;
+}
+
+.interaction-card dl {
+  margin: 0.5rem 0;
+}
+
+.interaction-card dl div {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.interaction-card dt {
+  font-weight: bold;
+}
+
+.interaction-card dd {
+  margin: 0;
+}
+
+.card-advice {
+  font-weight: bold;
+}
+
+@media print {
+  .no-print,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  section {
+    break-inside: avoid;
+  }
+}
