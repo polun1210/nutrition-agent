@@ -142,3 +142,43 @@ def test_成分對照表的目標都在有效成分目錄內():
     known = {i.code for i in load_reference_data().drugs.ingredients}
     assert set(load_aliases().values()) <= known
     assert not any("ranitidine" in k for k in load_aliases())
+
+
+@pytest.mark.parametrize(
+    ("tfda_name", "code"),
+    [
+        # 2026-10-15 TFDA 處方成分資料裡的實際寫法（不是猜的鹽類名稱）
+        ("METFORMIN HCL (EQ TO METFORMIN HYDROCHLORIDE)", "metformin"),
+        ("HYDROCHLOROTHIAZIDE (EQ TO 3,4-DIHYDROCHLOROTHIAZIDE)", "hydrochlorothiazide"),
+        ("ACETAMINOPHEN (EQ TO PARACETAMOL)", "acetaminophen"),
+        ("LISINOPRIL (DIHYDRATE)", "lisinopril"),
+        ("DAPAGLIFLOZIN PROPANEDIOL MONOHYDRATE", "dapagliflozin"),
+        ("SODIUM RABEPRAZOLE", "rabeprazole"),
+        ("AMLODIPINE (BESYLATE)", "amlodipine"),
+        ("ZOLPIDEM HEMITARTRATE", "zolpidem"),
+        ("CRYSTALLINE GLUCOSAMINE SULFATE", "glucosamine_sulfate"),
+        ("INSULIN ICODEC", "insulin"),
+        ("SACUBITRIL/VALSARTAN AS SACUBITRIL VALSARTAN SODIUM SALT COMPLEX", "valsartan"),
+        ("MAGNESIUM ALUMINUM HYDROXIDE CO-DRIED GEL", "aluminum_magnesium_compound"),
+        ("MAGALDRATE", "aluminum_magnesium_compound"),
+        ("SYNTHETIC HYDROTALCITE", "aluminum_magnesium_compound"),
+    ],
+)
+def test_真實資料的成分寫法對得到有效成分(tfda_name, code):
+    from nutrition_agent.reference.drug_names import normalize_name
+
+    assert load_aliases()[normalize_name(tfda_name)] == code
+
+
+def test_常作賦形劑的鋁鎂矽酸鹽不算鋁鎂制酸劑():
+    from nutrition_agent.reference.drug_names import normalize_name
+
+    aliases = load_aliases()
+    for name in ("ALUMINUM MAGNESIUM SILICATE", "MAGNESIUM ALUMINUM METASILICATE (NEUSILIN)"):
+        assert normalize_name(name) not in aliases
+
+
+def test_藥物目錄每個有效成分都有對照():
+    codes = set(load_aliases().values())
+    for ingredient in load_reference_data().drugs.ingredients:
+        assert ingredient.code in codes, ingredient.code
