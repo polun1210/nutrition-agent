@@ -1,13 +1,13 @@
 """評估個案與評估草稿。
 
-Revision ID: 0003
-Revises: 0002
+Revision ID: 0004
+Revises: 0003
 """
 
 from alembic import op
 
-revision = "0003"
-down_revision = "0002"
+revision = "0004"
+down_revision = "0003"
 branch_labels = None
 depends_on = None
 
