@@ -52,6 +52,18 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   // 兩罐峰值加總 1000 mg → 上限 2500 mg 的 40%
   await expect(page.getByText(/你服用當日來自補充劑的攝取量已達上限的 40%/)).toBeVisible();
   await expect(page.getByText("已超過上限")).toHaveCount(0);
+  // 4 段固定順序；沒有審定規則時交互作用段落不寫成「沒有交互作用」；完整揭露
+  await expect(page.locator("section[data-section] h2")).toHaveText([
+    "你的資料",
+    "交互作用",
+    "上限比對",
+    "評估範圍與揭露",
+  ]);
+  await expect(page.getByText("沒有交互作用")).toHaveCount(0);
+  await expect(page.getByText(/尚無已審定的交互作用規則/)).toBeVisible();
+  await expect(page.getByText(/DPP-4 抑制劑/)).toBeVisible();
+  await expect(page.getByText(/同一天服用/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "列印報告" })).toBeVisible();
   await expect(page.getByText(/用藥 Amlodipine：在評估範圍內.*氨氯地平/)).toBeVisible();
   await page.getByRole("button", { name: "回首頁" }).click();
 

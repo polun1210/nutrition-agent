@@ -99,7 +99,20 @@ export type Draft = {
   submitted_case_id: number | null;
 };
 
-export type ReportSection = { key: string; title: string; lines: string[] };
+export type InteractionCard = {
+  ingredient: string;
+  drugs: string[];
+  reasons: string[];
+  advice: string[];
+  values: { label: string; text: string }[];
+};
+
+export type ReportSection = {
+  key: string;
+  title: string;
+  lines: string[];
+  cards?: InteractionCard[];
+};
 
 export type HistoryItem = {
   id: number;
