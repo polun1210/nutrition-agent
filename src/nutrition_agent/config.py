@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "postgresql://nutrition:nutrition@127.0.0.1:55432/nutrition"
+    # 簽 session cookie 用；正式環境務必以環境變數換掉並開啟 https_only。
+    session_secret: str = "dev-only-insecure-session-secret"
+    session_https_only: bool = False
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_provider: str = ""
