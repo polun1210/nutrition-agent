@@ -7,10 +7,17 @@ from fastapi import Depends, FastAPI
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from nutrition_agent.api import assessments, auth
-from nutrition_agent.api.deps import User, current_user, get_connection, get_gateway
+from nutrition_agent.api import assessments, auth, photos
+from nutrition_agent.api.deps import (
+    User,
+    current_user,
+    get_connection,
+    get_gateway,
+    get_photo_store,
+)
 from nutrition_agent.config import get_settings
 from nutrition_agent.gateway import ModelGateway
+from nutrition_agent.photos import PhotoStore
 
 SESSION_MAX_AGE = 14 * 24 * 3600
 
@@ -22,6 +29,7 @@ class EchoRequest(BaseModel):
 def create_app(
     connection_provider: Callable[[], psycopg.Connection] | None = None,
     gateway: ModelGateway | None = None,
+    photo_store: PhotoStore | None = None,
 ) -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="nutrition-agent")
@@ -41,9 +49,12 @@ def create_app(
         app.dependency_overrides[get_connection] = injected_connection
     if gateway is not None:
         app.dependency_overrides[get_gateway] = lambda: gateway
+    if photo_store is not None:
+        app.dependency_overrides[get_photo_store] = lambda: photo_store
 
     app.include_router(auth.router)
     app.include_router(assessments.router)
+    app.include_router(photos.router)
 
     @app.post("/api/ping")
     def ping(conn: psycopg.Connection = Depends(get_connection)) -> dict:

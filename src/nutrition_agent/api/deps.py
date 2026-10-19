@@ -6,12 +6,14 @@ create_app 會在測試時用 dependency_overrides 換掉 get_connection / get_g
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 
 import psycopg
 from fastapi import Depends, HTTPException, Request
 
 from nutrition_agent.config import get_settings
 from nutrition_agent.gateway import ModelGateway, OpenRouterGateway
+from nutrition_agent.photos import PhotoStore
 from nutrition_agent.profile import Profile
 
 SESSION_KEY = "user_id"
@@ -25,6 +27,10 @@ def get_connection() -> Iterator[psycopg.Connection]:
 
 def get_gateway() -> ModelGateway:
     return OpenRouterGateway.from_settings(get_settings())
+
+
+def get_photo_store() -> PhotoStore:
+    return PhotoStore(Path(get_settings().photo_dir))
 
 
 @dataclass(frozen=True)

@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     # 簽 session cookie 用；正式環境務必以環境變數換掉並開啟 https_only。
     session_secret: str = "dev-only-insecure-session-secret"
     session_https_only: bool = False
+    # 保健食品照片存放的本機資料夾（compose 以 volume 掛載）。
+    photo_dir: str = "data/photos"
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_provider: str = ""

@@ -24,6 +24,9 @@ services:
         required: false
     environment:
       DATABASE_URL: postgresql://nutrition:nutrition@db:5432/nutrition
+      PHOTO_DIR: /app/data/photos
+    volumes:
+      - photos:/app/data/photos
     depends_on:
       db:
         condition: service_healthy
@@ -40,3 +43,4 @@ services:
 
 volumes:
   dbdata:
+  photos:
