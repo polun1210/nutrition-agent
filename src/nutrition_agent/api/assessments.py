@@ -7,7 +7,7 @@
 
 from datetime import date
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
@@ -112,13 +112,58 @@ def drug_search(
     return [c.model_dump(mode="json") for c in search_drugs(q, table, ref.drugs)]
 
 
+@router.get("")
+def list_cases(
+    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection)
+) -> list[dict]:
+    """歷史列表：只含自己的個案，新的在前。每筆帶當時的參考資料版本。"""
+    rows = conn.execute(
+        "SELECT id, created_at, snapshot->>'assessed_on', "
+        "jsonb_array_length(snapshot->'products'), "
+        "jsonb_array_length(COALESCE(snapshot->'medications', '[]'::jsonb)), reference_versions "
+        "FROM assessment_cases WHERE user_id = %s ORDER BY created_at DESC, id DESC",
+        (user.id,),
+    ).fetchall()
+    return [
+        {
+            "id": r[0],
+            "created_at": r[1].isoformat(),
+            "assessed_on": r[2],
+            "product_count": r[3],
+            "medication_count": r[4],
+            "reference_versions": r[5],
+        }
+        for r in rows
+    ]
+
+
 @router.post("/drafts", status_code=201)
 def create_draft(
-    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection)
+    copy_from: Literal["latest"] | None = None,
+    user: User = Depends(current_user),
+    conn: psycopg.Connection = Depends(get_connection),
 ) -> dict:
+    """建立草稿；`copy_from=latest` 時帶入自己最近一次評估的保健食品與用藥。
+
+    產品整筆沿用快照裡存的 JSON（含校對後成分列、服用方式與日後的照片參照）；
+    個人資料不複製，送出時取當下最新值。
+    """
+    products: list = []
+    medications: list = []
+    if copy_from == "latest":
+        latest = conn.execute(
+            "SELECT snapshot FROM assessment_cases WHERE user_id = %s "
+            "ORDER BY created_at DESC, id DESC LIMIT 1",
+            (user.id,),
+        ).fetchone()
+        if latest is None:
+            raise HTTPException(status_code=404, detail="沒有過去的評估可以複製")
+        products = latest[0]["products"]
+        medications = [{"name": m["raw_name"]} for m in latest[0].get("medications", [])]
     row = conn.execute(
-        "INSERT INTO assessment_drafts (user_id) VALUES (%s) RETURNING id, products, case_id, medications",
-        (user.id,),
+        "INSERT INTO assessment_drafts (user_id, products, medications) VALUES (%s, %s, %s) "
+        "RETURNING id, products, case_id, medications",
+        (user.id, Jsonb(products), Jsonb(medications)),
     ).fetchone()
     return _draft_json(row)
 
