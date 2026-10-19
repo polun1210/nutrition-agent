@@ -69,7 +69,6 @@ class IngredientLine(Frozen):
     # 校對頁上使用者覆寫推估值後，這一行就改回 labeled（視為使用者提供的值）。
     basis: Basis = Basis.LABELED
     compound_code: str | None = None  # basis 為 compound 時的化合物；None = 不在表內
-    form: str | None = None  # 成分型態（例如氧化鎂）；規則限定型態時才需要
 
 
 class Intake(Frozen):

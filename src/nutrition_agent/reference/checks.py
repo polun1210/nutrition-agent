@@ -70,6 +70,10 @@ def _check_references(rule: Rule, data: ReferenceData) -> list[Violation]:
     found: list[Violation] = []
     if data.ingredients.get(rule.ingredient_code) is None:
         found.append(Violation("unknown_ingredient", rule.id, f"成分不在目錄：{rule.ingredient_code}"))
+    if rule.ingredient_form is not None and data.compounds.get(rule.ingredient_form) is None:
+        found.append(
+            Violation("unknown_form", rule.id, f"限定型態不在化合物表：{rule.ingredient_form}")
+        )
     if rule.condition_type is ConditionType.DRUG_CLASS:
         known = {c.code for c in data.drugs.classes}
     else:

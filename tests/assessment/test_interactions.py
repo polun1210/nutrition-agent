@@ -91,24 +91,44 @@ def test_out_of_scope_and_unknown_ingredients_do_not_enter_rules(fx_ref):
     assert assess(case, with_rules(fx_ref, rule)).interactions == []
 
 
-def test_rule_with_ingredient_form_requires_matching_form(fx_ref):
+def test_rule_with_ingredient_form_requires_matching_compound(fx_ref):
     rule = make_rule(
         "r-form",
         "metformin",
         "magnesium",
         interaction_type="absorption",
         requires_supplement_intake=True,
-        ingredient_form="oxide",
+        ingredient_form="magnesium_oxide",
     )
     ref = with_rules(fx_ref, rule)
 
-    def case_with(form):
-        item = line("magnesium", 100).model_copy(update={"form": form})
+    def case_with(compound_code):
+        item = IngredientLine(
+            ingredient_code="magnesium",
+            amount=100,
+            unit="mg",
+            basis="compound",
+            compound_code=compound_code,
+        )
         return make_case(product("鎂", [item]), medications=(METFORMIN,))
 
-    assert assess(case_with("citrate"), ref).interactions == []
+    assert assess(case_with("magnesium_citrate"), ref).interactions == []
     assert assess(case_with(None), ref).interactions == []
-    assert finding(assess(case_with("oxide"), ref), "magnesium").rule_ids == ["r-form"]
+    assert finding(assess(case_with("magnesium_oxide"), ref), "magnesium").rule_ids == ["r-form"]
+
+
+def test_rule_with_ingredient_form_ignores_labeled_line_without_compound(fx_ref):
+    rule = make_rule(
+        "r-form",
+        "metformin",
+        "magnesium",
+        interaction_type="absorption",
+        requires_supplement_intake=True,
+        ingredient_form="magnesium_oxide",
+    )
+    case = make_case(product("鎂", [line("magnesium", 100)]), medications=(METFORMIN,))
+
+    assert assess(case, with_rules(fx_ref, rule)).interactions == []
 
 
 def test_multiple_rules_on_one_ingredient_make_one_card(fx_ref):

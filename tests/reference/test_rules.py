@@ -187,6 +187,20 @@ def test_規則引用的成分與用藥必須存在於目錄(data, fixture_rules
     assert expected in codes(check_integrity(data, rules))
 
 
+def test_規則限定的型態必須是化合物表內的代碼(data, fixture_rules):
+    bad = raw_rule(fixture_rules, "fx-ppi-magnesium")
+    bad["ingredient_form"] = "not_a_compound"
+    rules = fixture_rules.model_copy(update={"rules": (type(fixture_rules.rules[0]).model_validate(bad),)})
+    assert "unknown_form" in codes(check_integrity(data, rules))
+
+
+def test_規則限定的型態是表內化合物時通過(data, fixture_rules):
+    ok = raw_rule(fixture_rules, "fx-ppi-magnesium")
+    ok["ingredient_form"] = "magnesium_oxide"
+    rules = fixture_rules.model_copy(update={"rules": (type(fixture_rules.rules[0]).model_validate(ok),)})
+    assert "unknown_form" not in codes(check_integrity(data, rules))
+
+
 def test_規則id不得重複(data, fixture_rules):
     first = fixture_rules.rules[0]
     rules = fixture_rules.model_copy(update={"rules": (first, first)})

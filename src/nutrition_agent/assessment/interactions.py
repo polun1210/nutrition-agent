@@ -60,7 +60,7 @@ def _ingredient_in_scope(code: str, ref: ReferenceData) -> bool:
 def _is_supplemented(case: AssessmentCase, rule: Rule) -> bool:
     return any(
         item.ingredient_code == rule.ingredient_code
-        and (rule.ingredient_form is None or item.form == rule.ingredient_form)
+        and (rule.ingredient_form is None or item.compound_code == rule.ingredient_form)
         for product in case.products
         for item in product.ingredients
     )
