@@ -23,4 +23,4 @@ desktop.ini
 .claude/worktrees/
 
 # 使用者上傳的標示照片（本機 volume）
-data/
+/data/
