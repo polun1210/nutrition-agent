@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 
 from nutrition_agent.accounts import NO_CONDITION
@@ -59,62 +59,83 @@ def daily_servings(product: Product) -> Fraction:
     return daily_units / _exact(product.units_per_serving)
 
 
+@dataclass
+class _Tally:
+    """跨產品累計的中間結果。"""
+
+    totals: dict[str, Fraction] = field(default_factory=dict)  # 峰值加總
+    averages: dict[str, Fraction] = field(default_factory=dict)
+    non_daily: set[str] = field(default_factory=set)
+    estimated_codes: set[str] = field(default_factory=set)
+    undetermined: set[str] = field(default_factory=set)
+    sources: list[NutrientSource] = field(default_factory=list)
+    out_of_scope: list[ListedIngredient] = field(default_factory=list)
+    unconfirmed: list[ListedIngredient] = field(default_factory=list)
+
+
+def _classify_ingredients(
+    product: Product, ref: ReferenceData, tally: _Tally
+) -> dict[str, list[IngredientLine]]:
+    """把產品的成分行分流：範圍外與無法確認的記入揭露清單，目標營養素按代碼回傳。"""
+    target_lines: dict[str, list[IngredientLine]] = {}
+    for item in product.ingredients:
+        code = item.ingredient_code
+        listed = ListedIngredient(product_name=product.name, ingredient_code=code)
+        ingredient = None if code == UNKNOWN_INGREDIENT else ref.ingredients.get(code)
+        if ingredient is None:
+            tally.unconfirmed.append(listed)
+        elif ingredient.category is IngredientCategory.OUT_OF_SCOPE:
+            tally.out_of_scope.append(listed)
+        elif ingredient.category is IngredientCategory.TARGET_NUTRIENT:
+            target_lines.setdefault(code, []).append(item)
+    return target_lines
+
+
+def _accumulate_product(
+    product: Product, case: AssessmentCase, ref: ReferenceData, sex: Sex, tally: _Tally
+) -> None:
+    servings = daily_servings(product)
+    for code, lines in _classify_ingredients(product, ref, tally).items():
+        ul = ref.dris.lookup(code, DriKind.UL, age=case.age, sex=sex)
+        target_unit = ul.unit if ul else ref.ingredients.get(code).canonical_unit
+        source = _resolve_nutrient(product.name, code, lines, target_unit, ref)
+        tally.sources.append(source.record)
+        if source.amount is None:
+            tally.undetermined.add(code)
+            continue
+        peak = source.amount * servings
+        tally.totals[code] = tally.totals.get(code, Fraction(0)) + peak
+        tally.averages[code] = tally.averages.get(code, Fraction(0)) + (
+            peak * taking_day_fraction(product.intake)
+        )
+        if not product.intake.is_daily:
+            tally.non_daily.add(code)
+        if source.record.source is SourceKind.ESTIMATED:
+            tally.estimated_codes.add(code)
+
+
 def assess(case: AssessmentCase, ref: ReferenceData) -> Assessment:
     sex = Sex(case.profile.sex)
-    totals: dict[str, Fraction] = {}  # 跨產品的峰值加總
-    averages: dict[str, Fraction] = {}
-    non_daily: set[str] = set()
-    estimated_codes: set[str] = set()
-    undetermined: set[str] = set()
-    sources: list[NutrientSource] = []
-    out_of_scope: list[ListedIngredient] = []
-    unconfirmed: list[ListedIngredient] = []
-
+    tally = _Tally()
     for product in case.products:
-        servings = daily_servings(product)
-        target_lines: dict[str, list[IngredientLine]] = {}
-        for item in product.ingredients:
-            code = item.ingredient_code
-            listed = ListedIngredient(product_name=product.name, ingredient_code=code)
-            ingredient = None if code == UNKNOWN_INGREDIENT else ref.ingredients.get(code)
-            if ingredient is None:
-                unconfirmed.append(listed)
-            elif ingredient.category is IngredientCategory.OUT_OF_SCOPE:
-                out_of_scope.append(listed)
-            elif ingredient.category is IngredientCategory.TARGET_NUTRIENT:
-                target_lines.setdefault(code, []).append(item)
-        for code, lines in target_lines.items():
-            ul = ref.dris.lookup(code, DriKind.UL, age=case.age, sex=sex)
-            target_unit = ul.unit if ul else ref.ingredients.get(code).canonical_unit
-            source = _resolve_nutrient(product.name, code, lines, target_unit, ref)
-            sources.append(source.record)
-            if source.amount is None:
-                undetermined.add(code)
-                continue
-            peak = source.amount * servings
-            totals[code] = totals.get(code, Fraction(0)) + peak
-            averages[code] = (
-                averages.get(code, Fraction(0)) + peak * taking_day_fraction(product.intake)
-            )
-            if not product.intake.is_daily:
-                non_daily.add(code)
-            if source.record.source is SourceKind.ESTIMATED:
-                estimated_codes.add(code)
-
+        _accumulate_product(product, case, ref, sex, tally)
     comparisons = [
-        _compare(code, intake, averages[code], code in non_daily, case, ref, sex, code in estimated_codes)
-        for code, intake in sorted(totals.items(), key=lambda kv: _order(ref, kv[0]))
-        if code not in undetermined
+        _compare(
+            code, intake, tally.averages[code], code in tally.non_daily, case, ref, sex,
+            code in tally.estimated_codes,
+        )
+        for code, intake in sorted(tally.totals.items(), key=lambda kv: _order(ref, kv[0]))
+        if code not in tally.undetermined
     ]
     return Assessment(
         reference_version=ref.version,
         ul_comparisons=comparisons,
-        out_of_scope_ingredients=out_of_scope,
-        unconfirmed_ingredients=unconfirmed,
-        undetermined_nutrients=sorted(undetermined),
-        nutrient_sources=sources,
+        out_of_scope_ingredients=tally.out_of_scope,
+        unconfirmed_ingredients=tally.unconfirmed,
+        undetermined_nutrients=sorted(tally.undetermined),
+        nutrient_sources=tally.sources,
         disclosures=_disclosures(case),
-        interactions=find_interactions(case, ref, comparisons, undetermined),
+        interactions=find_interactions(case, ref, comparisons, tally.undetermined),
         approved_rule_count=len(ref.rules.approved()),
     )
 
