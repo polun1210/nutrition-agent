@@ -1,0 +1,30 @@
+[project]
+name = "nutrition-agent"
+version = "0.1.0"
+description = "保健食品與慢性病用藥的補充評估：VLM 讀標示、規則判定、RAG 組報告"
+readme = "README.md"
+authors = [
+    { name = "PolunChao", email = "balloonchao@gmail.com" }
+]
+requires-python = ">=3.12"
+# 執行時套件等各模組實作時再用 `uv add` 加入。
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

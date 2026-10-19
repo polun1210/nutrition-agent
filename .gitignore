@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# 金鑰
+.env
+
+# 原始語料太大，不進 git（見 knowledge/README.md）
+knowledge/raw/*
+!knowledge/raw/.gitkeep
+
+# Google 雲端硬碟同步產生的檔案
+desktop.ini
