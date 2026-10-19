@@ -31,6 +31,14 @@ def report_text(client, case_id):
     return "\n".join(line for s in case["report"]["sections"] for line in s["lines"])
 
 
+def test_ingredient_menu_lists_display_names_with_unknown_last(login_as):
+    options = login_as().get("/api/assessments/ingredient-options").json()
+
+    assert {"code": "calcium", "name": "鈣", "unit": "mg"} in options
+    assert any(o["name"] == "輔酶 Q10" for o in options)
+    assert options[-1] == {"code": "unknown", "name": "無法確定", "unit": "mg"}
+
+
 def test_draft_is_saved_step_by_step_and_can_be_replaced(login_as):
     client = login_as()
     draft = client.post("/api/assessments/drafts")

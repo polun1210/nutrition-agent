@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchMe, request, type Me } from "./api";
+import AssessmentFlow from "./assessment/AssessmentFlow";
 import { HomePage, LoginPage, ProfilePage, RegisterPage } from "./pages";
 
-type View = "home" | "profile" | "login" | "register";
+type View = "home" | "profile" | "login" | "register" | "assess";
 
 export default function App() {
   const [me, setMe] = useState<Me | null>(null);
@@ -42,9 +43,14 @@ export default function App() {
       <LoginPage onDone={() => void refresh()} goRegister={() => setView("register")} />
     );
   }
+  if (view === "assess") {
+    return (
+      <AssessmentFlow me={me} onProfileSaved={() => void refresh("assess")} goHome={() => void refresh("home")} />
+    );
+  }
   return view === "profile" ? (
     <ProfilePage me={me} onSaved={() => void refresh("profile")} goHome={() => setView("home")} />
   ) : (
-    <HomePage me={me} goProfile={() => setView("profile")} onLogout={() => void logout()} />
+    <HomePage me={me} startAssessment={() => setView("assess")} goProfile={() => setView("profile")} onLogout={() => void logout()} />
   );
 }

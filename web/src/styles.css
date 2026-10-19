@@ -70,3 +70,34 @@ button + button {
 [role="alert"] {
   color: #b00020;
 }
+
+.stepper {
+  display: flex;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.stepper li {
+  flex: 1;
+  padding: 0.25rem;
+  border-bottom: 4px solid #ccc;
+}
+
+.stepper li[aria-current="step"] {
+  border-color: #1a5fb4;
+  font-weight: bold;
+}
+
+.stepper li.done {
+  border-color: #2e7d32;
+}
+
+.ingredient-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed #999;
+}

@@ -100,13 +100,23 @@ export function RegisterPage({ onDone, goLogin }: { onDone: () => void; goLogin:
   );
 }
 
-export function HomePage({ me, goProfile, onLogout }: { me: Me; goProfile: () => void; onLogout: () => void }) {
+export function HomePage({
+  me,
+  startAssessment,
+  goProfile,
+  onLogout,
+}: {
+  me: Me;
+  startAssessment: () => void;
+  goProfile: () => void;
+  onLogout: () => void;
+})  {
   return (
     <main className="page">
       <h1>補對了嗎？</h1>
       <p>你好，{me.email}（{me.age} 歲）</p>
       {!me.is_adult && <p role="alert">{me.underage_message}</p>}
-      <button type="button" disabled={!me.is_adult} title={me.is_adult ? undefined : "未滿 19 歲無法使用"}>
+      <button type="button" onClick={startAssessment} disabled={!me.is_adult} title={me.is_adult ? undefined : "未滿 19 歲無法使用"}>
         開始評估
       </button>
       <button type="button" className="secondary" onClick={goProfile}>

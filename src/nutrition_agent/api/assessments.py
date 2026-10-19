@@ -22,7 +22,7 @@ from nutrition_agent.assessment import (
     ProfileSnapshot,
     assess,
 )
-from nutrition_agent.reference import ReferenceData, load_reference_data
+from nutrition_agent.reference import IngredientCategory, ReferenceData, load_reference_data
 from nutrition_agent.reporting.template import render_report
 
 router = APIRouter(prefix="/api/assessments")
@@ -66,6 +66,19 @@ def _check_ingredient_codes(products: list[Product], ref: ReferenceData) -> None
 
 def _draft_json(row: tuple) -> dict:
     return {"id": row[0], "products": row[1], "submitted_case_id": row[2]}
+
+
+@router.get("/ingredient-options")
+def ingredient_options(
+    _user: User = Depends(current_user), ref: ReferenceData = Depends(get_reference)
+) -> list[dict]:
+    """成分選單：以顯示名稱呈現，目標營養素、允許成分、範圍外依序排列，「無法確定」放最後。"""
+    options = [
+        {"code": i.code, "name": i.display_name_zh, "unit": i.canonical_unit or "mg"}
+        for category in IngredientCategory
+        for i in ref.ingredients.by_category(category)
+    ]
+    return [*options, {"code": UNKNOWN_INGREDIENT, "name": "無法確定", "unit": "mg"}]
 
 
 @router.post("/drafts", status_code=201)
