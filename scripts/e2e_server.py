@@ -12,6 +12,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+os.environ.setdefault("APP_ENV", "development")  # 須在 import app 之前
+
 import psycopg
 import uvicorn
 from alembic import command

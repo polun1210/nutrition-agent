@@ -15,7 +15,7 @@ from nutrition_agent.api.deps import (
     get_gateway,
     get_photo_store,
 )
-from nutrition_agent.config import get_settings
+from nutrition_agent.config import get_settings, resolve_session_secret
 from nutrition_agent.gateway import ModelGateway
 from nutrition_agent.photos import PhotoStore
 
@@ -35,7 +35,7 @@ def create_app(
     app = FastAPI(title="nutrition-agent")
     app.add_middleware(
         SessionMiddleware,
-        secret_key=settings.session_secret,
+        secret_key=resolve_session_secret(settings),
         max_age=SESSION_MAX_AGE,
         same_site="lax",
         https_only=settings.session_https_only,
