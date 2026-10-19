@@ -22,6 +22,7 @@ from nutrition_agent.assessment import (
     UlComparison,
 )
 from nutrition_agent.reference import ReferenceData
+from nutrition_agent.reporting.explanation import FindingExplanation, Footnote
 
 CONDITION_LABELS = {
     "hypertension": "高血壓",
@@ -67,11 +68,22 @@ class Report(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     sections: list[Section]
+    # 白話解釋與腳註在送出時產生（reporting/explanation.py），整份凍結在報告裡。
+    explanations: list[FindingExplanation] = []
+    footnotes: list[Footnote] = []
 
 
-def render_report(case: AssessmentCase, assessment: Assessment, ref: ReferenceData) -> Report:
+def render_report(
+    case: AssessmentCase,
+    assessment: Assessment,
+    ref: ReferenceData,
+    explanations: list[FindingExplanation] | None = None,
+    footnotes: list[Footnote] | None = None,
+) -> Report:
     names = _Names(ref)
     return Report(
+        explanations=explanations or [],
+        footnotes=footnotes or [],
         sections=[
             Section(key="profile", title="你的資料", lines=_profile_lines(case, names, ref)),
             Section(
