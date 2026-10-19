@@ -3,7 +3,18 @@ export const AMOUNT_UNITS = ["mg", "ug", "g", "IU"] as const;
 
 export type IngredientOption = { code: string; name: string; unit: string };
 
-export type IngredientLine = { ingredient_code: string; amount: number; unit: string };
+export type CompoundOption = { code: string; nutrient_code: string; name: string; element_ratio: number };
+
+/** 只標化合物重量時可選「化合物」的礦物質；鋅不在比率表內，會被判定為無法判定。 */
+export const MINERALS = ["calcium", "magnesium", "iron", "zinc"] as const;
+
+export type IngredientLine = {
+  ingredient_code: string;
+  amount: number;
+  unit: string;
+  basis?: "labeled" | "compound";
+  compound_code?: string | null;
+};
 
 export type Product = {
   name: string;

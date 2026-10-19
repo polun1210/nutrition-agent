@@ -101,3 +101,13 @@ button + button {
   padding-bottom: 0.75rem;
   border-bottom: 1px dashed #999;
 }
+
+/* 系統推估的數值：與使用者輸入值不同底色 */
+label.estimated input {
+  background: #fff4c2;
+  border-color: #b8860b;
+}
+
+.undetermined {
+  color: #8a4b00;
+}
