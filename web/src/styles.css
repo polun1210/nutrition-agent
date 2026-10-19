@@ -130,6 +130,15 @@ label.estimated input {
   background: #eef7ee;
 }
 
+.explanations { margin-top: 1rem; }
+.explanations p { margin: 0.5rem 0; }
+.footnote-ref {
+  background: none; border: 0; padding: 0 0.25rem; min-height: 0;
+  color: #0b5cad; text-decoration: underline; cursor: pointer; font-size: 0.8em; vertical-align: super;
+}
+.footnote-detail { border-left: 4px solid #0b5cad; padding: 0.25rem 0.75rem; margin: 0.5rem 0; font-size: 0.85em; }
+.footnote-detail blockquote { margin: 0.25rem 0; white-space: pre-wrap; }
+
 .interaction-card {
   border: 1px solid #999;
   border-radius: 0.5rem;

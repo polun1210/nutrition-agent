@@ -1,7 +1,16 @@
+import Explanations from "./Explanations";
 import PhotoThumbs from "./PhotoThumbs";
-import type { AssessmentCase, InteractionCard } from "./types";
+import type { AssessmentCase, FindingExplanation, Footnote, InteractionCard } from "./types";
 
-function Card({ card }: { card: InteractionCard }) {
+function Card({
+  card,
+  explanations,
+  footnotes,
+}: {
+  card: InteractionCard;
+  explanations: FindingExplanation[];
+  footnotes: Footnote[];
+}) {
   return (
     <article className="interaction-card" data-testid="interaction-card">
       <h3>{card.ingredient}</h3>
@@ -20,6 +29,10 @@ function Card({ card }: { card: InteractionCard }) {
         </dl>
       )}
       <p className="card-advice">建議行動：{card.advice.join("；")}</p>
+      <Explanations
+        explanations={explanations.filter((e) => e.ingredient_code === card.ingredient_code)}
+        footnotes={footnotes}
+      />
     </article>
   );
 }
@@ -54,7 +67,14 @@ export default function ReportView({
         <section key={s.key} data-section={s.key}>
           <h2>{s.title}</h2>
           {s.cards && s.cards.length > 0 ? (
-            s.cards.map((c, i) => <Card key={i} card={c} />)
+            s.cards.map((c, i) => (
+              <Card
+                key={i}
+                card={c}
+                explanations={report.report.explanations ?? []}
+                footnotes={report.report.footnotes ?? []}
+              />
+            ))
           ) : (
             <ul>
               {s.lines.map((line, i) => (

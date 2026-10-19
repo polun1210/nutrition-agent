@@ -15,7 +15,7 @@ from psycopg.types.json import Jsonb
 from pydantic import BaseModel, StringConstraints
 
 from nutrition_agent.accounts import UnderageError, require_adult
-from nutrition_agent.api.deps import User, current_user, get_connection
+from nutrition_agent.api.deps import User, current_user, get_connection, get_gateway
 from nutrition_agent.assessment import (
     UNKNOWN_INGREDIENT,
     AssessmentCase,
@@ -27,6 +27,8 @@ from nutrition_agent.assessment import (
 from nutrition_agent.assessment.medications import resolve_medication, search_drugs
 from nutrition_agent.reference import IngredientCategory, ReferenceData, load_reference_data
 from nutrition_agent.reference.drug_names import DrugNameTable, load_drug_names
+from nutrition_agent.gateway import ModelGateway
+from nutrition_agent.reporting.explanation import build_explanations
 from nutrition_agent.reporting.template import render_report
 
 router = APIRouter(prefix="/api/assessments")
@@ -280,6 +282,7 @@ def submit_draft(
     conn: psycopg.Connection = Depends(get_connection),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
+    gateway: ModelGateway = Depends(get_gateway),
 ) -> dict:
     row = _editable_draft(conn, draft_id, user)
     products = [Product.model_validate(p) for p in row[1]]
@@ -301,7 +304,8 @@ def submit_draft(
         medications=[resolve_medication(m["name"], table, ref.drugs) for m in row[3]],
     )
     assessment = assess(case, ref)
-    report = render_report(case, assessment, ref)
+    explanations, footnotes = build_explanations(conn, gateway, assessment, ref)
+    report = render_report(case, assessment, ref, explanations, footnotes)
     case_id = conn.execute(
         "INSERT INTO assessment_cases (user_id, snapshot, assessment, report, reference_versions) "
         "VALUES (%s, %s, %s, %s, %s) RETURNING id",

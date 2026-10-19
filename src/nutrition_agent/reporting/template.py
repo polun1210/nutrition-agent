@@ -27,6 +27,7 @@ from nutrition_agent.assessment import (
     UlComparison,
 )
 from nutrition_agent.reference import IngredientCategory, ReferenceData
+from nutrition_agent.reporting.explanation import FindingExplanation, Footnote
 
 CONDITION_LABELS = {
     "hypertension": "高血壓",
@@ -94,6 +95,7 @@ class Card(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     ingredient: str
+    ingredient_code: str
     drugs: list[str]
     reasons: list[str]
     advice: list[str]
@@ -113,11 +115,22 @@ class Report(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     sections: list[Section]
+    # 白話解釋與腳註在送出時產生（reporting/explanation.py），整份凍結在報告裡。
+    explanations: list[FindingExplanation] = []
+    footnotes: list[Footnote] = []
 
 
-def render_report(case: AssessmentCase, assessment: Assessment, ref: ReferenceData) -> Report:
+def render_report(
+    case: AssessmentCase,
+    assessment: Assessment,
+    ref: ReferenceData,
+    explanations: list[FindingExplanation] | None = None,
+    footnotes: list[Footnote] | None = None,
+) -> Report:
     names = _Names(ref)
     return Report(
+        explanations=explanations or [],
+        footnotes=footnotes or [],
         sections=[
             Section(key="profile", title="你的資料", lines=_profile_lines(case, names, ref)),
             Section(
@@ -262,6 +275,7 @@ def _interaction_lines(
 def _card(f: InteractionFinding, names: _Names) -> Card:
     return Card(
         ingredient=names(f.ingredient_code),
+        ingredient_code=f.ingredient_code,
         drugs=[d.raw_name for d in f.triggering_drugs],
         reasons=list(f.reasons_zh),
         advice=[_advice_text(f, a) for a in f.advice],
