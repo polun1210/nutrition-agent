@@ -3,6 +3,7 @@
 from nutrition_agent.assessment.engine import assess
 from nutrition_agent.assessment.models import (
     DOSE_UNITS,
+    HEALTHY_POPULATION,
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
@@ -16,6 +17,7 @@ from nutrition_agent.assessment.models import (
 
 __all__ = [
     "DOSE_UNITS",
+    "HEALTHY_POPULATION",
     "UNKNOWN_INGREDIENT",
     "Assessment",
     "AssessmentCase",
