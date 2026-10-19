@@ -5,7 +5,9 @@
 資料庫連線取自 E2E_DATABASE_URL，預設 nutrition_e2e（需要本機 db 已啟動：docker compose up -d db）。
 """
 
+import json
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -17,10 +19,17 @@ from alembic.config import Config
 from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
+from nutrition_agent.api.assessments import get_reference
 from nutrition_agent.config import get_settings, to_sqlalchemy_url
 from nutrition_agent.photos import PhotoStore
+from nutrition_agent.reference import load_reference_data, load_rule_set
 
-RECORDED_VLM = Path(__file__).resolve().parents[1] / "evals" / "vlm" / "recorded" / "vlm"
+ROOT = Path(__file__).resolve().parents[1]
+RECORDED_VLM = ROOT / "evals" / "vlm" / "recorded" / "vlm"
+# 真實規則全是草稿，煙霧測試改用測試夾具的審定規則（metformin × 維生素 B12）。
+FIXTURE_RULES = ROOT / "tests" / "fixtures" / "rules.toml"
+EVIDENCE_ID = "ev-e2e0000000000001"
+EVIDENCE_TEXT = "Metformin might reduce the absorption of vitamin B12 and reduce serum concentrations."
 
 
 class RecordedVlmGateway:
@@ -30,7 +39,13 @@ class RecordedVlmGateway:
         return (RECORDED_VLM / "p01-img01.json").read_text(encoding="utf-8")
 
     def complete(self, prompt: str, system: str | None = None) -> str:
-        return "fake-completion"
+        match = re.search(r"ev-[0-9a-f]+", prompt)
+        if match is None:
+            return "fake-completion"
+        return json.dumps(
+            [{"text": "這個藥可能影響維生素 B12 的吸收。", "evidence_ids": [match.group()]}],
+            ensure_ascii=False,
+        )
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         return [[0.0] * 4 for _ in texts]
@@ -57,10 +72,21 @@ def main() -> None:
     config = Config("alembic.ini")
     config.attributes["url"] = to_sqlalchemy_url(url)
     command.upgrade(config, "head")
+    with psycopg.connect(url) as conn:
+        conn.execute(
+            "INSERT INTO evidence_chunk (id, source_type, document_name, document_path, ingredients,"
+            " section, start_char, end_char, start_line, end_line, text, embedding)"
+            " VALUES (%s, 'nih_ods_health_professional', 'VitaminB12-HealthProfessional.md',"
+            " 'sources/nih_ods/VitaminB12-HealthProfessional.md', %s, 'Interactions with Medications',"
+            " 0, 100, 1, 2, %s, '[0,0,0,0]')",
+            (EVIDENCE_ID, ["vitamin_b12", "metformin"], EVIDENCE_TEXT),
+        )
+    ref = load_reference_data().model_copy(update={"rules": load_rule_set(FIXTURE_RULES)})
     app = create_app(
         gateway=RecordedVlmGateway(),
         photo_store=PhotoStore(Path(tempfile.mkdtemp(prefix="nutrition-e2e-photos-"))),
     )
+    app.dependency_overrides[get_reference] = lambda: ref
     uvicorn.run(app, host="127.0.0.1", port=port)
 
 

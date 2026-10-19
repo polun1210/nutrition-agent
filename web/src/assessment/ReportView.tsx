@@ -1,3 +1,4 @@
+import Explanations from "./Explanations";
 import PhotoThumbs from "./PhotoThumbs";
 import type { AssessmentCase } from "./types";
 
@@ -35,6 +36,12 @@ export default function ReportView({
               <li key={i}>{line}</li>
             ))}
           </ul>
+          {s.key === "interaction" && (
+            <Explanations
+              explanations={report.report.explanations ?? []}
+              footnotes={report.report.footnotes ?? []}
+            />
+          )}
         </section>
       ))}
       {report.reference_versions && (

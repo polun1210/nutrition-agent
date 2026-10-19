@@ -101,6 +101,21 @@ export type Draft = {
 
 export type ReportSection = { key: string; title: string; lines: string[] };
 
+export type ExplainedSentence = { text: string; evidence_ids: string[]; footnotes: number[] };
+export type FindingExplanation = {
+  ingredient_code: string;
+  source: "llm" | "template";
+  sentences: ExplainedSentence[];
+};
+export type Footnote = {
+  number: number;
+  evidence_id: string;
+  source_label: string;
+  document_name: string;
+  section: string;
+  text: string;
+};
+
 export type HistoryItem = {
   id: number;
   created_at: string;
@@ -115,5 +130,9 @@ export type AssessmentCase = {
   age: number;
   products: Product[];
   reference_versions?: Record<string, string>;
-  report: { sections: ReportSection[] };
+  report: {
+    sections: ReportSection[];
+    explanations?: FindingExplanation[];
+    footnotes?: Footnote[];
+  };
 };
