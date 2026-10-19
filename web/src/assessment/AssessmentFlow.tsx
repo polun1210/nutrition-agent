@@ -4,7 +4,14 @@ import ProfileFields from "../ProfileFields";
 import MedicationStep from "./MedicationStep";
 import ProductForm from "./ProductForm";
 import ReportView from "./ReportView";
-import type { AssessmentCase, Draft, IngredientOption, MedicationInput, Product } from "./types";
+import type {
+  AssessmentCase,
+  CompoundOption,
+  Draft,
+  IngredientOption,
+  MedicationInput,
+  Product,
+} from "./types";
 
 /** 步驟條。順序依 spec：個人資料 → 用藥 → 保健食品 → 送出。 */
 const STEPS = [
@@ -35,6 +42,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const [options, setOptions] = useState<IngredientOption[]>([]);
+  const [compounds, setCompounds] = useState<CompoundOption[]>([]);
   const [report, setReport] = useState<AssessmentCase | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,6 +53,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
       try {
         setDraft(await request<Draft>("POST", "/api/assessments/drafts"));
         setOptions(await request<IngredientOption[]>("GET", "/api/assessments/ingredient-options"));
+        setCompounds(await request<CompoundOption[]>("GET", "/api/assessments/compound-options"));
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       }
@@ -147,6 +156,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
             <ProductForm
               key={editing}
               options={options}
+              compounds={compounds}
               initial={products[editing]}
               onAdd={(p) => {
                 void saveProducts(products.map((old, j) => (j === editing ? p : old)));
@@ -155,7 +165,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
               onCancel={() => setEditing(null)}
             />
           ) : (
-            <ProductForm options={options} onAdd={(p) => void saveProducts([...products, p])} />
+            <ProductForm options={options} compounds={compounds} onAdd={(p) => void saveProducts([...products, p])} />
           )}
           <button type="button" disabled={products.length === 0 || busy} onClick={() => setStep("submit")}>
             下一步

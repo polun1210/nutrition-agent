@@ -19,6 +19,7 @@ from nutrition_agent.api.deps import User, current_user, get_connection
 from nutrition_agent.assessment import (
     UNKNOWN_INGREDIENT,
     AssessmentCase,
+    IngredientLine,
     Product,
     ProfileSnapshot,
     assess,
@@ -77,6 +78,16 @@ def _check_ingredient_codes(products: list[Product], ref: ReferenceData) -> None
                 raise HTTPException(
                     status_code=422, detail=f"成分只能從選單挑選：{item.ingredient_code}"
                 )
+            _check_compound(item, ref)
+
+
+def _check_compound(item: IngredientLine, ref: ReferenceData) -> None:
+    """化合物只能從表內挑選，且必須屬於所選營養素；未選化合物（None）= 無法判定。"""
+    if item.compound_code is None:
+        return
+    compound = ref.compounds.get(item.compound_code)
+    if compound is None or compound.nutrient_code != item.ingredient_code:
+        raise HTTPException(status_code=422, detail=f"化合物與成分不符：{item.compound_code}")
 
 
 def _draft_json(row: tuple) -> dict:
@@ -110,6 +121,22 @@ def drug_search(
 ) -> list[dict]:
     """藥名部分比對。不看個人資料：慢性病不會過濾候選。"""
     return [c.model_dump(mode="json") for c in search_drugs(q, table, ref.drugs)]
+
+
+@router.get("/compound-options")
+def compound_options(
+    _user: User = Depends(current_user), ref: ReferenceData = Depends(get_reference)
+) -> list[dict]:
+    """化合物選單（鈣、鎂、鐵）：校對頁用比率即時預覽推估值；最終推估仍由後端判定引擎計算。"""
+    return [
+        {
+            "code": c.code,
+            "nutrient_code": c.nutrient_code,
+            "name": c.display_name_zh,
+            "element_ratio": c.element_ratio,
+        }
+        for c in ref.compounds.compounds
+    ]
 
 
 @router.post("/drafts", status_code=201)

@@ -9,6 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from nutrition_agent.reference.compounds import CompoundCatalog
 from nutrition_agent.reference.dris import DriTable
 from nutrition_agent.reference.drugs import DrugCatalog
 from nutrition_agent.reference.ingredients import IngredientCatalog
@@ -51,6 +52,7 @@ class ReferenceData(BaseModel):
     version: str
     ingredients: IngredientCatalog
     drugs: DrugCatalog
+    compounds: CompoundCatalog
     dris: DriTable
     units: UnitConversions
     rules: RuleSet
@@ -60,6 +62,7 @@ class ReferenceData(BaseModel):
         return {
             "ingredients": self.ingredients.version,
             "drugs": self.drugs.version,
+            "compounds": self.compounds.version,
             "dris": self.dris.version,
             "units": self.units.version,
             "rules": self.rules.version,
@@ -74,12 +77,15 @@ def load_reference_data(data_dir: Path = DATA_DIR) -> ReferenceData:
     drugs = DrugCatalog(
         version=raw["version"], classes=raw["class"], ingredients=raw["ingredient"]
     )
+    raw = read_toml(data_dir / "compounds.toml")
+    compounds = CompoundCatalog(version=raw["version"], compounds=raw["compound"])
     raw = read_toml(data_dir / "units.toml")
     units = UnitConversions(version=raw["version"], rules=raw["rule"])
     return ReferenceData(
         version=manifest["version"],
         ingredients=ingredients,
         drugs=drugs,
+        compounds=compounds,
         dris=read_dris_csv(data_dir / "dris.csv"),
         units=units,
         rules=load_rule_set(data_dir / "rules.toml"),

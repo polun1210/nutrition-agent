@@ -9,6 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from nutrition_agent.reference.compounds import SUPPORTED_NUTRIENTS, evaluate_expression
 from nutrition_agent.reference.rules import (
     Citation,
     ConditionType,
@@ -90,11 +91,43 @@ def _check_scope(data: ReferenceData) -> list[Violation]:
     return [Violation("ranitidine_in_scope", n, "Ranitidine 已下架，不得列入範圍") for n in banned]
 
 
+_RATIO_TOLERANCE = 5e-5  # element_ratio 四捨五入到小數 4 位
+
+
+def _check_compounds(data: ReferenceData) -> list[Violation]:
+    found: list[Violation] = []
+    for c in data.compounds.compounds:
+        if c.nutrient_code not in SUPPORTED_NUTRIENTS or data.ingredients.get(c.nutrient_code) is None:
+            found.append(
+                Violation("compound_nutrient_unsupported", c.code, f"只支援鈣、鎂、鐵：{c.nutrient_code}")
+            )
+        if not c.molecular_weight_expr.strip() or not c.element_mass_expr.strip():
+            found.append(Violation("compound_expr_missing", c.code, "缺少分子量或元素質量計算式"))
+            continue
+        try:
+            ratio = evaluate_expression(c.element_mass_expr) / evaluate_expression(
+                c.molecular_weight_expr
+            )
+        except (ValueError, ZeroDivisionError) as err:
+            found.append(Violation("compound_expr_invalid", c.code, str(err)))
+            continue
+        if abs(ratio - c.element_ratio) > _RATIO_TOLERANCE:
+            found.append(
+                Violation(
+                    "compound_ratio_mismatch",
+                    c.code,
+                    f"element_ratio {c.element_ratio} 與計算式結果 {ratio:.4f} 不符",
+                )
+            )
+    return found
+
+
 def check_integrity(
     data: ReferenceData, rules: RuleSet, knowledge_dir: Path = KNOWLEDGE_DIR
 ) -> list[Violation]:
     """檢查參考資料與規則；回傳空清單代表通過。"""
     violations = _check_scope(data)
+    violations.extend(_check_compounds(data))
     for rule_id, count in Counter(r.id for r in rules.rules).items():
         if count > 1:
             violations.append(Violation("duplicate_rule_id", rule_id, "規則 id 重複"))

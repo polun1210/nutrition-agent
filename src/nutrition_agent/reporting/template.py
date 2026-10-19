@@ -16,6 +16,7 @@ from nutrition_agent.assessment import (
     Assessment,
     AssessmentCase,
     Medication,
+    IngredientLine,
     Product,
     UlComparison,
 )
@@ -31,6 +32,8 @@ CONDITION_LABELS = {
 SEX_LABELS = {"male": "男性", "female": "女性"}
 UNKNOWN_LABEL = "無法確定"
 NO_MEDICATION_TEXT = "你沒有提供用藥資料"
+
+ESTIMATE_NOTE = "此數值為系統推估，非標示值"
 
 DISCLOSURE_TEXT = {
     HEALTHY_POPULATION: "DRIs 的參考值適用於健康族群；你勾選了慢性病，這些數值僅供對照。",
@@ -55,11 +58,11 @@ def render_report(case: AssessmentCase, assessment: Assessment, ref: ReferenceDa
     names = _Names(ref)
     return Report(
         sections=[
-            Section(key="profile", title="你的資料", lines=_profile_lines(case, names)),
+            Section(key="profile", title="你的資料", lines=_profile_lines(case, names, ref)),
             Section(
                 key="ul_comparison",
                 title="上限比對",
-                lines=_ul_lines(assessment, names),
+                lines=_ul_lines(assessment, ref, names),
             ),
             Section(
                 key="scope",
@@ -83,18 +86,23 @@ class _Names:
         return ingredient.display_name_zh if ingredient else code
 
 
+def _compound_name(ref: ReferenceData, code: str | None) -> str:
+    compound = ref.compounds.get(code) if code else None
+    return compound.display_name_zh if compound else "未知化合物"
+
+
 def _num(value: float) -> str:
     return f"{round(value, 1):g}"
 
 
-def _profile_lines(case: AssessmentCase, names: _Names) -> list[str]:
+def _profile_lines(case: AssessmentCase, names: _Names, ref: ReferenceData) -> list[str]:
     profile = case.profile
     lines = [f"年齡：{case.age} 歲（評估當天）", f"性別：{SEX_LABELS[profile.sex]}"]
     chosen = [CONDITION_LABELS[c] for c in profile.conditions if c != NO_CONDITION]
     lines.append(
         f"你勾選了{'、'.join(chosen)}" if chosen else "你未勾選本系統涵蓋的 5 種慢性病"
     )
-    lines.extend(_product_line(p, names) for p in case.products)
+    lines.extend(_product_line(p, names, ref) for p in case.products)
     lines.extend(_medication_lines(case.medications))
     return lines
 
@@ -118,21 +126,34 @@ def _medication_line(m: Medication) -> str:
     return f"用藥 {m.raw_name}：在評估範圍內{detail}"
 
 
-def _product_line(product: Product, names: _Names) -> str:
+def _ingredient_text(item: IngredientLine, names: _Names, ref: ReferenceData) -> str:
+    amount = f"{_num(item.amount)} {item.unit}"
+    if item.basis == "labeled":
+        return f"{names(item.ingredient_code)} {amount}"
+    compound = _compound_name(ref, item.compound_code) if item.compound_code else "化合物未確定"
+    return f"{names(item.ingredient_code)}（標示化合物：{compound}）化合物重量 {amount}"
+
+
+def _product_line(product: Product, names: _Names, ref: ReferenceData) -> str:
     unit = product.dose_unit
-    ingredients = "、".join(
-        f"{names(i.ingredient_code)} {_num(i.amount)} {i.unit}" for i in product.ingredients
-    )
+    ingredients = "、".join(_ingredient_text(i, names, ref) for i in product.ingredients)
     return (
         f"{product.name}：每份 {_num(product.units_per_serving)} {unit}（每份含 {ingredients}）；"
         f"每天 {product.intake.times_per_day} 次，每次 {_num(product.intake.units_per_time)} {unit}"
     )
 
 
-def _ul_lines(assessment: Assessment, names: _Names) -> list[str]:
+def _ul_lines(assessment: Assessment, ref: ReferenceData, names: _Names) -> list[str]:
     lines = [_comparison_line(c, names) for c in assessment.ul_comparisons]
     lines.extend(
-        f"{names(code)}：標示單位無法換算成 DRIs 的單位，未計入上限比對"
+        f"{s.product_name} 的{names(s.nutrient_code)}：依化合物「{_compound_name(ref, s.compound_code)}」"
+        f"重量推估元素量（{ESTIMATE_NOTE}）"
+        for s in assessment.nutrient_sources
+        if s.source == "estimated"
+    )
+    lines.extend(
+        f"{names(code)}：無法判定元素量（標示單位無法換算，或只標化合物而無法推估），"
+        "未計入上限比對"
         for code in assessment.undetermined_nutrients
     )
     return lines or ["你的保健食品沒有可進行上限比對的目標營養素"]
@@ -148,15 +169,17 @@ def _comparison_line(c: UlComparison, names: _Names) -> str:
     else:
         head = f"{names(c.nutrient_code)}：來自補充劑的每日攝取量 {_num(c.intake)} {c.unit}"
     if c.ul is None:
-        return f"{head}；無已知上限攝取量"
+        note = f"（{ESTIMATE_NOTE}）" if c.estimated else ""
+        return f"{head}；無已知上限攝取量{note}"
     scope = "上限只計算補充劑來源" if c.supplement_only else "上限定義上包含飲食"
     flag = "，已超過上限" if c.exceeded else ""
+    note = f"；{ESTIMATE_NOTE}" if c.estimated else ""
     if c.non_daily:
         return (
             f"{head}；你服用當日來自補充劑的攝取量已達上限的 "
-            f"{_num(c.ul_percent)}%{flag}（上限 {_num(c.ul)} {c.unit}；{scope}）"
+            f"{_num(c.ul_percent)}%{flag}（上限 {_num(c.ul)} {c.unit}；{scope}）{note}"
         )
-    return f"{head}；佔上限 {_num(c.ul)} {c.unit} 的 {_num(c.ul_percent)}%{flag}（{scope}）"
+    return f"{head}；佔上限 {_num(c.ul)} {c.unit} 的 {_num(c.ul_percent)}%{flag}（{scope}）{note}"
 
 
 def _scope_lines(assessment: Assessment, names: _Names) -> list[str]:
