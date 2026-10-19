@@ -1,20 +1,81 @@
 """判定引擎（Seam B）的合成個案夾具。"""
 
+from pathlib import Path
+
 import pytest
 
 from nutrition_agent.assessment import (
     AssessmentCase,
     IngredientLine,
     Intake,
+    Medication,
+    MedicationIngredient,
     Product,
     ProfileSnapshot,
 )
-from nutrition_agent.reference import load_reference_data
+from nutrition_agent.reference import (
+    Citation,
+    Rule,
+    RuleSet,
+    load_reference_data,
+    load_rule_set,
+)
+
+FIXTURE_RULES = Path(__file__).resolve().parents[1] / "fixtures" / "rules.toml"
 
 
 @pytest.fixture(scope="session")
 def ref():
     return load_reference_data()
+
+
+@pytest.fixture(scope="session")
+def fx_ref(ref):
+    """參考資料，但規則換成測試夾具（真實規則全是草稿，引擎只讀審定規則）。"""
+    return ref.model_copy(update={"rules": load_rule_set(FIXTURE_RULES)})
+
+
+def with_rules(ref, *rules: Rule):
+    return ref.model_copy(update={"rules": RuleSet(version="test", rules=tuple(rules))})
+
+
+def make_rule(rule_id: str, condition_code: str, ingredient_code: str, **overrides) -> Rule:
+    fields = {
+        "id": rule_id,
+        "condition_type": "drug_ingredient",
+        "condition_code": condition_code,
+        "ingredient_code": ingredient_code,
+        "interaction_type": "drug_affects_nutrient",
+        "requires_supplement_intake": False,
+        "advice": "inform_provider",
+        "reason_zh": f"{rule_id} 的說明文字。",
+        "status": "approved",
+        "approved_by": "test",
+        "citations": [
+            Citation(
+                source_type="nih_ods_hp",
+                document="sources/nih_ods/Calcium-HealthProfessional.md",
+                quote="x",
+            )
+        ],
+    }
+    return Rule(**{**fields, **overrides})
+
+
+def drug(raw_name: str, *ingredients: tuple[str, str], scope: str = "in_scope") -> Medication:
+    """ingredients: (有效成分代碼, 用藥類別代碼)"""
+    return Medication(
+        raw_name=raw_name,
+        scope_status=scope,
+        name_zh=None,
+        ingredients=[
+            MedicationIngredient(
+                code=code, name_en=code, name_zh=code, class_code=cls, class_name_zh=cls
+            )
+            for code, cls in ingredients
+        ],
+        out_of_scope_names=[],
+    )
 
 
 def line(code: str, amount: float, unit: str = "mg") -> IngredientLine:
@@ -38,7 +99,12 @@ def product(
     )
 
 
-def make_case(*products: Product, sex: str = "female", conditions=("none",)) -> AssessmentCase:
+def make_case(
+    *products: Product,
+    sex: str = "female",
+    conditions=("none",),
+    medications: tuple[Medication, ...] = (),
+) -> AssessmentCase:
     return AssessmentCase(
         profile=ProfileSnapshot(
             birth_year=1950, birth_month=6, sex=sex, conditions=list(conditions)
@@ -46,4 +112,5 @@ def make_case(*products: Product, sex: str = "female", conditions=("none",)) -> 
         age=76,
         assessed_on="2026-10-19",
         products=list(products),
+        medications=list(medications),
     )

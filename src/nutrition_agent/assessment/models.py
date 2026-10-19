@@ -35,6 +35,7 @@ class IngredientLine(Frozen):
     ingredient_code: str  # 成分目錄代碼，或 UNKNOWN_INGREDIENT
     amount: Annotated[float, Field(ge=0)]  # 每份含量
     unit: str
+    form: str | None = None  # 成分型態（例如氧化鎂）；規則限定型態時才需要
 
 
 class Intake(Frozen):
@@ -145,3 +146,40 @@ class Assessment(Frozen):
     unconfirmed_ingredients: list[ListedIngredient]
     undetermined_nutrients: list[str]  # 單位無法換算、未計入上限比對的營養素
     disclosures: list[str]  # 揭露事項代碼，由報告模板渲染
+    interactions: list[InteractionFinding] = []  # 依成分目錄順序；只來自審定規則
+    approved_rule_count: int = 0  # 判定時可用的審定規則數；0 = 沒有規則可比對
+
+
+class TriggeringDrug(Frozen):
+    """觸發交互作用的用藥：使用者輸入的原文，加上命中的有效成分與類別。"""
+
+    raw_name: str
+    ingredient_code: str
+    class_code: str
+
+
+class RecommendedTotal(Frozen):
+    """建議總攝取量（RDA 或 AI，定義上含飲食）。"""
+
+    value: float
+    unit: str
+    kind: Literal["RDA", "AI"]
+
+
+class InteractionFinding(Frozen):
+    """交互作用卡片：一個成分一張，聚合所有命中的審定規則。
+
+    沒有嚴重度。supplement_intake／recommended_total／ul 三個數值只並列，不判斷高低。
+    """
+
+    ingredient_code: str
+    supplemented: bool  # 使用者正在補充此成分
+    rule_ids: list[str]
+    triggering_drugs: list[TriggeringDrug]
+    reasons_zh: list[str]  # 各規則審定的說明文字
+    advice: list[Literal["separate_timing", "inform_provider", "consult_before_combining"]]
+    separation_hours: int | None  # 命中的錯開規則中最長的時數
+    unit: str | None  # 數值的單位；允許成分（無 DRIs）為 None
+    supplement_intake: float | None  # 補充劑來源攝取量；沒補 = 0；單位無法換算 = None
+    recommended_total: RecommendedTotal | None
+    ul: float | None  # None = 無已知上限攝取量（或無 UL）
