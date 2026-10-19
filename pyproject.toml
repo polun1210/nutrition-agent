@@ -8,11 +8,25 @@ authors = [
 ]
 requires-python = ">=3.12"
 # 執行時套件等各模組實作時再用 `uv add` 加入。
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.1",
+    "alembic>=1.20.0",
+    "email-validator>=2.3.0",
+    "fastapi>=0.146.0",
+    "httpx>=0.28.1",
+    "itsdangerous>=2.2.0",
+    "psycopg[binary]>=3.3.6",
+    "pwdlib[argon2]>=0.3.1",
+    "pydantic-settings>=2.16.0",
+    "sqlalchemy>=2.1.5",
+    "uvicorn[standard]>=0.54.0",
+    "python-multipart>=0.0.32",
+]
 
 [dependency-groups]
 dev = [
     "pytest>=8",
+    "pytest-cov>=7.1.0",
     "ruff>=0.6",
 ]
 
@@ -21,6 +35,9 @@ default-groups = ["dev"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+extend-exclude = [".claude"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]

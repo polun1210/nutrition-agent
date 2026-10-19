@@ -1,0 +1,268 @@
+# 交互作用規則（真實資料）。
+# 這裡的規則是草稿（status = "draft"）或已退役（status = "retired"，不進入判定）；審定（approved）只能由開發者手動標記，
+# 並同時填 approved_by。agent 只能草擬，不能審定。
+# 每條規則的欄位與不變式見 src/nutrition_agent/reference/rules.py，出處引文會被完整性檢查逐字比對。
+# 出處只用 NIH ODS HealthProfessional 版（TFDA 仿單 raw 尚未取得，沒有引用）。
+# 錯開時數：原文都沒有針對這些組合明載，所以全部不填。
+
+version = "2026.10.1-draft"
+
+[[rule]]
+id = "metformin-vitamin-b12"
+condition_type = "drug_ingredient"
+condition_code = "metformin"
+ingredient_code = "vitamin_b12"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "這個降血糖藥可能減少身體對維生素 B12 的吸收，使血中濃度偏低；即使沒有補充也值得讓醫療人員知道。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/VitaminB12-HealthProfessional.md"
+quote = "Metformin, an antihyperglycemic agent used as first-line treatment for prediabetes and diabetes, might reduce the absorption of vitamin B12 and significantly reduce serum vitamin B12 concentrations"
+
+[[rule]]
+id = "ppi-vitamin-b12"
+condition_type = "drug_class"
+condition_code = "ppi"
+ingredient_code = "vitamin_b12"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "制酸類藥物會減少胃酸，影響食物中維生素 B12 的吸收，長期使用可能造成缺乏。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/VitaminB12-HealthProfessional.md"
+quote = "Gastric acid inhibitors include proton pump inhibitors, such as omeprazole (Prilosec) and lansoprazole (Prevacid)"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/VitaminB12-HealthProfessional.md"
+quote = "They can interfere with vitamin B12 absorption from food by slowing the release of gastric acid into the stomach and thereby lead to vitamin B12 deficiency"
+
+[[rule]]
+id = "h2-vitamin-b12"
+condition_type = "drug_class"
+condition_code = "h2_receptor_antagonist"
+ingredient_code = "vitamin_b12"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "制酸類藥物會減少胃酸，影響食物中維生素 B12 的吸收，長期使用可能造成缺乏。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/VitaminB12-HealthProfessional.md"
+quote = "histamine 2-receptor antagonists, such as cimetidine (Tagamet)"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/VitaminB12-HealthProfessional.md"
+quote = "They can interfere with vitamin B12 absorption from food by slowing the release of gastric acid into the stomach and thereby lead to vitamin B12 deficiency"
+
+[[rule]]
+id = "ppi-magnesium"
+condition_type = "drug_class"
+condition_code = "ppi"
+ingredient_code = "magnesium"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "長期使用質子幫浦抑制劑可能造成血鎂偏低，建議讓醫療人員知道並視情況檢查血鎂。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Magnesium-HealthProfessional.md"
+quote = "Prescription proton pump inhibitor (PPI) drugs, such as esomeprazole magnesium (Nexium) and lansoprazole (Prevacid), can cause hypomagnesemia when taken for prolonged periods (typically more than a year)"
+
+[[rule]]
+id = "ppi-iron"
+condition_type = "drug_class"
+condition_code = "ppi"
+ingredient_code = "iron"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "質子幫浦抑制劑會降低胃的酸度，可能減少鐵的吸收。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Iron-HealthProfessional.md"
+quote = "Because proton pump inhibitors, such as lansoprazole (Prevacid) and omeprazole (Prilosec), reduce the acidity of stomach contents, they can reduce iron absorption"
+
+[[rule]]
+id = "ppi-calcium"
+condition_type = "drug_class"
+condition_code = "ppi"
+ingredient_code = "calcium"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+# 退役（2026-10-19 人工審查）：不核准作為 v1 通用規則，不可進入正式判定；也不建立「PPI 與鈣錯開幾小時」規則。
+# 不核准原因：NIH ODS 只把 PPI 列為可能相關的藥物；直接吸收試驗結果不一致，2019 年隨機雙盲試驗未見具臨床意義的差異；
+# 2022 年 ACG GERD 指引不建議無骨病風險者例行補鈣或維生素 D；仿單警示限於長期或高劑量使用、骨質疏鬆風險，
+# 或低血鎂造成的次發性低血鈣。現有輸入模型沒有療程、劑量、骨骼風險，無法安全建立條件式規則。
+# 這不代表「PPI 絕不影響鈣」，只是目前資料無法支持一條通用提醒。
+reason_zh = "已退役、不核准：現有證據只把質子幫浦抑制劑列為可能相關的藥物，各項研究結果不一致，且只在長期或高劑量、有骨質疏鬆風險等條件下才有仿單警示，目前的輸入資料無法判斷這些條件。"
+status = "retired"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Calcium-HealthProfessional.md"
+quote = "use of certain medications (e.g., bisphosphonates, cisplatin, or proton pump inhibitors)"
+
+[[rule]]
+id = "thiazide-magnesium"
+condition_type = "drug_class"
+condition_code = "thiazide_diuretic"
+ingredient_code = "magnesium"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "長期使用利尿劑可能增加鎂從尿液流失，導致鎂不足。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Magnesium-HealthProfessional.md"
+quote = "Chronic treatment with loop diuretics, such as furosemide (Lasix) and bumetanide (Bumex), and thiazide diuretics, such as hydrochlorothiazide (Aquazide H) and ethacrynic acid (Edecrin), can increase the loss of magnesium in urine and lead to magnesium depletion"
+
+[[rule]]
+id = "thiazide-potassium"
+condition_type = "drug_class"
+condition_code = "thiazide_diuretic"
+ingredient_code = "potassium"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "利尿劑會增加鉀從尿液流失，可能造成低血鉀。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Potassium-HealthProfessional.md"
+quote = "Treatment with loop diuretics, such as furosemide (Lasix) and bumetanide (Bumex), and thiazide diuretics, such as chlorothiazide (Diuril) and metolazone (Zaroxolyn), increases urinary potassium excretion and can lead to hypokalemia"
+
+[[rule]]
+id = "thiazide-zinc"
+condition_type = "drug_class"
+condition_code = "thiazide_diuretic"
+ingredient_code = "zinc"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "這類利尿劑會增加鋅從尿液流失，使血中鋅濃度下降。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Zinc-HealthProfessional.md"
+quote = "Thiazide diuretics, such as chlorthalidone (e.g., Hygroton, Thalitone) and hydrochlorothiazide (e.g., Esidrix, HydroDIURIL), increase zinc excretion in the urine."
+
+[[rule]]
+id = "thiazide-vitamin-d"
+condition_type = "drug_class"
+condition_code = "thiazide_diuretic"
+ingredient_code = "vitamin_d"
+interaction_type = "pharmacodynamic"
+requires_supplement_intake = true
+advice = "consult_before_combining"
+reason_zh = "這類利尿劑會減少鈣從尿液排出，與維生素 D 補充劑併用（增加腸道鈣吸收）可能造成高血鈣，年長者與腎功能不佳者尤其要注意。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/VitaminD-HealthProfessional.md"
+quote = "Thiazide diuretics (e.g., Hygroton, Lozol, and Microzide) decrease urinary calcium excretion. The combination of these diuretics with vitamin D supplements (which increase intestinal calcium absorption) might lead to hypercalcemia"
+
+[[rule]]
+id = "acei-arb-potassium"
+condition_type = "drug_class"
+condition_code = "acei_arb"
+ingredient_code = "potassium"
+interaction_type = "pharmacodynamic"
+requires_supplement_intake = true
+advice = "consult_before_combining"
+reason_zh = "這類降血壓藥會減少鉀從尿液排出，再補充鉀可能造成高血鉀，需要由醫療人員監測。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Potassium-HealthProfessional.md"
+quote = "These medications reduce urinary potassium excretion, which can lead to hyperkalemia."
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Potassium-HealthProfessional.md"
+quote = "Experts recommend monitoring potassium status in people taking ACE inhibitors or ARBs"
+
+[[rule]]
+id = "atorvastatin-vitamin-d"
+condition_type = "drug_ingredient"
+condition_code = "atorvastatin"
+ingredient_code = "vitamin_d"
+interaction_type = "pharmacodynamic"
+requires_supplement_intake = true
+advice = "inform_provider"
+reason_zh = "高攝取量的維生素 D（尤其來自補充劑）可能因競爭同一種代謝酵素而降低這個降血脂藥的效力。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/VitaminD-HealthProfessional.md"
+quote = "high intakes of vitamin D, especially from supplements, might reduce the potency of atorvastatin (Lipitor), lovastatin (Altoprev and Mevacor), and simvastatin (FloLipid and Zocor), because these statins and vitamin D appear to compete for the same metabolizing enzyme"
+
+[[rule]]
+id = "simvastatin-vitamin-d"
+condition_type = "drug_ingredient"
+condition_code = "simvastatin"
+ingredient_code = "vitamin_d"
+interaction_type = "pharmacodynamic"
+requires_supplement_intake = true
+advice = "inform_provider"
+reason_zh = "高攝取量的維生素 D（尤其來自補充劑）可能因競爭同一種代謝酵素而降低這個降血脂藥的效力。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/VitaminD-HealthProfessional.md"
+quote = "high intakes of vitamin D, especially from supplements, might reduce the potency of atorvastatin (Lipitor), lovastatin (Altoprev and Mevacor), and simvastatin (FloLipid and Zocor), because these statins and vitamin D appear to compete for the same metabolizing enzyme"
+
+[[rule]]
+id = "biguanide-niacin"
+condition_type = "drug_class"
+condition_code = "biguanide"
+ingredient_code = "niacin"
+interaction_type = "pharmacodynamic"
+requires_supplement_intake = true
+advice = "inform_provider"
+reason_zh = "高劑量菸鹼酸可能使血糖升高，併用降血糖藥時需要監測血糖，藥量也可能要調整。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Niacin-HealthProfessional.md"
+quote = "People who take any antidiabetes medications should have their blood glucose levels monitored if they take high-dose nicotinic acid supplements concomitantly because they might require dose adjustments"
+
+[[rule]]
+id = "insulin-niacin"
+condition_type = "drug_class"
+condition_code = "insulin"
+ingredient_code = "niacin"
+interaction_type = "pharmacodynamic"
+requires_supplement_intake = true
+advice = "inform_provider"
+reason_zh = "高劑量菸鹼酸可能使血糖升高，併用降血糖藥時需要監測血糖，藥量也可能要調整。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Niacin-HealthProfessional.md"
+quote = "People who take any antidiabetes medications should have their blood glucose levels monitored if they take high-dose nicotinic acid supplements concomitantly because they might require dose adjustments"

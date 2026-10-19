@@ -1,0 +1,48 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: nutrition
+      POSTGRES_PASSWORD: nutrition
+      POSTGRES_DB: nutrition
+    ports:
+      - "127.0.0.1:${DB_PORT:-55432}:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nutrition"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://nutrition:nutrition@db:5432/nutrition
+      PHOTO_DIR: /app/data/photos
+      # 本機開發堆疊；實際部署請改 production 並提供 SESSION_SECRET。
+      APP_ENV: ${APP_ENV:-development}
+    volumes:
+      - photos:/app/data/photos
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  web:
+    build:
+      context: web
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:5173:5173"
+
+volumes:
+  dbdata:
+  photos:

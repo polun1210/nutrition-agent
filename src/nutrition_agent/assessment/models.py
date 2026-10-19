@@ -1,0 +1,247 @@
+"""判定引擎的輸入（評估個案快照）與輸出（判定）。
+
+輸入是凍結後的快照，輸出由 `assess` 純函數產生。後續的票（用藥、規則、非每天頻率）
+在這些模型上加欄位，不改現有欄位的意思。
+"""
+
+from __future__ import annotations
+
+from datetime import date
+from enum import StrEnum
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+# 「無法確定」選單項目的成分代碼：使用者無法判斷標示成分是哪一種時選它。
+UNKNOWN_INGREDIENT = "unknown"
+# 揭露事項代碼（報告模板依代碼渲染文字）
+HEALTHY_POPULATION = "healthy_population"
+SAME_DAY_ASSUMPTION = "same_day_assumption"
+MEDICATION_SOURCE_EXCLUDED = "medication_source_excluded"
+ANTACID_REMINDER = "antacid_reminder"
+PREGNANCY_LACTATION = "pregnancy_lactation"
+SCOPE_COVERAGE = "scope_coverage"
+DOSE_UNITS = ("粒", "錠", "包", "匙", "毫升")
+
+
+
+class Basis(StrEnum):
+    """成分行的含量依據。"""
+
+    LABELED = "labeled"  # amount 是標示載明的元素量
+    COMPOUND = "compound"  # amount 是化合物重量，元素量由系統推估
+
+
+class SourceKind(StrEnum):
+    """目標營養素元素量的來源。"""
+
+    LABELED = "labeled"
+    ESTIMATED = "estimated"
+    UNDETERMINED = "undetermined"
+
+
+class Frequency(StrEnum):
+    DAILY = "daily"
+    EVERY_OTHER_DAY = "every_other_day"
+    WEEKLY_DAYS = "weekly_days"
+    CYCLE = "cycle"
+
+
+PositiveNumber = Annotated[float, Field(gt=0)]
+
+
+class Frozen(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class ProfileSnapshot(Frozen):
+    birth_year: int
+    birth_month: int
+    sex: Literal["male", "female"]
+    conditions: list[str]
+
+
+class IngredientLine(Frozen):
+    ingredient_code: str  # 成分目錄代碼，或 UNKNOWN_INGREDIENT
+    amount: Annotated[float, Field(ge=0)]  # 每份含量
+    unit: str
+    # labeled = amount 是標示載明的元素量；compound = amount 是化合物重量（元素量由系統推估，
+    # 除非使用者以 element_override_mg 覆寫）。
+    basis: Basis = Basis.LABELED
+    compound_code: str | None = None  # basis 為 compound 時的化合物；None = 不在表內
+    # 使用者在校對頁覆寫推估值（mg 元素量）；設了就視為使用者提供的標示值。
+    # 化合物與化合物重量照舊保留，使用者可再還原系統推估。
+    element_override_mg: Annotated[float, Field(ge=0)] | None = None
+
+    @model_validator(mode="after")
+    def _override_only_for_compound(self) -> "IngredientLine":
+        if self.element_override_mg is not None and self.basis is not Basis.COMPOUND:
+            raise ValueError("只有標示化合物重量的成分行可以覆寫元素量")
+        return self
+
+    @property
+    def is_user_provided(self) -> bool:
+        """元素量是標示載明或使用者提供的，不需要系統推估。"""
+        return self.basis is Basis.LABELED or self.element_override_mg is not None
+
+
+class Intake(Frozen):
+    """服用方式：封閉的四種頻率。沒有「需要時才吃」，因為它無法量化。
+
+    times_per_day／units_per_time 描述「服用當日」的劑量（峰值）；頻率決定平均。
+    - daily：每天
+    - every_other_day：每兩天
+    - weekly_days：每週 days_per_week 天（1–6）
+    - cycle：服用 cycle_on_days 天、停用 cycle_off_days 天，週期性重複
+    """
+
+    frequency: Frequency = Frequency.DAILY
+    times_per_day: Annotated[int, Field(ge=1, le=24)]
+    units_per_time: PositiveNumber  # 每次幾個劑型單位
+    days_per_week: Annotated[int, Field(ge=1, le=6)] | None = None
+    cycle_on_days: Annotated[int, Field(ge=1, le=365)] | None = None
+    cycle_off_days: Annotated[int, Field(ge=1, le=365)] | None = None
+
+    @model_validator(mode="after")
+    def _check_frequency_parameters(self) -> "Intake":
+        needed = {
+            Frequency.WEEKLY_DAYS: {"days_per_week"},
+            Frequency.CYCLE: {"cycle_on_days", "cycle_off_days"},
+        }.get(self.frequency, set())
+        given = {
+            name
+            for name in ("days_per_week", "cycle_on_days", "cycle_off_days")
+            if getattr(self, name) is not None
+        }
+        if given != needed:
+            raise ValueError(f"頻率 {self.frequency} 需要的參數是 {sorted(needed)}")
+        return self
+
+    @property
+    def is_daily(self) -> bool:
+        return self.frequency is Frequency.DAILY
+
+
+class Product(Frozen):
+    name: Annotated[str, Field(min_length=1)]
+    dose_unit: Literal["粒", "錠", "包", "匙", "毫升"]
+    units_per_serving: PositiveNumber  # 每份幾個劑型單位
+    ingredients: list[IngredientLine]
+    intake: Intake
+    photo_ids: list[int] = Field(default_factory=list)  # 標示照片（product_photos.id）
+
+
+ScopeStatus = Literal["in_scope", "out_of_scope", "unconfirmed"]
+
+
+class MedicationIngredient(Frozen):
+    """藥名對照出的一個有效成分，及其所屬用藥類別。"""
+
+    code: str
+    name_en: str
+    name_zh: str
+    class_code: str
+    class_name_zh: str
+
+
+class Medication(Frozen):
+    """一個用藥：使用者輸入的原文，加上後端對照出的結果（複方有多個有效成分）。"""
+
+    raw_name: str
+    scope_status: ScopeStatus
+    name_zh: str | None  # 中文藥名；對照不到時為 None
+    ingredients: list[MedicationIngredient]
+    out_of_scope_names: list[str]  # 認得但不在範圍內的成分名稱
+
+
+class AssessmentCase(Frozen):
+    """評估個案快照：判定引擎的唯一輸入（連同參考資料）。"""
+
+    profile: ProfileSnapshot
+    age: int  # 評估當天年齡
+    assessed_on: date
+    products: list[Product]
+    medications: list[Medication] = []  # 空 = 使用者略過用藥
+
+
+class UlComparison(Frozen):
+    """一個目標營養素的上限比對。ul 為 None = 無已知上限攝取量。"""
+
+    nutrient_code: str
+    intake: float  # 跨產品加總的單日峰值攝取量（DRIs 單位）；上限比對一律用它
+    average_intake: float  # 跨產品加總的平均每日攝取量，只用於一般呈現
+    non_daily: bool  # 有非每日服用的產品貢獻此營養素
+    unit: str
+    ul: float | None
+    ul_percent: float | None
+    exceeded: bool
+    supplement_only: bool  # 鎂、鐵：UL 只計補充劑來源
+    estimated: bool = False  # 加總中含系統推估值（非標示值）
+
+
+class ListedIngredient(Frozen):
+    """被保留並在報告中揭露的標示成分（範圍外或無法確認）。"""
+
+    product_name: str
+    ingredient_code: str
+
+
+class NutrientSource(Frozen):
+    """一項產品中某個目標營養素的元素量來源。
+
+    只看「有沒有」的交互作用規則用這份清單判斷：source 為 undetermined 時營養素仍算存在。
+    """
+
+    product_name: str
+    nutrient_code: str
+    source: SourceKind
+    compound_code: str | None = None  # source 為 estimated 時的化合物
+
+
+class Assessment(Frozen):
+    """判定：確定性程式的產出，報告只能解釋它。"""
+
+    reference_version: str
+    ul_comparisons: list[UlComparison]
+    out_of_scope_ingredients: list[ListedIngredient]
+    unconfirmed_ingredients: list[ListedIngredient]
+    undetermined_nutrients: list[str]  # 元素量無法判定、未計入上限比對的營養素
+    nutrient_sources: list[NutrientSource] = []  # 各產品目標營養素的來源（標示／推估／無法判定）
+    disclosures: list[str]  # 揭露事項代碼，由報告模板渲染
+    interactions: list[InteractionFinding] = []  # 依成分目錄順序；只來自審定規則
+    approved_rule_count: int = 0  # 判定時可用的審定規則數；0 = 沒有規則可比對
+
+
+class TriggeringDrug(Frozen):
+    """觸發交互作用的用藥：使用者輸入的原文，加上命中的有效成分與類別。"""
+
+    raw_name: str
+    ingredient_code: str
+    class_code: str
+
+
+class RecommendedTotal(Frozen):
+    """建議總攝取量（RDA 或 AI，定義上含飲食）。"""
+
+    value: float
+    unit: str
+    kind: Literal["RDA", "AI"]
+
+
+class InteractionFinding(Frozen):
+    """交互作用卡片：一個成分一張，聚合所有命中的審定規則。
+
+    沒有嚴重度。supplement_intake／recommended_total／ul 三個數值只並列，不判斷高低。
+    """
+
+    ingredient_code: str
+    supplemented: bool  # 使用者正在補充此成分
+    rule_ids: list[str]
+    triggering_drugs: list[TriggeringDrug]
+    reasons_zh: list[str]  # 各規則審定的說明文字
+    advice: list[Literal["separate_timing", "inform_provider", "consult_before_combining"]]
+    separation_hours: int | None  # 命中的錯開規則中最長的時數
+    unit: str | None  # 數值的單位；允許成分（無 DRIs）為 None
+    supplement_intake: float | None  # 補充劑來源攝取量；沒補 = 0；單位無法換算 = None
+    recommended_total: RecommendedTotal | None
+    ul: float | None  # None = 無已知上限攝取量（或無 UL）

@@ -1,0 +1,95 @@
+# 單位換算：把標示單位換成 DRIs 使用的單位。
+# nutrient_code 省略 = 所有營養素通用。每條只寫一個方向，反向換算由程式取倒數。
+# 沒有對應規則的換算會明確失敗（UnitNotConvertible），不猜。
+# 單位代碼：mg／ug／g／IU／mg_alpha_te／mg_ne／ug_dfe 與維生素 E 各型態的 mg_*。
+
+version = "2026.10.0"
+
+# ---- 通用質量單位 ----
+
+[[rule]]
+from_unit = "g"
+to_unit = "mg"
+factor = 1000.0
+source = "公制"
+
+[[rule]]
+from_unit = "mg"
+to_unit = "ug"
+factor = 1000.0
+source = "公制"
+
+[[rule]]
+from_unit = "g"
+to_unit = "ug"
+factor = 1000000.0
+source = "公制"
+
+# ---- 維生素 D ----
+
+[[rule]]
+nutrient_code = "vitamin_d"
+from_unit = "IU"
+to_unit = "ug"
+factor = 0.025
+source = "DRIs 第八版總表註 (7)：維生素 D 1 μg = 40 I.U."
+
+# ---- 維生素 E（α-TE）----
+# IU 本身依生物活性定義，天然型與合成型 1 IU 均約為 0.67 mg α-TE（NRC 1989 體系，不是 IOM 2000 的 0.45）。
+# 以毫克標示者，每毫克的 α-TE 依型態而異；這組係數 DRIs 本文未逐項列出，
+# 出處為 NRC 1989（DRIs 維生素 E 章參考文獻 2），正式審定前須回查原書核對。
+
+[[rule]]
+nutrient_code = "vitamin_e"
+from_unit = "IU"
+to_unit = "mg_alpha_te"
+factor = 0.67
+source = "DRIs 第八版維生素 E 章（NRC 1989 α-TE 體系）；見 knowledge/sources/dris/dris-reference-notes.md"
+
+[[rule]]
+nutrient_code = "vitamin_e"
+from_unit = "mg_d_alpha_tocopherol"
+to_unit = "mg_alpha_te"
+factor = 1.0
+source = "NRC 1989（DRIs 維生素 E 章參考文獻 2），待回查原書"
+
+[[rule]]
+nutrient_code = "vitamin_e"
+from_unit = "mg_d_alpha_tocopheryl_acetate"
+to_unit = "mg_alpha_te"
+factor = 0.91
+source = "NRC 1989（DRIs 維生素 E 章參考文獻 2），待回查原書"
+
+[[rule]]
+nutrient_code = "vitamin_e"
+from_unit = "mg_dl_alpha_tocopherol"
+to_unit = "mg_alpha_te"
+factor = 0.74
+source = "NRC 1989（DRIs 維生素 E 章參考文獻 2），待回查原書"
+
+[[rule]]
+nutrient_code = "vitamin_e"
+from_unit = "mg_dl_alpha_tocopheryl_acetate"
+to_unit = "mg_alpha_te"
+factor = 0.67
+source = "NRC 1989（DRIs 維生素 E 章參考文獻 2），待回查原書"
+
+# ---- 菸鹼素（NE）----
+# 菸鹼酸與菸鹼醯胺的毫克數直接視為 NE 毫克（色胺酸來源不屬補充劑標示）。
+
+[[rule]]
+nutrient_code = "niacin"
+from_unit = "mg"
+to_unit = "mg_ne"
+factor = 1.0
+source = "DRIs 第八版總表註 (9)：菸鹼素以菸鹼素當量表示"
+
+# ---- 葉酸（DFE）----
+# 建議量用 DFE；上限比對直接以合成葉酸 ug 比對，不乘 1.7（見 dris-reference-notes.md）。
+
+[[rule]]
+nutrient_code = "folate"
+from_unit = "ug"
+to_unit = "ug_dfe"
+factor = 1.7
+source = "DRIs 第八版葉酸章：DFE = 食物葉酸 + 1.7 × 人工合成葉酸"
