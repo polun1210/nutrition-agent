@@ -3,6 +3,7 @@
 import pytest
 
 from nutrition_agent.reference import (
+    RuleSet,
     RuleStatus,
     SourceType,
     check_integrity,
@@ -31,10 +32,29 @@ def test_已草擬規則的最低數量(rules):
     assert len(rules) >= 10
 
 
-def test_真實規則一律是草稿且沒有審定者(rules):
+def test_真實規則只有草稿或退役且沒有審定者(rules):
     for rule in rules:
-        assert rule.status is RuleStatus.DRAFT, rule.id
+        assert rule.status in {RuleStatus.DRAFT, RuleStatus.RETIRED}, rule.id
         assert rule.approved_by is None, rule.id
+
+
+def test_PPI_鈣規則已退役且說明不再無條件宣稱降低吸收(rules):
+    rule = next(r for r in rules if r.id == "ppi-calcium")
+    assert rule.status is RuleStatus.RETIRED
+    assert "降低鈣吸收" not in rule.reason_zh
+    assert "不核准" in rule.reason_zh
+
+
+def test_PPI_鈣規則即使其他規則全被審定也不會進入判定(data):
+    live = tuple(
+        r.model_copy(update={"status": RuleStatus.APPROVED, "approved_by": "test"})
+        if r.status is RuleStatus.DRAFT
+        else r
+        for r in data.rules.rules
+    )
+    approved_ids = {r.id for r in RuleSet(version="t", rules=live).approved()}
+    assert "ppi-calcium" not in approved_ids
+    assert {"ppi-magnesium", "ppi-vitamin-b12", "ppi-iron"} <= approved_ids
 
 
 def test_agent_草擬的規則不會被判定引擎讀到(data):

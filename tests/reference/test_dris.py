@@ -68,6 +68,35 @@ def test_抽查DRIs數值(dris, code, kind, age, sex, value):
     assert dris.lookup(code, kind, age=age, sex=sex).value == value
 
 
+def test_成人資料列數與官方PDF核對一致(dris):
+    # 2026-10-19 逐格對照官方 PDF：124/124 相符；列數變動代表資料被改過，需重新核對
+    assert len(dris.entries) == 124
+
+
+@pytest.mark.parametrize(
+    ("code", "kind", "sex", "ages_and_values"),
+    [
+        ("magnesium", DriKind.RDA, Sex.MALE, [(30, 380), (31, 380), (50, 380), (51, 360), (70, 360), (71, 350)]),
+        ("iron", DriKind.RDA, Sex.FEMALE, [(30, 15), (31, 15), (50, 15), (51, 10), (70, 10), (71, 10)]),
+    ],
+)
+def test_年齡邊界取值(dris, code, kind, sex, ages_and_values):
+    for age, value in ages_and_values:
+        assert dris.lookup(code, kind, age=age, sex=sex).value == value, age
+
+
+def test_性別分流_鐵19到30歲男女不同(dris):
+    assert dris.lookup("iron", DriKind.RDA, age=19, sex=Sex.MALE).value == 10
+    assert dris.lookup("iron", DriKind.RDA, age=19, sex=Sex.FEMALE).value == 15
+
+
+def test_UL不分性別(dris):
+    for code in ("magnesium", "iron", "zinc", "calcium"):
+        male = dris.lookup(code, DriKind.UL, age=40, sex=Sex.MALE)
+        female = dris.lookup(code, DriKind.UL, age=40, sex=Sex.FEMALE)
+        assert male.value == female.value, code
+
+
 def test_未滿19歲查不到(dris):
     assert dris.lookup("magnesium", DriKind.UL, age=18, sex=Sex.MALE) is None
 

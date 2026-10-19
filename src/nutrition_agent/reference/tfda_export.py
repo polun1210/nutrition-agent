@@ -36,8 +36,9 @@ NAME_EN_COL = "英文品名"
 FORMULA_KIND_COL = "處方標示"
 INGREDIENT_COL = "成分名稱"
 
-_NOT_CANCELLED = "未註銷"
-_EXCIPIENT_MARK = "賦形"
+# 官方「註銷狀態」實際值：空白（有效）、已註銷、已廢止；沒有「未註銷」這個值。
+# fail-closed：只有空白才算有效，任何其他值（含未知值）一律排除。
+_ACTIVE_STATUS = ""
 
 
 def load_aliases(path: Path = ALIASES_PATH) -> dict[str, str]:
@@ -60,7 +61,7 @@ def _parse_date(text: str) -> date:
 
 
 def _is_valid_permit(row: dict[str, str], snapshot_date: date) -> bool:
-    if row[STATUS_COL].strip() != _NOT_CANCELLED:
+    if row[STATUS_COL].strip() != _ACTIVE_STATUS:
         return False
     return _parse_date(row[EXPIRY_COL]) >= snapshot_date
 
@@ -68,8 +69,8 @@ def _is_valid_permit(row: dict[str, str], snapshot_date: date) -> bool:
 def _ingredients_by_permit(rows: list[dict[str, str]]) -> dict[str, list[str]]:
     result: dict[str, list[str]] = defaultdict(list)
     for row in rows:
-        if _EXCIPIENT_MARK in row[FORMULA_KIND_COL]:
-            continue
+        # 「處方標示」是自由文字（官方資料約 6,936 種），不是穩定的主成分／賦形劑分類，
+        # 沒有官方語意可據以排除，所以不使用；賦形劑只會多出範圍外成分（保守方向）。
         name = normalize_name(row[INGREDIENT_COL])
         if name:
             result[row[PERMIT_ID_COL].strip()].append(name)
@@ -83,7 +84,7 @@ def export_drug_names(
     snapshot_date: date,
     aliases: dict[str, str] | None = None,
 ) -> DrugNameTable:
-    """只納入有效許可證；成分經成分對照表對到有效成分，對不上的記為範圍外。"""
+    """只納入有效許可證（註銷狀態空白且有效日期未過）；成分經成分對照表對到有效成分，對不上的記為範圍外。"""
     alias_map = load_aliases() if aliases is None else aliases
     permits = _read_rows(permits_csv, [PERMIT_ID_COL, STATUS_COL, EXPIRY_COL, NAME_ZH_COL, NAME_EN_COL])
     by_permit = _ingredients_by_permit(
