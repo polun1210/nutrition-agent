@@ -25,6 +25,8 @@ TEST_DATABASE_URL = os.environ.get(
 
 def _recreate_database(url: str) -> None:
     name = conninfo.conninfo_to_dict(url)["dbname"]
+    if "test" not in name:  # 防呆：不得 DROP 非測試用資料庫
+        raise RuntimeError(f"拒絕重建資料庫 {name!r}：測試資料庫名稱須含 test")
     admin = conninfo.make_conninfo(url, dbname="postgres")
     with psycopg.connect(admin, autocommit=True) as conn:
         conn.execute(

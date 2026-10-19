@@ -59,8 +59,16 @@ class RecordedVlmGateway:
 DEFAULT_URL = "postgresql://nutrition:nutrition@127.0.0.1:55432/nutrition_e2e"
 
 
-def recreate_database(url: str) -> None:
+def check_database_name(url: str) -> str:
+    """只允許名稱含 `_e2e` 或以 `nutrition_e2e` 開頭的資料庫被 DROP，避免誤刪開發／正式資料。"""
     name = conninfo.conninfo_to_dict(url)["dbname"]
+    if "_e2e" not in name and not name.startswith("nutrition_e2e"):
+        raise SystemExit(f"拒絕重建資料庫 {name!r}：e2e 專用資料庫名稱須含 _e2e")
+    return name
+
+
+def recreate_database(url: str) -> None:
+    name = check_database_name(url)
     admin = conninfo.make_conninfo(url, dbname="postgres")
     with psycopg.connect(admin, autocommit=True) as conn:
         conn.execute(
