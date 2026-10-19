@@ -17,11 +17,14 @@ from nutrition_agent.assessment.models import (
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
+    Basis,
+    Frequency,
     IngredientLine,
     Intake,
     ListedIngredient,
     NutrientSource,
     Product,
+    SourceKind,
     UlComparison,
 )
 from nutrition_agent.reference import (
@@ -41,11 +44,11 @@ def _exact(value: float) -> Fraction:
 
 def taking_day_fraction(intake: Intake) -> Fraction:
     """服用日佔全部日子的比例，用來由峰值算平均。"""
-    if intake.frequency == "every_other_day":
+    if intake.frequency is Frequency.EVERY_OTHER_DAY:
         return Fraction(1, 2)
-    if intake.frequency == "weekly_days":
+    if intake.frequency is Frequency.WEEKLY_DAYS:
         return Fraction(intake.days_per_week, 7)
-    if intake.frequency == "cycle":
+    if intake.frequency is Frequency.CYCLE:
         return Fraction(intake.cycle_on_days, intake.cycle_on_days + intake.cycle_off_days)
     return Fraction(1)
 
@@ -95,7 +98,7 @@ def assess(case: AssessmentCase, ref: ReferenceData) -> Assessment:
             )
             if not product.intake.is_daily:
                 non_daily.add(code)
-            if source.record.source == "estimated":
+            if source.record.source is SourceKind.ESTIMATED:
                 estimated_codes.add(code)
 
     comparisons = [
@@ -127,20 +130,20 @@ def _resolve_nutrient(
 ) -> _Resolved:
     """一項產品裡同一營養素的元素量：標示載明 > 推估 > 無法判定。"""
 
-    def result(kind: str, amount: Fraction | None, compound: str | None = None) -> _Resolved:
+    def result(kind: SourceKind, amount: Fraction | None, compound: str | None = None) -> _Resolved:
         record = NutrientSource(
             product_name=product_name, nutrient_code=code, source=kind, compound_code=compound
         )
         return _Resolved(record, amount)
 
-    labeled = [_labeled_amount(code, i, target_unit, ref) for i in lines if i.basis == "labeled"]
+    labeled = [_labeled_amount(code, i, target_unit, ref) for i in lines if i.basis is Basis.LABELED]
     if labeled and all(a is not None for a in labeled):
-        return result("labeled", sum(labeled, Fraction(0)))
+        return result(SourceKind.LABELED, sum(labeled, Fraction(0)))
     estimates = [_estimated_amount(code, i, target_unit, ref) for i in lines]
     if not estimates or any(a is None for a in estimates):
-        return result("undetermined", None)
+        return result(SourceKind.UNDETERMINED, None)
     compounds = sorted({i.compound_code for i in lines if i.compound_code})
-    return result("estimated", sum(estimates, Fraction(0)), compounds[0])
+    return result(SourceKind.ESTIMATED, sum(estimates, Fraction(0)), compounds[0])
 
 
 def _labeled_amount(
@@ -156,7 +159,7 @@ def _estimated_amount(
     code: str, item: IngredientLine, target_unit: str, ref: ReferenceData
 ) -> Fraction | None:
     """標示載明的行直接換算；化合物行用元素比率推估，表內查不到或營養素不符 → None。"""
-    if item.basis == "labeled":
+    if item.basis is Basis.LABELED:
         return _labeled_amount(code, item, target_unit, ref)
     compound = ref.compounds.get(item.compound_code) if item.compound_code else None
     if compound is None or compound.nutrient_code != code:

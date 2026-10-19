@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from datetime import date
+from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -20,7 +21,31 @@ MEDICATION_SOURCE_EXCLUDED = "medication_source_excluded"
 ANTACID_REMINDER = "antacid_reminder"
 PREGNANCY_LACTATION = "pregnancy_lactation"
 SCOPE_COVERAGE = "scope_coverage"
-DOSE_UNITS =("粒", "錠", "包", "匙", "毫升")
+DOSE_UNITS = ("粒", "錠", "包", "匙", "毫升")
+
+
+
+class Basis(StrEnum):
+    """成分行的含量依據。"""
+
+    LABELED = "labeled"  # amount 是標示載明的元素量
+    COMPOUND = "compound"  # amount 是化合物重量，元素量由系統推估
+
+
+class SourceKind(StrEnum):
+    """目標營養素元素量的來源。"""
+
+    LABELED = "labeled"
+    ESTIMATED = "estimated"
+    UNDETERMINED = "undetermined"
+
+
+class Frequency(StrEnum):
+    DAILY = "daily"
+    EVERY_OTHER_DAY = "every_other_day"
+    WEEKLY_DAYS = "weekly_days"
+    CYCLE = "cycle"
+
 
 PositiveNumber = Annotated[float, Field(gt=0)]
 
@@ -42,7 +67,7 @@ class IngredientLine(Frozen):
     unit: str
     # labeled = amount 是標示載明的元素量；compound = amount 是化合物重量（元素量由系統推估）。
     # 校對頁上使用者覆寫推估值後，這一行就改回 labeled（視為使用者提供的值）。
-    basis: Literal["labeled", "compound"] = "labeled"
+    basis: Basis = Basis.LABELED
     compound_code: str | None = None  # basis 為 compound 時的化合物；None = 不在表內
     form: str | None = None  # 成分型態（例如氧化鎂）；規則限定型態時才需要
 
@@ -57,7 +82,7 @@ class Intake(Frozen):
     - cycle：服用 cycle_on_days 天、停用 cycle_off_days 天，週期性重複
     """
 
-    frequency: Literal["daily", "every_other_day", "weekly_days", "cycle"] = "daily"
+    frequency: Frequency = Frequency.DAILY
     times_per_day: Annotated[int, Field(ge=1, le=24)]
     units_per_time: PositiveNumber  # 每次幾個劑型單位
     days_per_week: Annotated[int, Field(ge=1, le=6)] | None = None
@@ -67,8 +92,8 @@ class Intake(Frozen):
     @model_validator(mode="after")
     def _check_frequency_parameters(self) -> "Intake":
         needed = {
-            "weekly_days": {"days_per_week"},
-            "cycle": {"cycle_on_days", "cycle_off_days"},
+            Frequency.WEEKLY_DAYS: {"days_per_week"},
+            Frequency.CYCLE: {"cycle_on_days", "cycle_off_days"},
         }.get(self.frequency, set())
         given = {
             name
@@ -81,7 +106,7 @@ class Intake(Frozen):
 
     @property
     def is_daily(self) -> bool:
-        return self.frequency == "daily"
+        return self.frequency is Frequency.DAILY
 
 
 class Product(Frozen):
@@ -156,7 +181,7 @@ class NutrientSource(Frozen):
 
     product_name: str
     nutrient_code: str
-    source: Literal["labeled", "estimated", "undetermined"]
+    source: SourceKind
     compound_code: str | None = None  # source 為 estimated 時的化合物
 
 
