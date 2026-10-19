@@ -1,0 +1,18 @@
+{
+  "readable": true,
+  "product_name": "挺立 葡萄糖胺強力錠",
+  "serving_size": 3,
+  "dose_unit": "錠",
+  "rows": [
+    {"raw_name": "維生素B1", "section": "nutrition_table", "amount": 3, "unit": "mg", "readable": true},
+    {"raw_name": "維生素B6", "section": "nutrition_table", "amount": 3.15, "unit": "mg", "readable": true},
+    {"raw_name": "維生素B12", "section": "nutrition_table", "amount": 9, "unit": "ug", "readable": true},
+    {"raw_name": "維生素D", "section": "nutrition_table", "amount": 6.75, "unit": "ug", "readable": true},
+    {"raw_name": "維生素E", "section": "nutrition_table", "amount": 24.1, "unit": "mg_alpha_te", "readable": true},
+    {"raw_name": "菸鹼素", "section": "nutrition_table", "amount": 25.5, "unit": "mg_ne", "readable": true},
+    {"raw_name": "鈣", "section": "nutrition_table", "amount": 360, "unit": "mg", "readable": true},
+    {"raw_name": "葡萄糖胺", "section": "per_unit_note", "amount": 750, "unit": "mg", "readable": true},
+    {"raw_name": "豬軟骨素硫酸鈉", "section": "per_unit_note", "amount": 150, "unit": "mg", "readable": true},
+    {"raw_name": "檸檬酸鈣", "section": "ingredient_list", "amount": null, "unit": null, "readable": true}
+  ]
+}
