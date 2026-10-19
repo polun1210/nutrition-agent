@@ -7,7 +7,7 @@
 
 from datetime import date
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
@@ -105,6 +105,31 @@ def _check_photo_ids(
         raise HTTPException(status_code=422, detail="產品只能掛自己在這份評估上傳的照片")
 
 
+def _copy_photos(
+    conn: psycopg.Connection, products: list[dict], user: User, draft_id: int
+) -> list[dict]:
+    """複製產品時，照片也複製一份歸屬新草稿（共用同一個檔案），並改寫產品的照片編號。
+
+    照片只能掛在上傳它的草稿上，所以不能直接沿用舊編號。
+    """
+    mapping: dict[int, int] = {}
+    for old_id in dict.fromkeys(pid for p in products for pid in p.get("photo_ids", [])):
+        copied = conn.execute(
+            "INSERT INTO product_photos (user_id, draft_id, stored_name, mime_type, reading) "
+            "SELECT user_id, %s, stored_name, mime_type, reading FROM product_photos "
+            "WHERE id = %s AND user_id = %s RETURNING id",
+            (draft_id, old_id, user.id),
+        ).fetchone()
+        if copied is not None:
+            mapping[old_id] = copied[0]
+    return [
+        {**p, "photo_ids": [mapping[pid] for pid in p.get("photo_ids", []) if pid in mapping]}
+        if "photo_ids" in p
+        else p
+        for p in products
+    ]
+
+
 def _draft_json(row: tuple) -> dict:
     return {
         "id": row[0],
@@ -154,14 +179,65 @@ def compound_options(
     ]
 
 
+@router.get("")
+def list_cases(
+    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection)
+) -> list[dict]:
+    """歷史列表：只含自己的個案，新的在前。每筆帶當時的參考資料版本。"""
+    rows = conn.execute(
+        "SELECT id, created_at, snapshot->>'assessed_on', "
+        "jsonb_array_length(snapshot->'products'), "
+        "jsonb_array_length(COALESCE(snapshot->'medications', '[]'::jsonb)), reference_versions "
+        "FROM assessment_cases WHERE user_id = %s ORDER BY created_at DESC, id DESC",
+        (user.id,),
+    ).fetchall()
+    return [
+        {
+            "id": r[0],
+            "created_at": r[1].isoformat(),
+            "assessed_on": r[2],
+            "product_count": r[3],
+            "medication_count": r[4],
+            "reference_versions": r[5],
+        }
+        for r in rows
+    ]
+
+
 @router.post("/drafts", status_code=201)
 def create_draft(
-    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection)
+    copy_from: Literal["latest"] | None = None,
+    user: User = Depends(current_user),
+    conn: psycopg.Connection = Depends(get_connection),
 ) -> dict:
+    """建立草稿；`copy_from=latest` 時帶入自己最近一次評估的保健食品與用藥。
+
+    產品整筆沿用快照裡存的 JSON（含校對後成分列、服用方式與日後的照片參照）；
+    個人資料不複製，送出時取當下最新值。
+    """
+    products: list = []
+    medications: list = []
+    if copy_from == "latest":
+        latest = conn.execute(
+            "SELECT snapshot FROM assessment_cases WHERE user_id = %s "
+            "ORDER BY created_at DESC, id DESC LIMIT 1",
+            (user.id,),
+        ).fetchone()
+        if latest is None:
+            raise HTTPException(status_code=404, detail="沒有過去的評估可以複製")
+        products = latest[0]["products"]
+        medications = [{"name": m["raw_name"]} for m in latest[0].get("medications", [])]
     row = conn.execute(
-        "INSERT INTO assessment_drafts (user_id) VALUES (%s) RETURNING id, products, case_id, medications",
-        (user.id,),
+        "INSERT INTO assessment_drafts (user_id, products, medications) VALUES (%s, %s, %s) "
+        "RETURNING id, products, case_id, medications",
+        (user.id, Jsonb([]), Jsonb(medications)),
     ).fetchone()
+    if products:
+        row = conn.execute(
+            "UPDATE assessment_drafts SET products = %s WHERE id = %s "
+            "RETURNING id, products, case_id, medications",
+            (Jsonb(_copy_photos(conn, products, user, row[0])), row[0]),
+        ).fetchone()
     return _draft_json(row)
 
 
