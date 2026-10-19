@@ -31,7 +31,7 @@ def ref():
 
 @pytest.fixture(scope="session")
 def fx_ref(ref):
-    """參考資料，但規則換成測試夾具（真實規則全是草稿，引擎只讀審定規則）。"""
+    """參考資料，但規則換成測試夾具，測試不受真實規則審查結果影響。"""
     return ref.model_copy(update={"rules": load_rule_set(FIXTURE_RULES)})
 
 

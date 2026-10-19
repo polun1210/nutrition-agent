@@ -46,7 +46,7 @@ def test_multiple_drugs_listed_and_separation_hours_shown(fx_ref):
 def test_no_approved_rules_never_says_no_interaction_or_safe(ref):
     case = make_case(product("鐵", [line("iron", 20)]), medications=(METFORMIN,))
 
-    text = section_text(case, ref)
+    text = section_text(case, with_rules(ref))
 
     assert "尚無已審定的交互作用規則" in text
     assert not any(word in text for word in FORBIDDEN)

@@ -1,6 +1,6 @@
 """交互作用判定（Seam B）：合成個案＋規則夾具；預期結果以規則 ID 表達。
 
-真實 rules.toml 全是草稿，這裡不依賴它；夾具規則見 tests/fixtures/rules.toml。
+除了一條真實規則的冒煙測試，這裡不依賴真實 rules.toml；夾具規則見 tests/fixtures/rules.toml。
 """
 
 import pytest
@@ -42,13 +42,14 @@ def test_only_approved_rules_fire(fx_ref):
     assert assess(case, fx_ref).interactions == []
 
 
-def test_real_rules_are_all_drafts_so_nothing_fires(ref):
-    case = make_case(product("鐵", [line("iron", 20)]), medications=(METFORMIN, PPI))
+def test_real_approved_rules_fire_and_retired_ones_do_not(ref):
+    case = make_case(product("鈣鐵", [line("iron", 20), line("calcium", 500)]), medications=(METFORMIN, PPI))
 
     result = assess(case, ref)
 
-    assert result.interactions == []
-    assert result.approved_rule_count == 0
+    fired = {rule_id for f in result.interactions for rule_id in f.rule_ids}
+    assert fired == {"metformin-vitamin-b12", "ppi-vitamin-b12", "ppi-magnesium", "ppi-iron"}
+    assert result.approved_rule_count == len(ref.rules.approved())
 
 
 def test_absorption_rule_needs_user_to_supplement_the_ingredient(fx_ref):

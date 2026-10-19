@@ -45,7 +45,7 @@ def test_card_per_ingredient_lists_all_triggering_drugs(fx_ref):
 def test_no_approved_rules_gives_no_cards_and_no_claim_of_no_interaction(ref):
     case = make_case(product("鐵", [line("iron", 20)]), medications=(METFORMIN,))
 
-    section = interaction_section(case, ref)
+    section = interaction_section(case, with_rules(ref))
 
     assert section.cards == []
     text = "\n".join(section.lines)

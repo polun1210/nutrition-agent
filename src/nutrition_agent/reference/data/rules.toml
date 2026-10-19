@@ -1,11 +1,19 @@
 # 交互作用規則（真實資料）。
-# 這裡的規則是草稿（status = "draft"）或已退役（status = "retired"，不進入判定）；審定（approved）只能由開發者手動標記，
-# 並同時填 approved_by。agent 只能草擬，不能審定。
+# 狀態：草稿（draft）、審定（approved）、退役（retired，不進入判定）。判定引擎只讀審定規則。
+# 審定只能由開發者手動標記，並同時填 approved_by；agent 只能草擬，不能審定。
+# 2026-10-19 人工審查：審定 10 條、退役 5 條，目前沒有草稿。
+#
+# 明確排除（不草擬規則，2026-10-19 人工審查）：
+# - COX-2 選擇性抑制劑（celecoxib、etoricoxib）× 鐵：已取得的 Celecoxib、Etoricoxib 仿單只在 PRECISION 試驗提到
+#   源自腸胃道的缺鐵性貧血，且 celecoxib 比 naproxen／ibuprofen 少；沒有支持「鐵流失」提醒的原文。
+#   傳統 NSAIDs 的腸胃出血證據不得直接套用到這一類。
+# - COX-2 選擇性抑制劑 × 魚油 n-3／維生素 E（出血加成）：兩種仿單都沒有提到魚油、omega-3 或維生素 E，
+#   NIH ODS 維生素 E HP 版也沒有提到這一類藥。維生素 E 保留為目標營養素，只做超量檢查。
 # 每條規則的欄位與不變式見 src/nutrition_agent/reference/rules.py，出處引文會被完整性檢查逐字比對。
 # 出處只用 NIH ODS HealthProfessional 版（TFDA 仿單 raw 尚未取得，沒有引用）。
 # 錯開時數：原文都沒有針對這些組合明載，所以全部不填。
 
-version = "2026.10.1-draft"
+version = "2026.10.2"
 
 [[rule]]
 id = "metformin-vitamin-b12"
@@ -16,7 +24,8 @@ interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
 reason_zh = "這個降血糖藥可能減少身體對維生素 B12 的吸收，使血中濃度偏低；即使沒有補充也值得讓醫療人員知道。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -32,7 +41,8 @@ interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
 reason_zh = "制酸類藥物會減少胃酸，影響食物中維生素 B12 的吸收，長期使用可能造成缺乏。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -53,7 +63,8 @@ interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
 reason_zh = "制酸類藥物會減少胃酸，影響食物中維生素 B12 的吸收，長期使用可能造成缺乏。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -74,7 +85,8 @@ interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
 reason_zh = "長期使用質子幫浦抑制劑可能造成血鎂偏低，建議讓醫療人員知道並視情況檢查血鎂。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -90,7 +102,8 @@ interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
 reason_zh = "質子幫浦抑制劑會降低胃的酸度，可能減少鐵的吸收。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -127,7 +140,8 @@ interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
 reason_zh = "長期使用利尿劑可能增加鎂從尿液流失，導致鎂不足。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -143,7 +157,8 @@ interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
 reason_zh = "利尿劑會增加鉀從尿液流失，可能造成低血鉀。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -159,7 +174,8 @@ interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
 reason_zh = "這類利尿劑會增加鋅從尿液流失，使血中鋅濃度下降。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -175,7 +191,8 @@ interaction_type = "pharmacodynamic"
 requires_supplement_intake = true
 advice = "consult_before_combining"
 reason_zh = "這類利尿劑會減少鈣從尿液排出，與維生素 D 補充劑併用（增加腸道鈣吸收）可能造成高血鈣，年長者與腎功能不佳者尤其要注意。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -191,7 +208,8 @@ interaction_type = "pharmacodynamic"
 requires_supplement_intake = true
 advice = "consult_before_combining"
 reason_zh = "這類降血壓藥會減少鉀從尿液排出，再補充鉀可能造成高血鉀，需要由醫療人員監測。"
-status = "draft"
+status = "approved"
+approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -211,8 +229,10 @@ ingredient_code = "vitamin_d"
 interaction_type = "pharmacodynamic"
 requires_supplement_intake = true
 advice = "inform_provider"
-reason_zh = "高攝取量的維生素 D（尤其來自補充劑）可能因競爭同一種代謝酵素而降低這個降血脂藥的效力。"
-status = "draft"
+# 退役（2026-10-19 人工審查）：原文只說「高攝取量」的維生素 D 可能降低效力，規則模型沒有攝取量門檻，
+# 會對一般劑量也發出提醒；長者同時使用 statin 與維生素 D 很普遍，提醒會失去意義。等模型支援門檻再重新草擬。
+reason_zh = "已退役、不核准：原文只說高攝取量的維生素 D 可能降低這類降血脂藥的效力，目前的規則無法依攝取量設定門檻，會對一般劑量也發出提醒。"
+status = "retired"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -227,8 +247,10 @@ ingredient_code = "vitamin_d"
 interaction_type = "pharmacodynamic"
 requires_supplement_intake = true
 advice = "inform_provider"
-reason_zh = "高攝取量的維生素 D（尤其來自補充劑）可能因競爭同一種代謝酵素而降低這個降血脂藥的效力。"
-status = "draft"
+# 退役（2026-10-19 人工審查）：原文只說「高攝取量」的維生素 D 可能降低效力，規則模型沒有攝取量門檻，
+# 會對一般劑量也發出提醒；長者同時使用 statin 與維生素 D 很普遍，提醒會失去意義。等模型支援門檻再重新草擬。
+reason_zh = "已退役、不核准：原文只說高攝取量的維生素 D 可能降低這類降血脂藥的效力，目前的規則無法依攝取量設定門檻，會對一般劑量也發出提醒。"
+status = "retired"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -243,8 +265,10 @@ ingredient_code = "niacin"
 interaction_type = "pharmacodynamic"
 requires_supplement_intake = true
 advice = "inform_provider"
-reason_zh = "高劑量菸鹼酸可能使血糖升高，併用降血糖藥時需要監測血糖，藥量也可能要調整。"
-status = "draft"
+# 退役（2026-10-19 人工審查）：原文只針對「high-dose nicotinic acid」，成分目錄把菸鹼醯胺也歸在 niacin，
+# 規則模型沒有型態與攝取量門檻，會對一般綜合維生素也發出提醒；原文說的是任何降血糖藥，只草擬兩類也不完整。
+reason_zh = "已退役、不核准：原文只針對高劑量的菸鹼酸，成分目錄把菸鹼醯胺也算在內，目前的規則無法依型態與攝取量設定門檻，會對一般綜合維生素也發出提醒。"
+status = "retired"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
@@ -259,8 +283,10 @@ ingredient_code = "niacin"
 interaction_type = "pharmacodynamic"
 requires_supplement_intake = true
 advice = "inform_provider"
-reason_zh = "高劑量菸鹼酸可能使血糖升高，併用降血糖藥時需要監測血糖，藥量也可能要調整。"
-status = "draft"
+# 退役（2026-10-19 人工審查）：原文只針對「high-dose nicotinic acid」，成分目錄把菸鹼醯胺也歸在 niacin，
+# 規則模型沒有型態與攝取量門檻，會對一般綜合維生素也發出提醒；原文說的是任何降血糖藥，只草擬兩類也不完整。
+reason_zh = "已退役、不核准：原文只針對高劑量的菸鹼酸，成分目錄把菸鹼醯胺也算在內，目前的規則無法依型態與攝取量設定門檻，會對一般綜合維生素也發出提醒。"
+status = "retired"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"

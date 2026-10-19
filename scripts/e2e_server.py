@@ -30,7 +30,7 @@ from nutrition_agent.reference import load_reference_data, load_rule_set
 MEDICATION_PACK_REPLY = '{"readable": true, "names": ["Amlodipine", "Zantac"]}'
 ROOT = Path(__file__).resolve().parents[1]
 RECORDED_VLM = ROOT / "evals" / "vlm" / "recorded" / "vlm"
-# 真實規則全是草稿，煙霧測試改用測試夾具的審定規則（metformin × 維生素 B12）。
+# 煙霧測試用測試夾具的審定規則（metformin × 維生素 B12），不受真實規則審查結果影響。
 FIXTURE_RULES = ROOT / "tests" / "fixtures" / "rules.toml"
 EVIDENCE_ID = "ev-e2e0000000000001"
 EVIDENCE_TEXT = "Metformin might reduce the absorption of vitamin B12 and reduce serum concentrations."
