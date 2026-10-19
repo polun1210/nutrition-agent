@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from nutrition_agent.reference.drugs import DrugCatalog
 from nutrition_agent.reference.ingredients import IngredientCatalog
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -23,14 +24,19 @@ class ReferenceData(BaseModel):
 
     version: str
     ingredients: IngredientCatalog
+    drugs: DrugCatalog
 
     @property
     def versions(self) -> dict[str, str]:
-        return {"ingredients": self.ingredients.version}
+        return {"ingredients": self.ingredients.version, "drugs": self.drugs.version}
 
 
 def load_reference_data(data_dir: Path = DATA_DIR) -> ReferenceData:
     manifest = read_toml(data_dir / "manifest.toml")
     raw = read_toml(data_dir / "ingredients.toml")
     ingredients = IngredientCatalog(version=raw["version"], ingredients=raw["ingredient"])
-    return ReferenceData(version=manifest["version"], ingredients=ingredients)
+    raw = read_toml(data_dir / "drugs.toml")
+    drugs = DrugCatalog(
+        version=raw["version"], classes=raw["class"], ingredients=raw["ingredient"]
+    )
+    return ReferenceData(version=manifest["version"], ingredients=ingredients, drugs=drugs)
