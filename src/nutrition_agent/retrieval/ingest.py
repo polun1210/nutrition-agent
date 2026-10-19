@@ -21,6 +21,7 @@ from nutrition_agent.retrieval.corpus import Document, discover_documents
 
 EMBED_BATCH_SIZE = 64
 MAX_EMBED_CHARS = 2000
+NUL = chr(0)  # PostgreSQL text 欄位不接受 NUL
 _MD_LINK_TARGET = re.compile(r"\]\([^)]*\)")
 # 參考文獻、免責聲明不是證據，不進索引。
 _NOISE_SECTIONS = frozenset({"references", "disclaimer", "top"})
@@ -72,7 +73,8 @@ def ingest_corpus(
 
 
 def _prepare(document: Document) -> list[_PreparedChunk]:
-    text = strip_base64_images(document.path.read_text(encoding="utf-8"))
+    raw_text = document.path.read_text(encoding="utf-8")
+    text = strip_base64_images(raw_text.replace(NUL, ""))
     seen: set[str] = set()
     prepared: list[_PreparedChunk] = []
     for chunk in chunk_markdown(text):
