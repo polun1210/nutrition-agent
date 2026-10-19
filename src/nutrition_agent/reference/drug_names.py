@@ -124,3 +124,8 @@ def load_drug_names(data_dir: Path = DATA_DIR) -> DrugNameTable:
     """載入藥名表：有完整匯出檔就用它，否則退回 repo 內的小量夾具。"""
     full = data_dir / FULL_TABLE
     return read_drug_names(full if full.exists() else data_dir / SAMPLE_TABLE)
+
+
+def load_sample_drug_names(data_dir: Path = DATA_DIR) -> DrugNameTable:
+    """repo 內的小量夾具；測試與 e2e 用它，結果不受完整匯出檔影響。"""
+    return read_drug_names(data_dir / SAMPLE_TABLE)

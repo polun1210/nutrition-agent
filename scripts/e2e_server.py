@@ -21,11 +21,12 @@ from alembic.config import Config
 from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
-from nutrition_agent.api.assessments import get_reference
+from nutrition_agent.api.assessments import get_drug_names, get_reference
 from nutrition_agent.config import get_settings, to_sqlalchemy_url
 from nutrition_agent.extraction import medication_pack
 from nutrition_agent.photos import PhotoStore
 from nutrition_agent.reference import load_reference_data, load_rule_set
+from nutrition_agent.reference.drug_names import load_sample_drug_names
 
 MEDICATION_PACK_REPLY = '{"readable": true, "names": ["Amlodipine", "Zantac"]}'
 ROOT = Path(__file__).resolve().parents[1]
@@ -101,6 +102,8 @@ def main() -> None:
         photo_store=PhotoStore(Path(tempfile.mkdtemp(prefix="nutrition-e2e-photos-"))),
     )
     app.dependency_overrides[get_reference] = lambda: ref
+    sample = load_sample_drug_names()
+    app.dependency_overrides[get_drug_names] = lambda: sample
     uvicorn.run(app, host="127.0.0.1", port=port)
 
 

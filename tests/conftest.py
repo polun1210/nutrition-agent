@@ -13,8 +13,10 @@ from fastapi.testclient import TestClient
 from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
+from nutrition_agent.api.assessments import get_drug_names
 from nutrition_agent.config import to_sqlalchemy_url
 from nutrition_agent.photos import PhotoStore
+from nutrition_agent.reference.drug_names import load_sample_drug_names
 from tests.fakes import FakeGateway
 
 TEST_DATABASE_URL = os.environ.get(
@@ -59,9 +61,13 @@ def gateway() -> FakeGateway:
 
 @pytest.fixture
 def app(db: psycopg.Connection, gateway: FakeGateway, tmp_path: Path) -> FastAPI:
-    return create_app(
+    app = create_app(
         connection_provider=lambda: db, gateway=gateway, photo_store=PhotoStore(tmp_path / "photos")
     )
+    # 藥名用 repo 內的夾具，測試結果不受完整匯出檔（drug_names.csv）影響。
+    sample = load_sample_drug_names()
+    app.dependency_overrides[get_drug_names] = lambda: sample
+    return app
 
 
 @pytest.fixture
