@@ -1,0 +1,352 @@
+# 用藥類別（16 類）與其有效成分。範圍以 docs/legacy/v1-scope-checklist.md §1 為準。
+# role：rule_bearing = 規則型（會觸發判定）；coverage_only = 覆蓋型（不觸發規則，但藥名對照必須認得）。
+# group：高血壓／糖尿病／高血脂／慢性關節炎／慢性失眠症各自一組，腸胃用藥獨立（不佔疾病名額）。
+# 慢性病不過濾藥名對照，group 只用於說明，不用於篩選。
+# Ranitidine 因 NDMA 汙染已全球下架，刻意不收錄。
+
+version = "2026.10.0"
+
+[[class]]
+code = "thiazide_diuretic"
+name_zh = "Thiazide 類利尿劑"
+group = "hypertension"
+role = "rule_bearing"
+
+[[class]]
+code = "acei_arb"
+name_zh = "ACEI／ARB"
+group = "hypertension"
+role = "rule_bearing"
+
+[[class]]
+code = "ccb"
+name_zh = "鈣離子阻斷劑（CCB）"
+group = "hypertension"
+role = "coverage_only"
+
+[[class]]
+code = "biguanide"
+name_zh = "雙胍類"
+group = "type2_diabetes"
+role = "rule_bearing"
+
+[[class]]
+code = "insulin"
+name_zh = "胰島素"
+group = "type2_diabetes"
+role = "rule_bearing"
+
+[[class]]
+code = "sglt2_inhibitor"
+name_zh = "SGLT2 抑制劑"
+group = "type2_diabetes"
+role = "coverage_only"
+
+[[class]]
+code = "statin"
+name_zh = "Statin 類"
+group = "hyperlipidemia"
+role = "rule_bearing"
+
+[[class]]
+code = "cholesterol_absorption_inhibitor"
+name_zh = "膽固醇吸收抑制劑"
+group = "hyperlipidemia"
+role = "coverage_only"
+
+[[class]]
+code = "cox2_inhibitor"
+name_zh = "COX-2 選擇性抑制劑"
+group = "chronic_arthritis"
+role = "rule_bearing"
+
+[[class]]
+code = "acetaminophen"
+name_zh = "Acetaminophen"
+group = "chronic_arthritis"
+role = "coverage_only"
+
+[[class]]
+code = "prescription_glucosamine"
+name_zh = "處方葡萄糖胺"
+group = "chronic_arthritis"
+role = "rule_bearing"
+
+[[class]]
+code = "bzd_z_drug"
+name_zh = "BZD 與 Z-drugs"
+group = "chronic_insomnia"
+role = "coverage_only"
+
+[[class]]
+code = "melatonin"
+name_zh = "褪黑激素製劑"
+group = "chronic_insomnia"
+role = "coverage_only"
+
+[[class]]
+code = "ppi"
+name_zh = "質子幫浦抑制劑（PPI）"
+group = "gastrointestinal"
+role = "rule_bearing"
+
+[[class]]
+code = "h2_receptor_antagonist"
+name_zh = "H2 受體拮抗劑"
+group = "gastrointestinal"
+role = "rule_bearing"
+
+[[class]]
+code = "calcium_magnesium_antacid"
+name_zh = "含鈣／含鎂制酸劑與軟便劑"
+group = "gastrointestinal"
+role = "rule_bearing"
+
+# ---- 有效成分 ----
+
+[[ingredient]]
+code = "hydrochlorothiazide"
+class_code = "thiazide_diuretic"
+name_en = "Hydrochlorothiazide"
+name_zh = "氫氯噻嗪"
+
+[[ingredient]]
+code = "indapamide"
+class_code = "thiazide_diuretic"
+name_en = "Indapamide"
+name_zh = "吲達帕胺"
+
+[[ingredient]]
+code = "losartan"
+class_code = "acei_arb"
+name_en = "Losartan"
+name_zh = "洛沙坦"
+
+[[ingredient]]
+code = "valsartan"
+class_code = "acei_arb"
+name_en = "Valsartan"
+name_zh = "纈沙坦"
+
+[[ingredient]]
+code = "irbesartan"
+class_code = "acei_arb"
+name_en = "Irbesartan"
+name_zh = "厄貝沙坦"
+
+[[ingredient]]
+code = "telmisartan"
+class_code = "acei_arb"
+name_en = "Telmisartan"
+name_zh = "替米沙坦"
+
+[[ingredient]]
+code = "lisinopril"
+class_code = "acei_arb"
+name_en = "Lisinopril"
+name_zh = "賴諾普利"
+
+[[ingredient]]
+code = "amlodipine"
+class_code = "ccb"
+name_en = "Amlodipine"
+name_zh = "氨氯地平"
+
+[[ingredient]]
+code = "felodipine"
+class_code = "ccb"
+name_en = "Felodipine"
+name_zh = "非洛地平"
+
+[[ingredient]]
+code = "metformin"
+class_code = "biguanide"
+name_en = "Metformin"
+name_zh = "二甲雙胍"
+
+[[ingredient]]
+code = "insulin"
+class_code = "insulin"
+name_en = "Insulin"
+name_zh = "胰島素"
+
+[[ingredient]]
+code = "empagliflozin"
+class_code = "sglt2_inhibitor"
+name_en = "Empagliflozin"
+name_zh = "恩格列淨"
+
+[[ingredient]]
+code = "dapagliflozin"
+class_code = "sglt2_inhibitor"
+name_en = "Dapagliflozin"
+name_zh = "達格列淨"
+
+[[ingredient]]
+code = "atorvastatin"
+class_code = "statin"
+name_en = "Atorvastatin"
+name_zh = "阿托伐他汀"
+
+[[ingredient]]
+code = "rosuvastatin"
+class_code = "statin"
+name_en = "Rosuvastatin"
+name_zh = "瑞舒伐他汀"
+
+[[ingredient]]
+code = "simvastatin"
+class_code = "statin"
+name_en = "Simvastatin"
+name_zh = "辛伐他汀"
+
+[[ingredient]]
+code = "pravastatin"
+class_code = "statin"
+name_en = "Pravastatin"
+name_zh = "普伐他汀"
+
+[[ingredient]]
+code = "ezetimibe"
+class_code = "cholesterol_absorption_inhibitor"
+name_en = "Ezetimibe"
+name_zh = "依澤替米貝"
+
+[[ingredient]]
+code = "celecoxib"
+class_code = "cox2_inhibitor"
+name_en = "Celecoxib"
+name_zh = "塞來昔布"
+
+[[ingredient]]
+code = "etoricoxib"
+class_code = "cox2_inhibitor"
+name_en = "Etoricoxib"
+name_zh = "依託考昔"
+
+[[ingredient]]
+code = "acetaminophen"
+class_code = "acetaminophen"
+name_en = "Acetaminophen"
+name_zh = "乙醯胺酚"
+
+[[ingredient]]
+code = "glucosamine_sulfate"
+class_code = "prescription_glucosamine"
+name_en = "Glucosamine sulfate"
+name_zh = "硫酸葡萄糖胺"
+
+[[ingredient]]
+code = "glucosamine_hydrochloride"
+class_code = "prescription_glucosamine"
+name_en = "Glucosamine hydrochloride"
+name_zh = "鹽酸葡萄糖胺"
+
+[[ingredient]]
+code = "estazolam"
+class_code = "bzd_z_drug"
+name_en = "Estazolam"
+name_zh = "艾司唑崙"
+
+[[ingredient]]
+code = "lorazepam"
+class_code = "bzd_z_drug"
+name_en = "Lorazepam"
+name_zh = "蘿拉西泮"
+
+[[ingredient]]
+code = "zolpidem"
+class_code = "bzd_z_drug"
+name_en = "Zolpidem"
+name_zh = "唑吡坦"
+
+[[ingredient]]
+code = "zopiclone"
+class_code = "bzd_z_drug"
+name_en = "Zopiclone"
+name_zh = "佐沛克隆"
+
+[[ingredient]]
+code = "melatonin"
+class_code = "melatonin"
+name_en = "Melatonin"
+name_zh = "褪黑激素"
+
+[[ingredient]]
+code = "omeprazole"
+class_code = "ppi"
+name_en = "Omeprazole"
+name_zh = "奧美拉唑"
+
+[[ingredient]]
+code = "esomeprazole"
+class_code = "ppi"
+name_en = "Esomeprazole"
+name_zh = "埃索美拉唑"
+
+[[ingredient]]
+code = "lansoprazole"
+class_code = "ppi"
+name_en = "Lansoprazole"
+name_zh = "蘭索拉唑"
+
+[[ingredient]]
+code = "pantoprazole"
+class_code = "ppi"
+name_en = "Pantoprazole"
+name_zh = "泮托拉唑"
+
+[[ingredient]]
+code = "rabeprazole"
+class_code = "ppi"
+name_en = "Rabeprazole"
+name_zh = "雷貝拉唑"
+
+[[ingredient]]
+code = "famotidine"
+class_code = "h2_receptor_antagonist"
+name_en = "Famotidine"
+name_zh = "法莫替丁"
+
+[[ingredient]]
+code = "cimetidine"
+class_code = "h2_receptor_antagonist"
+name_en = "Cimetidine"
+name_zh = "西咪替丁"
+
+[[ingredient]]
+code = "nizatidine"
+class_code = "h2_receptor_antagonist"
+name_en = "Nizatidine"
+name_zh = "尼扎替丁"
+
+# 含鈣／含鎂制酸劑與軟便劑：藥名表需另外認得「氧化鎂」這類獨立名稱（使用者認知裡是軟便劑，不是胃藥）。
+[[ingredient]]
+code = "calcium_carbonate"
+class_code = "calcium_magnesium_antacid"
+name_en = "Calcium carbonate"
+name_zh = "碳酸鈣"
+
+[[ingredient]]
+code = "magnesium_hydroxide"
+class_code = "calcium_magnesium_antacid"
+name_en = "Magnesium hydroxide"
+name_zh = "氫氧化鎂"
+
+[[ingredient]]
+code = "aluminum_hydroxide"
+class_code = "calcium_magnesium_antacid"
+name_en = "Aluminum hydroxide"
+name_zh = "氫氧化鋁"
+
+[[ingredient]]
+code = "aluminum_magnesium_compound"
+class_code = "calcium_magnesium_antacid"
+name_en = "Aluminum magnesium compound"
+name_zh = "鋁鎂複方"
+
+[[ingredient]]
+code = "magnesium_oxide"
+class_code = "calcium_magnesium_antacid"
+name_en = "Magnesium oxide"
+name_zh = "氧化鎂"

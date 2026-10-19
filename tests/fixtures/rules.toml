@@ -1,0 +1,90 @@
+# 測試專用的規則夾具：含草稿、審定、退役三種狀態，用來驗證判定引擎只讀審定規則。
+# 內容只為了讓資料格式與完整性檢查有東西可驗，不代表任何醫學結論；
+# 出處引文都取自 knowledge/ 的真實段落，所以逐字檢查會通過。
+# 真實規則（src/nutrition_agent/reference/data/rules.toml）一律是草稿，審定只能由開發者手動標記。
+
+version = "fixture-1"
+
+[[rule]]
+id = "fx-metformin-b12"
+condition_type = "drug_ingredient"
+condition_code = "metformin"
+ingredient_code = "vitamin_b12"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "這個藥可能影響體內這項維生素的狀態。"
+status = "approved"
+approved_by = "fixture"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/VitaminB12-HealthProfessional.md"
+quote = "Metformin, an antihyperglycemic agent used as first-line treatment for prediabetes and diabetes, might reduce the absorption of vitamin B12 and significantly reduce serum vitamin B12 concentrations"
+
+[[rule]]
+id = "fx-ppi-magnesium"
+condition_type = "drug_class"
+condition_code = "ppi"
+ingredient_code = "magnesium"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "長期使用這類藥物可能使體內鎂偏低。"
+status = "approved"
+approved_by = "fixture"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Magnesium-HealthProfessional.md"
+quote = "Prescription proton pump inhibitor (PPI) drugs, such as esomeprazole magnesium (Nexium) and lansoprazole (Prevacid), can cause hypomagnesemia when taken for prolonged periods"
+
+[[rule]]
+id = "fx-statin-niacin-draft"
+condition_type = "drug_class"
+condition_code = "statin"
+ingredient_code = "niacin"
+interaction_type = "pharmacodynamic"
+requires_supplement_intake = true
+advice = "consult_before_combining"
+reason_zh = "同時服用可能增加不良反應的風險。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Niacin-HealthProfessional.md"
+quote = "Statin medications have become the treatment of choice for hyperlipidemia and lowering the risks of atherosclerotic cardiovascular disease."
+
+[[rule]]
+id = "fx-antacid-calcium-separate"
+condition_type = "drug_class"
+condition_code = "calcium_magnesium_antacid"
+ingredient_code = "calcium"
+interaction_type = "absorption"
+requires_supplement_intake = true
+advice = "separate_timing"
+separation_hours = 2
+reason_zh = "兩者同時服用可能影響吸收。"
+status = "approved"
+approved_by = "fixture"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Calcium-HealthProfessional.md"
+quote = "Taking the antibiotic 2 hours before or 2 hours after calcium supplements prevents this effect"
+
+[[rule]]
+id = "fx-thiazide-zinc-retired"
+condition_type = "drug_class"
+condition_code = "thiazide_diuretic"
+ingredient_code = "zinc"
+interaction_type = "drug_affects_nutrient"
+requires_supplement_intake = false
+advice = "inform_provider"
+reason_zh = "這條規則已退役。"
+status = "retired"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Zinc-HealthProfessional.md"
+quote = "Both quinolone antibiotics (such as Cipro) and tetracycline antibiotics (such as Achromycin and Sumycin) might interact with zinc in the gastrointestinal tract"
