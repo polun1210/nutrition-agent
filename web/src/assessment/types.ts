@@ -20,7 +20,7 @@ export type Product = {
   dose_unit: (typeof DOSE_UNITS)[number];
   units_per_serving: number;
   ingredients: IngredientLine[];
-  intake: { frequency: "daily"; times_per_day: number; units_per_time: number };
+  intake: Intake;
   photo_ids?: number[];
 };
 
@@ -44,7 +44,49 @@ export type Extraction = {
   photos: { photo_id: number; readable: boolean; hint: string | null }[];
 };
 
-export type Draft = { id: number; products: Product[]; submitted_case_id: number | null };
+export const FREQUENCIES = [
+  { value: "daily", label: "每天" },
+  { value: "every_other_day", label: "每兩天" },
+  { value: "weekly_days", label: "每週指定天數" },
+  { value: "cycle", label: "週期性服用／停用" },
+] as const;
+
+export type Frequency = (typeof FREQUENCIES)[number]["value"];
+
+export type Intake = {
+  frequency: Frequency;
+  times_per_day: number;
+  units_per_time: number;
+  days_per_week?: number | null;
+  cycle_on_days?: number | null;
+  cycle_off_days?: number | null;
+};
+
+export type MedicationInput = { name: string };
+
+export type DrugIngredient = {
+  code: string;
+  name_en: string;
+  name_zh: string;
+  class_code: string;
+  class_name_zh: string;
+};
+
+export type DrugCandidate = {
+  name: string;
+  scope_status: "in_scope" | "out_of_scope" | "unconfirmed";
+  name_zh: string | null;
+  ingredients: DrugIngredient[];
+  out_of_scope_names: string[];
+  brand_names: string[];
+};
+
+export type Draft = {
+  id: number;
+  products: Product[];
+  medications: MedicationInput[];
+  submitted_case_id: number | null;
+};
 
 export type ReportSection = { key: string; title: string; lines: string[] };
 
