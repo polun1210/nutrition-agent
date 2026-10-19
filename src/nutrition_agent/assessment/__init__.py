@@ -8,6 +8,7 @@ from nutrition_agent.assessment.models import (
     Assessment,
     AssessmentCase,
     IngredientLine,
+    InteractionFinding,
     Intake,
     ListedIngredient,
     Medication,
@@ -15,6 +16,8 @@ from nutrition_agent.assessment.models import (
     NutrientSource,
     Product,
     ProfileSnapshot,
+    RecommendedTotal,
+    TriggeringDrug,
     UlComparison,
 )
 
@@ -25,6 +28,7 @@ __all__ = [
     "Assessment",
     "AssessmentCase",
     "IngredientLine",
+    "InteractionFinding",
     "Intake",
     "ListedIngredient",
     "Medication",
@@ -32,6 +36,8 @@ __all__ = [
     "NutrientSource",
     "Product",
     "ProfileSnapshot",
+    "RecommendedTotal",
+    "TriggeringDrug",
     "UlComparison",
     "assess",
 ]

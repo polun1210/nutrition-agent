@@ -68,6 +68,7 @@ class Rule(BaseModel):
     condition_type: ConditionType
     condition_code: str
     ingredient_code: str
+    ingredient_form: str | None = None  # 限定成分型態（例如氧化鎂）；None = 不限
     interaction_type: InteractionType
     requires_supplement_intake: bool
     advice: Advice

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from nutrition_agent.accounts import NO_CONDITION
+from nutrition_agent.assessment.interactions import find_interactions
 from nutrition_agent.assessment.models import (
     HEALTHY_POPULATION,
     UNKNOWN_INGREDIENT,
@@ -105,6 +106,8 @@ def assess(case: AssessmentCase, ref: ReferenceData) -> Assessment:
         undetermined_nutrients=sorted(undetermined),
         nutrient_sources=sources,
         disclosures=_disclosures(case),
+        interactions=find_interactions(case, ref, comparisons, undetermined),
+        approved_rule_count=len(ref.rules.approved()),
     )
 
 

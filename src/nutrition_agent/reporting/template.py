@@ -15,6 +15,7 @@ from nutrition_agent.assessment import (
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
+    InteractionFinding,
     Medication,
     IngredientLine,
     Product,
@@ -34,6 +35,20 @@ UNKNOWN_LABEL = "無法確定"
 NO_MEDICATION_TEXT = "你沒有提供用藥資料"
 
 ESTIMATE_NOTE = "此數值為系統推估，非標示值"
+
+NO_RULES_TEXT = (
+    "本系統目前尚無已審定的交互作用規則，因此無法比對你的用藥與保健食品；"
+    "這不表示兩者不會交互作用，請諮詢藥師或醫師。"
+)
+NO_HIT_TEXT = (
+    "你的用藥與保健食品未命中已審定的規則；本系統只涵蓋部分用藥類別與成分，"
+    "這不表示兩者不會交互作用，請諮詢藥師或醫師。"
+)
+NO_MEDICATION_INTERACTION_TEXT = "你沒有提供用藥資料，未進行交互作用比對。"
+ADVICE_TEXT = {
+    "inform_provider": "告知你的醫師或藥師",
+    "consult_before_combining": "合併使用前先諮詢醫師或藥師",
+}
 
 DISCLOSURE_TEXT = {
     HEALTHY_POPULATION: "DRIs 的參考值適用於健康族群；你勾選了慢性病，這些數值僅供對照。",
@@ -63,6 +78,11 @@ def render_report(case: AssessmentCase, assessment: Assessment, ref: ReferenceDa
                 key="ul_comparison",
                 title="上限比對",
                 lines=_ul_lines(assessment, ref, names),
+            ),
+            Section(
+                key="interaction",
+                title="交互作用",
+                lines=_interaction_lines(case, assessment, names),
             ),
             Section(
                 key="scope",
@@ -180,6 +200,48 @@ def _comparison_line(c: UlComparison, names: _Names) -> str:
             f"{_num(c.ul_percent)}%{flag}（上限 {_num(c.ul)} {c.unit}；{scope}）{note}"
         )
     return f"{head}；佔上限 {_num(c.ul)} {c.unit} 的 {_num(c.ul_percent)}%{flag}（{scope}）{note}"
+
+
+def _interaction_lines(
+    case: AssessmentCase, assessment: Assessment, names: _Names
+) -> list[str]:
+    if assessment.interactions:
+        return [line for f in assessment.interactions for line in _card_lines(f, names)]
+    if not case.medications:
+        return [NO_MEDICATION_INTERACTION_TEXT]
+    return [NO_HIT_TEXT if assessment.approved_rule_count else NO_RULES_TEXT]
+
+
+def _card_lines(f: InteractionFinding, names: _Names) -> list[str]:
+    drugs = " 與 ".join(d.raw_name for d in f.triggering_drugs)
+    lines = [f"{names(f.ingredient_code)}：因為你正在服用 {drugs}", *f.reasons_zh]
+    lines.append("建議行動：" + "；".join(_advice_text(f, a) for a in f.advice))
+    if f.unit is not None:
+        lines.append(_values_line(f))
+    return lines
+
+
+def _advice_text(f: InteractionFinding, advice: str) -> str:
+    if advice == "separate_timing":
+        return f"與藥物錯開服用，至少相隔 {f.separation_hours} 小時"
+    return ADVICE_TEXT[advice]
+
+
+def _values_line(f: InteractionFinding) -> str:
+    """三個數值並列，不判斷高低、不說不足。"""
+    intake = (
+        f"{_num(f.supplement_intake)} {f.unit}"
+        if f.supplement_intake is not None
+        else "無法判定"
+    )
+    total = (
+        f"{_num(f.recommended_total.value)} {f.recommended_total.unit}"
+        f"（{f.recommended_total.kind}）"
+        if f.recommended_total
+        else "無"
+    )
+    ul = f"上限 {_num(f.ul)} {f.unit}" if f.ul is not None else "無已知上限攝取量"
+    return f"參考數值：來自補充劑 {intake}；建議總攝取量（含飲食）{total}；{ul}"
 
 
 def _scope_lines(assessment: Assessment, names: _Names) -> list[str]:
