@@ -108,8 +108,8 @@ repo 內有兩份 md 轉檔：`DRIs_Table.md`（總表）、`DRIs_Full.md`（完
   **不適用本專案的錨定單位**。
 - **以毫克標示者**：型態才有影響。每毫克的 α-TE 依 NRC 1989 為
   d-α-生育醇 1.00、d-α-生育醇醋酸酯 0.91、dl-α-生育醇 0.74、dl-α-生育醇醋酸酯 0.67。
-  這組係數本文未逐項列出，**引用時出處寫 NRC 1989（DRIs 維生素 E 章參考文獻 2）**，
-  建表前須回查該書原文核對。
+  這組係數本文未逐項列出，引用時出處寫 NRC 1989（DRIs 維生素 E 章參考文獻 2）。
+  2026-10-19 已回查原書（見下文「仍未決」的處理結果）。
 
 ## 本文中與藥物相關的敘述（供藥物交互作用模組建表參考）
 
@@ -146,9 +146,18 @@ repo 內有兩份 md 轉檔：`DRIs_Table.md`（總表）、`DRIs_Full.md`（完
 - 不要從攤平的 `DRIs_Table.md` 重新產生 dris.csv（見上文「轉檔版本的使用限制」）。
 - 測試：`tests/reference/test_dris.py` 涵蓋列數（124）、年齡邊界（30/31、50/51、70/71）、性別分流、無 UL 的紀錄、UL 範圍（supplement_only／includes_diet）與 UL 不分性別。
 
-### 仍未決（不可視為已驗證）
+### 語意待辦的處理（2026-10-19 人工決定）
 
-- [ ] 鐵 UL：原文含強化食品及補充劑的總鐵量，與「只計補充劑」的對應關係待確認。
-- [ ] 鎂 UL：原文為「非食物性鎂」，可能含含鎂藥物，與補充劑來源的界線待確認。
-- [ ] 葉酸 UL：與型態換算（DFE 與合成葉酸）的語意待確認。
-- [ ] 維生素 E：毫克型態係數待回查 NRC 1989 原書核對。
+- [x] 鐵 UL：原文涵蓋「強化食品與補充劑等之總鐵量」，系統只算使用者填的保健食品，比對結果是下限。
+  `ul_scope = supplement_and_fortified`，報告寫「上限包含補充劑與強化食品；這裡只算你填的保健食品，實際可能更高」。
+- [x] 鎂 UL：原文為「非食物性鎂」，含含鎂藥物；系統不計藥品來源（另有揭露），比對結果是下限。
+  `ul_scope = non_food`，報告寫「上限包含所有非食物來源，含藥物；……實際可能更高」。
+  UL 表鎂欄位標題「鎂(1)」的 (1) 註解在第 2 頁仍找不到，維持未解。
+- [x] 葉酸 UL：採用「以合成葉酸 µg 比對 1000 µg」的解讀，標示為 µg DFE 者除以 1.7；報告標明這是依 DRIs 本文推導的解讀。
+  甲基葉酸（5-MTHF）本文未討論，保守地 1:1 算進葉酸（加進成分同義詞）。
+- [x] 維生素 E：回查 NRC 1989《RDA 第十版》第 100 頁（National Academies Press 線上版頁面影像）。
+  原文明載：「One α-TE is the activity of 1 mg of RRR-α-tocopherol」「If all-rac-α-tocopherol is present,
+  the number of milligrams should be multiplied by 0.74」「The activity of 1 mg of the acetate form of this latter
+  compound [all-rac-α-tocopherol] has been defined as equivalent to 1 IU of vitamin E」。
+  d-醋酸酯 0.91、dl-醋酸酯 0.67 與 1 IU = 0.67 mg α-TE 原書沒有直接寫，由上述定義加醋酸酯質量比
+  430.7 / 472.8 = 0.911 推導；units.toml 的出處欄寫明「明載」或「推導」。

@@ -4,6 +4,7 @@ DRIs 預期值是從 reference/data/dris.csv 抄的字面值（71 歲以上：�
 """
 
 from nutrition_agent.assessment import assess
+from nutrition_agent.reference import UlScope
 from tests.assessment.conftest import line, make_case, product
 
 
@@ -84,14 +85,14 @@ def test_nutrient_without_ul_has_no_percent_and_is_never_exceeded(ref):
     assert potassium.exceeded is False
 
 
-def test_magnesium_and_iron_are_marked_supplement_only(ref):
+def test_each_comparison_carries_the_ul_scope(ref):
     case = make_case(product("綜合", [line("magnesium", 100), line("iron", 10), line("zinc", 5)]))
 
     result = assess(case, ref)
 
-    assert row(result, "magnesium").supplement_only is True
-    assert row(result, "iron").supplement_only is True
-    assert row(result, "zinc").supplement_only is False
+    assert row(result, "magnesium").ul_scope is UlScope.NON_FOOD
+    assert row(result, "iron").ul_scope is UlScope.SUPPLEMENT_AND_FORTIFIED
+    assert row(result, "zinc").ul_scope is UlScope.INCLUDES_DIET
 
 
 def test_ul_comparison_uses_dris_group_for_age_and_sex(ref):

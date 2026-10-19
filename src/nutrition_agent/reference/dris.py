@@ -20,7 +20,9 @@ class Sex(StrEnum):
 
 
 class UlScope(StrEnum):
-    SUPPLEMENT_ONLY = "supplement_only"  # 鎂、鐵：只計補充劑來源
+    # 系統只算使用者填的保健食品，所以鎂、鐵的比對結果都是下限：超過一定是真的超過。
+    NON_FOOD = "non_food"  # 鎂：所有非食物來源，含含鎂藥物（總表註「為非食物性鎂量」）
+    SUPPLEMENT_AND_FORTIFIED = "supplement_and_fortified"  # 鐵：補充劑與強化食品（總表註）
     INCLUDES_DIET = "includes_diet"  # 其餘：定義上含飲食
 
 

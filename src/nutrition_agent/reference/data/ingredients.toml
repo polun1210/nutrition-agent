@@ -2,7 +2,7 @@
 # sort_order 是報告中固定的排列順序；synonyms 用於標示成分名稱對照（比對前會做 NFKC 正規化、忽略大小寫）。
 # canonical_unit 是 DRIs 使用的單位（目標營養素才有）。
 
-version = "2026.10.0"
+version = "2026.10.1"
 
 # ---- 目標營養素（DRIs 第八版，做數值判定）----
 
@@ -74,7 +74,8 @@ canonical_unit = "ug"
 code = "folate"
 category = "target_nutrient"
 display_name_zh = "葉酸"
-synonyms = ["Folate", "Folic Acid", "維生素 B9", "維他命B9"]
+# 甲基葉酸（5-MTHF）DRIs 本文未討論；2026-10-19 人工決定保守地 1:1 算進葉酸，與葉酸一起比對上限。
+synonyms = ["Folate", "Folic Acid", "維生素 B9", "維他命B9", "5-MTHF", "L-5-MTHF", "甲基葉酸", "Methylfolate", "L-Methylfolate", "5-甲基四氫葉酸", "L-5-甲基四氫葉酸"]
 sort_order = 9
 canonical_unit = "ug_dfe"
 

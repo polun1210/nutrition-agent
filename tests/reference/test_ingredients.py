@@ -22,6 +22,12 @@ def test_同義詞可反查標準代碼且含範圍外成分():
     assert data.ingredients.find("不存在的成分") is None
 
 
+def test_甲基葉酸算進葉酸():
+    data = load_reference_data()
+    for name in ("5-MTHF", "L-5-MTHF", "甲基葉酸", "L-Methylfolate"):
+        assert data.ingredients.find(name).code == "folate", name
+
+
 def test_資料帶版本號():
     data = load_reference_data()
     assert data.versions["ingredients"]

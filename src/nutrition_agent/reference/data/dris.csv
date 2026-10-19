@@ -1,8 +1,8 @@
 # DRIs 第八版（民國111年）19 歲以上成人。依總表人工抄錄，來源 knowledge/sources/dris/DRIs_Table.md 與原始總表。
-# kind：rda／ai／ul。value 為空的 ul 列表示「無已知上限攝取量」。ul_scope：supplement_only = 只計補充劑來源（鎂、鐵）；includes_diet = 定義上含飲食。
+# kind：rda／ai／ul。value 為空的 ul 列表示「無已知上限攝取量」。ul_scope：non_food = 所有非食物來源，含含鎂藥物（鎂）；supplement_and_fortified = 補充劑與強化食品（鐵）；includes_diet = 定義上含飲食。
 # 單位：mg／ug／mg_alpha_te（維生素 E）／mg_ne（菸鹼素）／ug_dfe（葉酸建議量，上限為合成葉酸 ug）。
 # 第一行 version 之後是欄位列。
-version,2026.10.0
+version,2026.10.1
 nutrient_code,kind,sex,age_min,age_max,value,unit,ul_scope
 calcium,ai,any,19,30,1000,mg,
 calcium,ai,any,31,50,1000,mg,
@@ -20,10 +20,10 @@ magnesium,rda,female,19,30,320,mg,
 magnesium,rda,female,31,50,320,mg,
 magnesium,rda,female,51,70,310,mg,
 magnesium,rda,female,71,,300,mg,
-magnesium,ul,any,19,30,350,mg,supplement_only
-magnesium,ul,any,31,50,350,mg,supplement_only
-magnesium,ul,any,51,70,350,mg,supplement_only
-magnesium,ul,any,71,,350,mg,supplement_only
+magnesium,ul,any,19,30,350,mg,non_food
+magnesium,ul,any,31,50,350,mg,non_food
+magnesium,ul,any,51,70,350,mg,non_food
+magnesium,ul,any,71,,350,mg,non_food
 iron,rda,male,19,30,10,mg,
 iron,rda,male,31,50,10,mg,
 iron,rda,male,51,70,10,mg,
@@ -32,10 +32,10 @@ iron,rda,female,19,30,15,mg,
 iron,rda,female,31,50,15,mg,
 iron,rda,female,51,70,10,mg,
 iron,rda,female,71,,10,mg,
-iron,ul,any,19,30,40,mg,supplement_only
-iron,ul,any,31,50,40,mg,supplement_only
-iron,ul,any,51,70,40,mg,supplement_only
-iron,ul,any,71,,40,mg,supplement_only
+iron,ul,any,19,30,40,mg,supplement_and_fortified
+iron,ul,any,31,50,40,mg,supplement_and_fortified
+iron,ul,any,51,70,40,mg,supplement_and_fortified
+iron,ul,any,71,,40,mg,supplement_and_fortified
 zinc,rda,male,19,30,15,mg,
 zinc,rda,male,31,50,15,mg,
 zinc,rda,male,51,70,15,mg,

@@ -12,6 +12,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from nutrition_agent.reference.dris import UlScope
+
 # 「無法確定」選單項目的成分代碼：使用者無法判斷標示成分是哪一種時選它。
 UNKNOWN_INGREDIENT = "unknown"
 # 揭露事項代碼（報告模板依代碼渲染文字）
@@ -175,7 +177,7 @@ class UlComparison(Frozen):
     ul: float | None
     ul_percent: float | None
     exceeded: bool
-    supplement_only: bool  # 鎂、鐵：UL 只計補充劑來源
+    ul_scope: UlScope | None  # 上限涵蓋的攝取來源；None = 無已知上限攝取量
     estimated: bool = False  # 加總中含系統推估值（非標示值）
 
 

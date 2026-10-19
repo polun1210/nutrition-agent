@@ -28,7 +28,7 @@ from nutrition_agent.assessment import (
     SourceKind,
     UlComparison,
 )
-from nutrition_agent.reference import IngredientCategory, ReferenceData
+from nutrition_agent.reference import IngredientCategory, ReferenceData, UlScope
 from nutrition_agent.reporting.explanation import FindingExplanation, Footnote
 
 CONDITION_LABELS = {
@@ -43,6 +43,14 @@ UNKNOWN_LABEL = "無法確定"
 NO_MEDICATION_TEXT = "你沒有提供用藥資料"
 
 ESTIMATE_NOTE = "此數值為系統推估，非標示值"
+# 系統只算使用者填的保健食品：鎂、鐵的上限涵蓋更多來源，所以比對結果是下限。
+UL_SCOPE_TEXT = {
+    UlScope.NON_FOOD: "上限包含所有非食物來源，含藥物；這裡只算你填的保健食品，實際可能更高",
+    UlScope.SUPPLEMENT_AND_FORTIFIED: "上限包含補充劑與強化食品；這裡只算你填的保健食品，實際可能更高",
+    UlScope.INCLUDES_DIET: "上限定義上包含飲食",
+}
+# DRIs 原文沒有寫明葉酸上限的單位；依推導數值來自補充劑劑量，以合成葉酸微克數比對。
+UL_EXTRA_NOTE = {"folate": "；上限以補充劑的葉酸微克數比對，這是依 DRIs 本文推導的解讀"}
 
 NO_RULES_TEXT = (
     "本系統目前尚無已審定的交互作用規則，因此無法比對你的用藥與保健食品；"
@@ -256,7 +264,7 @@ def _comparison_line(c: UlComparison, names: _Names) -> str:
     if c.ul is None:
         note = f"（{ESTIMATE_NOTE}）" if c.estimated else ""
         return f"{head}；無已知上限攝取量{note}"
-    scope = "上限只計算補充劑來源" if c.supplement_only else "上限定義上包含飲食"
+    scope = UL_SCOPE_TEXT[c.ul_scope] + UL_EXTRA_NOTE.get(c.nutrient_code, "")
     flag = "，已超過上限" if c.exceeded else ""
     note = f"；{ESTIMATE_NOTE}" if c.estimated else ""
     if c.non_daily:

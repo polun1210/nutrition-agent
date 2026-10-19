@@ -3,7 +3,7 @@
 # 沒有對應規則的換算會明確失敗（UnitNotConvertible），不猜。
 # 單位代碼：mg／ug／g／IU／mg_alpha_te／mg_ne／ug_dfe 與維生素 E 各型態的 mg_*。
 
-version = "2026.10.0"
+version = "2026.10.1"
 
 # ---- 通用質量單位 ----
 
@@ -35,44 +35,46 @@ factor = 0.025
 source = "DRIs 第八版總表註 (7)：維生素 D 1 μg = 40 I.U."
 
 # ---- 維生素 E（α-TE）----
-# IU 本身依生物活性定義，天然型與合成型 1 IU 均約為 0.67 mg α-TE（NRC 1989 體系，不是 IOM 2000 的 0.45）。
-# 以毫克標示者，每毫克的 α-TE 依型態而異；這組係數 DRIs 本文未逐項列出，
-# 出處為 NRC 1989（DRIs 維生素 E 章參考文獻 2），正式審定前須回查原書核對。
+# 出處 NRC 1989《RDA 第十版》第 100 頁（DRIs 維生素 E 章參考文獻 2），2026-10-19 回查原書：
+# - 明載：一 α-TE 是 1 mg RRR-α-生育醇的活性；all-rac-α-生育醇的毫克數乘 0.74；1 mg all-rac-α-生育醇醋酸酯 = 1 IU。
+# - 推導：醋酸酯換算為生育醇的質量比 430.7 / 472.8 = 0.911（C29H50O2 / C31H52O3），
+#   所以 d-醋酸酯 0.91、dl-醋酸酯 0.74 × 0.911 = 0.67，1 IU（= 1 mg dl-醋酸酯）= 0.67 mg α-TE。
+# 不是 IOM 2000 的 mg α-生育醇體系（合成型 1 IU = 0.45 mg），那套不適用本專案的錨定單位。
 
 [[rule]]
 nutrient_code = "vitamin_e"
 from_unit = "IU"
 to_unit = "mg_alpha_te"
 factor = 0.67
-source = "DRIs 第八版維生素 E 章（NRC 1989 α-TE 體系）；見 knowledge/sources/dris/dris-reference-notes.md"
+source = "NRC 1989 第 100 頁：1 IU = 1 mg all-rac-α-生育醇醋酸酯；推導為 0.74 × 0.911"
 
 [[rule]]
 nutrient_code = "vitamin_e"
 from_unit = "mg_d_alpha_tocopherol"
 to_unit = "mg_alpha_te"
 factor = 1.0
-source = "NRC 1989（DRIs 維生素 E 章參考文獻 2），待回查原書"
+source = "NRC 1989 第 100 頁明載：一 α-TE 是 1 mg RRR-α-生育醇的活性"
 
 [[rule]]
 nutrient_code = "vitamin_e"
 from_unit = "mg_d_alpha_tocopheryl_acetate"
 to_unit = "mg_alpha_te"
 factor = 0.91
-source = "NRC 1989（DRIs 維生素 E 章參考文獻 2），待回查原書"
+source = "NRC 1989 第 100 頁定義推導：1.00 × 醋酸酯質量比 0.911"
 
 [[rule]]
 nutrient_code = "vitamin_e"
 from_unit = "mg_dl_alpha_tocopherol"
 to_unit = "mg_alpha_te"
 factor = 0.74
-source = "NRC 1989（DRIs 維生素 E 章參考文獻 2），待回查原書"
+source = "NRC 1989 第 100 頁明載：all-rac-α-生育醇的毫克數乘 0.74"
 
 [[rule]]
 nutrient_code = "vitamin_e"
 from_unit = "mg_dl_alpha_tocopheryl_acetate"
 to_unit = "mg_alpha_te"
 factor = 0.67
-source = "NRC 1989（DRIs 維生素 E 章參考文獻 2），待回查原書"
+source = "NRC 1989 第 100 頁定義推導：0.74 × 醋酸酯質量比 0.911"
 
 # ---- 菸鹼素（NE）----
 # 菸鹼酸與菸鹼醯胺的毫克數直接視為 NE 毫克（色胺酸來源不屬補充劑標示）。

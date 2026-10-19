@@ -14,11 +14,11 @@ def dris():
     return load_reference_data().dris
 
 
-def test_51歲以上成人鎂UL是350毫克且只計補充劑來源(dris):
+def test_51歲以上成人鎂UL是350毫克且涵蓋所有非食物來源(dris):
     ul = dris.lookup("magnesium", DriKind.UL, age=51, sex=Sex.FEMALE)
     assert ul.value == 350
     assert ul.unit == "mg"
-    assert ul.ul_scope is UlScope.SUPPLEMENT_ONLY
+    assert ul.ul_scope is UlScope.NON_FOOD
 
 
 def test_維生素D的UL是50微克(dris):
@@ -26,9 +26,9 @@ def test_維生素D的UL是50微克(dris):
     assert dris.lookup("vitamin_d", DriKind.UL, age=65, sex=Sex.MALE).unit == "ug"
 
 
-def test_鐵UL是40毫克且只計補充劑來源(dris):
+def test_鐵UL是40毫克且涵蓋補充劑與強化食品(dris):
     ul = dris.lookup("iron", DriKind.UL, age=40, sex=Sex.FEMALE)
-    assert (ul.value, ul.ul_scope) == (40, UlScope.SUPPLEMENT_ONLY)
+    assert (ul.value, ul.ul_scope) == (40, UlScope.SUPPLEMENT_AND_FORTIFIED)
 
 
 def test_鉀與B12沒有UL但仍有明確的紀錄(dris):

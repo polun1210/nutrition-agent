@@ -32,7 +32,6 @@ from nutrition_agent.reference import (
     IngredientCategory,
     ReferenceData,
     Sex,
-    UlScope,
     UnitNotConvertible,
 )
 
@@ -262,6 +261,6 @@ def _compare(
         ul=ul.value if has_ul else None,
         ul_percent=float(intake / ul_value * 100) if ul_value else None,
         exceeded=bool(ul_value and intake >= ul_value),
-        supplement_only=bool(ul and ul.ul_scope is UlScope.SUPPLEMENT_ONLY),
+        ul_scope=ul.ul_scope if has_ul else None,
         estimated=estimated,
     )

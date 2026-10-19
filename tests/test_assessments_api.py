@@ -102,9 +102,9 @@ def test_nutrient_without_ul_and_source_limited_uls_are_labelled(login_as):
     out = report_lines(client, response.json()["id"], "ul_comparison")
 
     assert "無已知上限攝取量" in next(line for line in out if "鉀" in line)
-    assert "只計算補充劑來源" in next(line for line in out if "鎂" in line)
-    assert "只計算補充劑來源" in next(line for line in out if "鐵" in line)
-    assert "只計算補充劑來源" not in next(line for line in out if "鋅" in line)
+    assert "所有非食物來源" in next(line for line in out if "鎂" in line)
+    assert "補充劑與強化食品" in next(line for line in out if "鐵" in line)
+    assert "實際可能更高" not in next(line for line in out if "鋅" in line)
 
 
 def test_out_of_scope_ingredient_is_kept_with_neutral_wording(login_as):
