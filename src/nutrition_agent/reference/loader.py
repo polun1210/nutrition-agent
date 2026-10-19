@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from nutrition_agent.reference.dris import DriTable
 from nutrition_agent.reference.drugs import DrugCatalog
 from nutrition_agent.reference.ingredients import IngredientCatalog
+from nutrition_agent.reference.units import UnitConversions
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -45,10 +46,12 @@ class ReferenceData(BaseModel):
     ingredients: IngredientCatalog
     drugs: DrugCatalog
     dris: DriTable
+    units: UnitConversions
 
     @property
     def versions(self) -> dict[str, str]:
         return {
+            "units": self.units.version,
             "ingredients": self.ingredients.version,
             "drugs": self.drugs.version,
             "dris": self.dris.version,
@@ -64,6 +67,12 @@ def load_reference_data(data_dir: Path = DATA_DIR) -> ReferenceData:
         version=raw["version"], classes=raw["class"], ingredients=raw["ingredient"]
     )
     dris = read_dris_csv(data_dir / "dris.csv")
+    raw = read_toml(data_dir / "units.toml")
+    units = UnitConversions(version=raw["version"], rules=raw["rule"])
     return ReferenceData(
-        version=manifest["version"], ingredients=ingredients, drugs=drugs, dris=dris
+        version=manifest["version"],
+        ingredients=ingredients,
+        drugs=drugs,
+        dris=dris,
+        units=units,
     )

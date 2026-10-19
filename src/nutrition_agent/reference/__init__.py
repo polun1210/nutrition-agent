@@ -8,8 +8,12 @@ from nutrition_agent.reference.ingredients import (
     IngredientCategory,
 )
 from nutrition_agent.reference.loader import ReferenceData, load_reference_data
+from nutrition_agent.reference.units import UnitConversions, UnitNotConvertible, UnitRule
 
 __all__ = [
+    "UnitConversions",
+    "UnitNotConvertible",
+    "UnitRule",
     "DriEntry",
     "DriKind",
     "DriTable",
