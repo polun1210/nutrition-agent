@@ -60,7 +60,7 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
     "評估範圍與揭露",
   ]);
   await expect(page.getByText("沒有交互作用")).toHaveCount(0);
-  await expect(page.getByText(/尚無已審定的交互作用規則/)).toBeVisible();
+  await expect(page.getByText(/未命中已審定的規則/)).toBeVisible();
   await expect(page.getByText(/DPP-4 抑制劑/)).toBeVisible();
   await expect(page.getByText(/同一天服用/)).toBeVisible();
   await expect(page.getByRole("button", { name: "列印報告" })).toBeVisible();
@@ -120,6 +120,34 @@ test("用一張照片新增保健食品：辨識 → 逐列確認 → 送出", a
   await expect(page.getByRole("heading", { name: "上限比對" })).toBeVisible();
   await expect(page.getByText(/鈣：.*4.8%/)).toBeVisible(); // 每份（3 錠）含鈣 360 mg，每次 1 錠 = 120 mg
   await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/)).toBeVisible();
+});
+
+// 後端以假回應：規則用夾具的審定規則（metformin × 維生素 B12），解釋引用一筆種進資料庫的證據段落。
+test("交互作用的白話解釋附腳註，點開看到原文與來源", async ({ page }) => {
+  await registerAndOpenMedications(page);
+
+  const search = page.getByRole("form", { name: "搜尋藥名" });
+  await search.getByLabel("藥名").fill("Metformin");
+  await search.getByRole("button", { name: "搜尋" }).click();
+  await page.getByRole("button", { name: /^加入 Metformin/ }).first().click();
+  await page.getByRole("button", { name: "下一步" }).click();
+
+  const form = page.getByRole("form", { name: "新增保健食品" });
+  await form.getByLabel("產品名稱").fill("B12 錠");
+  await form.getByLabel("成分", { exact: true }).selectOption({ label: "維生素 B12" });
+  await form.getByLabel("含量").fill("100");
+  await form.getByRole("button", { name: "加入這項保健食品" }).click();
+  await expect(page.getByRole("button", { name: "刪除 B12 錠" })).toBeVisible();
+  await page.getByRole("button", { name: "下一步" }).click();
+  await page.getByRole("button", { name: "送出評估" }).click();
+
+  const explanations = page.getByTestId("explanations");
+  await expect(explanations).toContainText("這個藥可能影響維生素 B12 的吸收。");
+  await expect(page.getByTestId("footnote-detail")).toHaveCount(0);
+  await explanations.getByRole("button", { name: "腳註 1" }).click();
+  const detail = page.getByTestId("footnote-detail");
+  await expect(detail).toContainText("NIH ODS");
+  await expect(detail).toContainText("Metformin might reduce the absorption of vitamin B12");
 });
 
 // 後端的假 VLM 對藥包照片固定回 Amlodipine、Zantac。
