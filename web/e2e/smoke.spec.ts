@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// 煙霧測試：註冊 → 新增保健食品 → 搜尋並加入一個藥 → 送出 → 看到上限 %。之後有 UI 的票在這裡延伸。
+// 煙霧測試：註冊 → 搜尋並加入一個藥 → 新增保健食品 → 送出 → 看到上限 %。之後有 UI 的票在這裡延伸。
 test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) => {
   await page.goto("/");
 
@@ -16,6 +16,14 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await page.getByRole("button", { name: "開始評估" }).click();
   await page.getByRole("button", { name: "資料正確，下一步" }).click();
 
+  const search = page.getByRole("form", { name: "搜尋藥名" });
+  await search.getByLabel("藥名").fill("amlo");
+  await search.getByRole("button", { name: "搜尋" }).click();
+  await page.getByRole("button", { name: "加入 Amlodipine" }).click();
+  await expect(page.getByRole("button", { name: "刪除 Amlodipine" })).toBeVisible();
+
+  await page.getByRole("button", { name: "下一步" }).click();
+
   const form = page.getByRole("form", { name: "新增保健食品" });
   await form.getByLabel("產品名稱").fill("家裡的鈣片");
   await form.getByLabel("成分", { exact: true }).selectOption({ label: "鈣" });
@@ -30,14 +38,6 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await form.getByLabel("服用頻率").selectOption("every_other_day");
   await form.getByRole("button", { name: "加入這項保健食品" }).click();
   await expect(page.getByRole("button", { name: "刪除 隔天吃的鈣片" })).toBeVisible();
-
-  await page.getByRole("button", { name: "下一步" }).click();
-
-  const search = page.getByRole("form", { name: "搜尋藥名" });
-  await search.getByLabel("藥名").fill("amlo");
-  await search.getByRole("button", { name: "搜尋" }).click();
-  await page.getByRole("button", { name: "加入 Amlodipine" }).click();
-  await expect(page.getByRole("button", { name: "刪除 Amlodipine" })).toBeVisible();
 
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();

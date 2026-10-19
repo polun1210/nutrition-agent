@@ -6,11 +6,11 @@ import ProductForm from "./ProductForm";
 import ReportView from "./ReportView";
 import type { AssessmentCase, Draft, IngredientOption, MedicationInput, Product } from "./types";
 
-/** 步驟條。之後的票（用藥等）在陣列中插入新步驟即可。 */
+/** 步驟條。順序依 spec：個人資料 → 用藥 → 保健食品 → 送出。 */
 const STEPS = [
   { key: "profile", label: "個人資料" },
-  { key: "supplements", label: "保健食品" },
   { key: "medications", label: "用藥" },
+  { key: "supplements", label: "保健食品" },
   { key: "submit", label: "送出" },
 ] as const;
 type StepKey = (typeof STEPS)[number]["key"];
@@ -79,7 +79,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
       if (profile.conditions.length === 0) throw new Error("請回答已知疾病，沒有請勾「以上皆無」");
       await request("PUT", "/api/me/profile", profile);
       onProfileSaved();
-      setStep("supplements");
+      setStep("medications");
     });
 
   const submit = () =>
@@ -157,7 +157,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
           ) : (
             <ProductForm options={options} onAdd={(p) => void saveProducts([...products, p])} />
           )}
-          <button type="button" disabled={products.length === 0 || busy} onClick={() => setStep("medications")}>
+          <button type="button" disabled={products.length === 0 || busy} onClick={() => setStep("submit")}>
             下一步
           </button>
         </section>
@@ -167,7 +167,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
           medications={medications}
           busy={busy}
           onChange={(next) => void saveMedications(next)}
-          onNext={() => setStep("submit")}
+          onNext={() => setStep("supplements")}
         />
       )}
       {step === "submit" && (
@@ -177,7 +177,7 @@ export default function AssessmentFlow({ me, onProfileSaved, goHome }: Props) {
           <button type="button" disabled={busy} onClick={() => void submit()}>
             {busy ? "計算中…" : "送出評估"}
           </button>
-          <button type="button" className="secondary" onClick={() => setStep("medications")}>
+          <button type="button" className="secondary" onClick={() => setStep("supplements")}>
             上一步
           </button>
         </section>
