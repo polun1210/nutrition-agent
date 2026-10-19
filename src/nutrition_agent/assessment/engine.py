@@ -8,7 +8,12 @@ from fractions import Fraction
 from nutrition_agent.accounts import NO_CONDITION
 from nutrition_agent.assessment.interactions import find_interactions
 from nutrition_agent.assessment.models import (
+    ANTACID_REMINDER,
     HEALTHY_POPULATION,
+    MEDICATION_SOURCE_EXCLUDED,
+    PREGNANCY_LACTATION,
+    SAME_DAY_ASSUMPTION,
+    SCOPE_COVERAGE,
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
@@ -164,11 +169,23 @@ def _estimated_amount(
         return None
 
 
+ANTACID_CLASS = "calcium_magnesium_antacid"
+
+
 def _disclosures(case: AssessmentCase) -> list[str]:
-    """揭露事項代碼；報告模板負責把代碼渲染成文字。"""
+    """揭露事項代碼（固定順序）；報告模板負責把代碼渲染成文字。"""
     found = []
     if any(c != NO_CONDITION for c in case.profile.conditions):
         found.append(HEALTHY_POPULATION)
+    if any(not p.intake.is_daily for p in case.products):
+        found.append(SAME_DAY_ASSUMPTION)
+    found.append(MEDICATION_SOURCE_EXCLUDED)
+    if any(
+        m.scope_status == "in_scope" and any(i.class_code == ANTACID_CLASS for i in m.ingredients)
+        for m in case.medications
+    ):
+        found.append(ANTACID_REMINDER)
+    found.extend([PREGNANCY_LACTATION, SCOPE_COVERAGE])
     return found
 
 

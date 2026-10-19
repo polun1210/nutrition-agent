@@ -3,7 +3,12 @@
 from nutrition_agent.assessment.engine import assess
 from nutrition_agent.assessment.models import (
     DOSE_UNITS,
+    ANTACID_REMINDER,
     HEALTHY_POPULATION,
+    MEDICATION_SOURCE_EXCLUDED,
+    PREGNANCY_LACTATION,
+    SAME_DAY_ASSUMPTION,
+    SCOPE_COVERAGE,
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
@@ -23,7 +28,12 @@ from nutrition_agent.assessment.models import (
 
 __all__ = [
     "DOSE_UNITS",
+    "ANTACID_REMINDER",
     "HEALTHY_POPULATION",
+    "MEDICATION_SOURCE_EXCLUDED",
+    "PREGNANCY_LACTATION",
+    "SAME_DAY_ASSUMPTION",
+    "SCOPE_COVERAGE",
     "UNKNOWN_INGREDIENT",
     "Assessment",
     "AssessmentCase",

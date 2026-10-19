@@ -23,7 +23,7 @@ def test_card_names_nutrient_drugs_reason_advice_and_three_values(fx_ref):
     assert "這個藥可能影響體內這項維生素的狀態。" in text
     assert "告知你的醫師或藥師" in text
     assert "來自補充劑 0 ug" in text
-    assert "建議總攝取量（含飲食）2.4 ug" in text
+    assert "建議總攝取量（含飲食） 2.4 ug" in text
     assert "無已知上限攝取量" in text
     assert "不足" not in text
 
