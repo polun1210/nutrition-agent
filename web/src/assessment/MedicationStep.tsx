@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { request } from "../api";
-import type { DrugCandidate, MedicationInput } from "./types";
+import { request, upload } from "../api";
+import type { DrugCandidate, MedicationInput, MedicationPackResult } from "./types";
 
 const SCOPE_TEXT = {
   in_scope: "在評估範圍內",
@@ -8,7 +8,10 @@ const SCOPE_TEXT = {
   unconfirmed: "無法確認",
 } as const;
 
+type ScopeStatus = keyof typeof SCOPE_TEXT;
+
 type Props = {
+  draftId: number;
   medications: MedicationInput[];
   busy: boolean;
   onChange: (medications: MedicationInput[]) => void;
@@ -16,11 +19,45 @@ type Props = {
 };
 
 /** 用藥步驟：搜尋藥名 → 從候選加入，或自由輸入；也可以直接按「我沒有用藥」略過。 */
-export default function MedicationStep({ medications, busy, onChange, onNext }: Props) {
+export default function MedicationStep({ draftId, medications, busy, onChange, onNext }: Props) {
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<DrugCandidate[]>([]);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [reading, setReading] = useState(false);
+  const [hints, setHints] = useState<string[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, ScopeStatus>>({});
+  const [replacing, setReplacing] = useState<string | null>(null);
+
+  const readPhotos = async () => {
+    setError(null);
+    setHints([]);
+    setReading(true);
+    try {
+      const form = new FormData();
+      files.forEach((f) => form.append("files", f));
+      const result = await upload<MedicationPackResult>(
+        `/api/assessments/drafts/${draftId}/medication-photos`,
+        form,
+      );
+      setHints(
+        result.photos.flatMap((p, i) => (p.readable ? [] : [`第 ${i + 1} 張：${p.hint ?? "讀不到藥名，請重拍"}`])),
+      );
+      setStatuses((prev) => ({
+        ...prev,
+        ...Object.fromEntries(result.medications.map((m) => [m.raw_name, m.scope_status])),
+      }));
+      const known = new Set(medications.map((m) => m.name));
+      const added = result.medications.filter((m) => !known.has(m.raw_name)).map((m) => ({ name: m.raw_name }));
+      if (added.length > 0) onChange([...medications, ...added]);
+      setFiles([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setReading(false);
+    }
+  };
 
   const search = async () => {
     setError(null);
@@ -36,10 +73,16 @@ export default function MedicationStep({ medications, busy, onChange, onNext }: 
     }
   };
 
-  const add = (name: string) => {
+  const add = (name: string, status?: ScopeStatus) => {
     const trimmed = name.trim();
     if (!trimmed || medications.some((m) => m.name === trimmed)) return;
-    onChange([...medications, { name: trimmed }]);
+    setStatuses((prev) => ({ ...prev, [trimmed]: status ?? "unconfirmed" }));
+    onChange(
+      replacing === null
+        ? [...medications, { name: trimmed }]
+        : medications.map((m) => (m.name === replacing ? { name: trimmed } : m)),
+    );
+    setReplacing(null);
     setQuery("");
     setCandidates([]);
     setSearched(false);
@@ -48,8 +91,35 @@ export default function MedicationStep({ medications, busy, onChange, onNext }: 
   return (
     <section>
       <h1>用藥</h1>
-      <p>搜尋你正在吃的藥（中文名、商品名或學名皆可），從候選中加入。</p>
+      <p>拍藥包讓系統讀出藥名，或搜尋你正在吃的藥（中文名、商品名或學名皆可），從候選中加入。</p>
       {error && <p role="alert">{error}</p>}
+      <div role="group" aria-label="拍藥包">
+        <label>
+          藥包照片
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+          />
+        </label>
+        <button type="button" disabled={files.length === 0 || reading} onClick={() => void readPhotos()}>
+          {reading ? "辨識中…" : "讀取藥名"}
+        </button>
+        {hints.map((h) => (
+          <p key={h} role="status">
+            {h}
+          </p>
+        ))}
+      </div>
+      {replacing !== null && (
+        <p role="status">
+          正在修改「{replacing}」：請在下方搜尋並選擇正確的藥名。
+          <button type="button" className="secondary" onClick={() => setReplacing(null)}>
+            取消修改
+          </button>
+        </p>
+      )}
       <form
         aria-label="搜尋藥名"
         onSubmit={(e) => {
@@ -78,7 +148,7 @@ export default function MedicationStep({ medications, busy, onChange, onNext }: 
                   </div>
                 )}
                 {c.brand_names.length > 0 && <div>常見商品名：{c.brand_names.join("、")}</div>}
-                <button type="button" onClick={() => add(c.name)}>
+                <button type="button" onClick={() => add(c.name, c.scope_status)}>
                   加入 {c.name}
                 </button>
               </li>
@@ -98,6 +168,18 @@ export default function MedicationStep({ medications, busy, onChange, onNext }: 
         {medications.map((m) => (
           <li key={m.name}>
             {m.name}
+            {statuses[m.name] && <span>（{SCOPE_TEXT[statuses[m.name]]}）</span>}
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              onClick={() => {
+                setReplacing(m.name);
+                setQuery(m.name);
+              }}
+            >
+              修改 {m.name}
+            </button>
             <button
               type="button"
               className="secondary"
