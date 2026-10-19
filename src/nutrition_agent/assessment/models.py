@@ -82,6 +82,29 @@ class Product(Frozen):
     intake: Intake
 
 
+ScopeStatus = Literal["in_scope", "out_of_scope", "unconfirmed"]
+
+
+class MedicationIngredient(Frozen):
+    """藥名對照出的一個有效成分，及其所屬用藥類別。"""
+
+    code: str
+    name_en: str
+    name_zh: str
+    class_code: str
+    class_name_zh: str
+
+
+class Medication(Frozen):
+    """一個用藥：使用者輸入的原文，加上後端對照出的結果（複方有多個有效成分）。"""
+
+    raw_name: str
+    scope_status: ScopeStatus
+    name_zh: str | None  # 中文藥名；對照不到時為 None
+    ingredients: list[MedicationIngredient]
+    out_of_scope_names: list[str]  # 認得但不在範圍內的成分名稱
+
+
 class AssessmentCase(Frozen):
     """評估個案快照：判定引擎的唯一輸入（連同參考資料）。"""
 
@@ -89,6 +112,7 @@ class AssessmentCase(Frozen):
     age: int  # 評估當天年齡
     assessed_on: date
     products: list[Product]
+    medications: list[Medication] = []  # 空 = 使用者略過用藥
 
 
 class UlComparison(Frozen):

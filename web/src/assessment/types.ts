@@ -31,7 +31,31 @@ export type Intake = {
   cycle_off_days?: number | null;
 };
 
-export type Draft = { id: number; products: Product[]; submitted_case_id: number | null };
+export type MedicationInput = { name: string };
+
+export type DrugIngredient = {
+  code: string;
+  name_en: string;
+  name_zh: string;
+  class_code: string;
+  class_name_zh: string;
+};
+
+export type DrugCandidate = {
+  name: string;
+  scope_status: "in_scope" | "out_of_scope" | "unconfirmed";
+  name_zh: string | null;
+  ingredients: DrugIngredient[];
+  out_of_scope_names: string[];
+  brand_names: string[];
+};
+
+export type Draft = {
+  id: number;
+  products: Product[];
+  medications: MedicationInput[];
+  submitted_case_id: number | null;
+};
 
 export type ReportSection = { key: string; title: string; lines: string[] };
 

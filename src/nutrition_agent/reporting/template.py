@@ -15,6 +15,7 @@ from nutrition_agent.assessment import (
     UNKNOWN_INGREDIENT,
     Assessment,
     AssessmentCase,
+    Medication,
     Product,
     UlComparison,
 )
@@ -29,6 +30,7 @@ CONDITION_LABELS = {
 }
 SEX_LABELS = {"male": "男性", "female": "女性"}
 UNKNOWN_LABEL = "無法確定"
+NO_MEDICATION_TEXT = "你沒有提供用藥資料"
 
 DISCLOSURE_TEXT = {
     HEALTHY_POPULATION: "DRIs 的參考值適用於健康族群；你勾選了慢性病，這些數值僅供對照。",
@@ -93,7 +95,27 @@ def _profile_lines(case: AssessmentCase, names: _Names) -> list[str]:
         f"你勾選了{'、'.join(chosen)}" if chosen else "你未勾選本系統涵蓋的 5 種慢性病"
     )
     lines.extend(_product_line(p, names) for p in case.products)
+    lines.extend(_medication_lines(case.medications))
     return lines
+
+
+def _medication_lines(medications: list[Medication]) -> list[str]:
+    if not medications:
+        return [NO_MEDICATION_TEXT]
+    return [_medication_line(m) for m in medications]
+
+
+def _medication_line(m: Medication) -> str:
+    if m.scope_status == "unconfirmed":
+        return f"用藥 {m.raw_name}：無法判斷是否有交互作用（藥名表查不到，可能是寫法不同或已註銷）"
+    parts = [f"中文藥名 {m.name_zh}"] if m.name_zh else []
+    english = "、".join(i.name_en for i in m.ingredients) or "、".join(m.out_of_scope_names)
+    if english:
+        parts.append(f"有效成分 {english}")
+    detail = f"（{'；'.join(parts)}）" if parts else ""
+    if m.scope_status == "out_of_scope":
+        return f"用藥 {m.raw_name}：不在本系統評估範圍{detail}"
+    return f"用藥 {m.raw_name}：在評估範圍內{detail}"
 
 
 def _product_line(product: Product, names: _Names) -> str:

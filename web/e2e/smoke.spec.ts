@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// 煙霧測試：註冊 → 新增一項保健食品 → 送出 → 看到上限 %。之後有 UI 的票在這裡延伸。
+// 煙霧測試：註冊 → 新增保健食品 → 搜尋並加入一個藥 → 送出 → 看到上限 %。之後有 UI 的票在這裡延伸。
 test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) => {
   await page.goto("/");
 
@@ -32,10 +32,19 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await expect(page.getByRole("button", { name: "刪除 隔天吃的鈣片" })).toBeVisible();
 
   await page.getByRole("button", { name: "下一步" }).click();
+
+  const search = page.getByRole("form", { name: "搜尋藥名" });
+  await search.getByLabel("藥名").fill("amlo");
+  await search.getByRole("button", { name: "搜尋" }).click();
+  await page.getByRole("button", { name: "加入 Amlodipine" }).click();
+  await expect(page.getByRole("button", { name: "刪除 Amlodipine" })).toBeVisible();
+
+  await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
 
   await expect(page.getByRole("heading", { name: "上限比對" })).toBeVisible();
   // 兩罐峰值加總 1000 mg → 上限 2500 mg 的 40%
   await expect(page.getByText(/你服用當日來自補充劑的攝取量已達上限的 40%/)).toBeVisible();
   await expect(page.getByText("已超過上限")).toHaveCount(0);
+  await expect(page.getByText(/用藥 Amlodipine：在評估範圍內.*氨氯地平/)).toBeVisible();
 });
