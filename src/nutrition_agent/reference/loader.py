@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import csv
 import tomllib
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from nutrition_agent.reference.dris import DriTable
 from nutrition_agent.reference.drugs import DrugCatalog
 from nutrition_agent.reference.ingredients import IngredientCatalog
 
@@ -19,16 +21,38 @@ def read_toml(path: Path) -> dict[str, Any]:
         return tomllib.load(f)
 
 
+def read_dris_csv(path: Path) -> DriTable:
+    """CSV：`#` 開頭為註解；第一列 `version,<版本>`；第二列欄位名；空白欄位視為 None。"""
+    with path.open(encoding="utf-8", newline="") as f:
+        lines = [line for line in f if not line.startswith("#")]
+    rows = list(csv.reader(lines))
+    if rows[0][0] != "version":
+        raise ValueError(f"{path.name}: 第一列必須是 version")
+    entries = [
+        {key: (value or None) for key, value in zip(rows[1], row, strict=True)}
+        for row in rows[2:]
+    ]
+    for entry in entries:
+        if entry["sex"] == "any":  # 男女相同
+            entry["sex"] = None
+    return DriTable(version=rows[0][1], entries=entries)
+
+
 class ReferenceData(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     version: str
     ingredients: IngredientCatalog
     drugs: DrugCatalog
+    dris: DriTable
 
     @property
     def versions(self) -> dict[str, str]:
-        return {"ingredients": self.ingredients.version, "drugs": self.drugs.version}
+        return {
+            "ingredients": self.ingredients.version,
+            "drugs": self.drugs.version,
+            "dris": self.dris.version,
+        }
 
 
 def load_reference_data(data_dir: Path = DATA_DIR) -> ReferenceData:
@@ -39,4 +63,7 @@ def load_reference_data(data_dir: Path = DATA_DIR) -> ReferenceData:
     drugs = DrugCatalog(
         version=raw["version"], classes=raw["class"], ingredients=raw["ingredient"]
     )
-    return ReferenceData(version=manifest["version"], ingredients=ingredients, drugs=drugs)
+    dris = read_dris_csv(data_dir / "dris.csv")
+    return ReferenceData(
+        version=manifest["version"], ingredients=ingredients, drugs=drugs, dris=dris
+    )
