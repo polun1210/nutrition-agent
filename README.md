@@ -20,7 +20,7 @@
 | `src/nutrition_agent/` | `extraction`（VLM）、`assessment`、`retrieval`、`reporting`、`api` |
 | `knowledge/` | RAG 語料，見 `knowledge/README.md` |
 | `evals/` | VLM 與 RAG 的評估資料 |
-| `web/` | 前端（技術選型待定） |
+| `web/` | 前端（React＋Vite＋TypeScript，手機優先） |
 | `docs/adr/` | 決策紀錄 |
 | `docs/research/` | 研究筆記 |
 | `docs/legacy/` | 舊組內專案的文件，只供參考 |
@@ -28,9 +28,29 @@
 ## 開發
 
 ```
-uv sync
-uv run pytest
+cp .env.example .env        # 填入 OpenRouter 金鑰與模型 ID（不填也能跑骨架）
+docker compose up --build   # db（pgvector）+ api :8000 + web :5173，開 http://127.0.0.1:5173
 ```
+
+只跑資料庫、其餘在本機：
+
+```
+docker compose up -d db
+uv sync
+uv run alembic upgrade head                      # 套用 migration
+uv run uvicorn nutrition_agent.api.app:app --reload
+cd web && npm install && npm run dev
+```
+
+測試與檢查（測試需要 `docker compose up -d db`，會自動重建 `nutrition_test` 資料庫，不碰開發資料）：
+
+```
+uv run pytest
+uv run ruff check
+cd web && npm run build    # 前端型別檢查＋打包
+```
+
+新增 migration：在 `migrations/versions/` 加一個檔案（revision 依序編號）。
 
 ## 資料來源與致謝
 
