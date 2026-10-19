@@ -109,3 +109,30 @@ test("用一張照片新增保健食品：辨識 → 逐列確認 → 送出", a
   await expect(page.getByText(/鈣：.*4.8%/)).toBeVisible(); // 每份（3 錠）含鈣 360 mg，每次 1 錠 = 120 mg
   await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/)).toBeVisible();
 });
+
+// 後端的假 VLM 對藥包照片固定回 Amlodipine、Zantac。
+test("拍一張藥包加入藥：辨識 → 顯示範圍狀態 → 用搜尋修改", async ({ page }) => {
+  await registerAndOpenMedications(page);
+
+  await page.getByLabel("藥包照片").setInputFiles({
+    name: "pack.jpg",
+    mimeType: "image/jpeg",
+    buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]),
+  });
+  await page.getByRole("button", { name: "讀取藥名" }).click();
+
+  await expect(page.getByRole("button", { name: "刪除 Amlodipine" })).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: "Amlodipine" })).toContainText("在評估範圍內");
+  await expect(page.getByRole("listitem").filter({ hasText: "Zantac" })).toContainText("不在本系統評估範圍");
+
+  // 讀錯的藥名用搜尋修改，另一個直接刪除
+  await page.getByRole("button", { name: "刪除 Zantac" }).click();
+  await page.getByRole("button", { name: "修改 Amlodipine" }).click();
+  const search = page.getByRole("form", { name: "搜尋藥名" });
+  await search.getByLabel("藥名").fill("atorva");
+  await search.getByRole("button", { name: "搜尋" }).click();
+  await page.getByRole("button", { name: /^加入 Atorva/ }).first().click();
+
+  await expect(page.getByRole("button", { name: "刪除 Amlodipine" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^刪除 Atorva/ })).toBeVisible();
+});

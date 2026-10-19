@@ -182,8 +182,9 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
           </button>
         </section>
       )}
-      {step === "medications" && (
+      {step === "medications" && draft && (
         <MedicationStep
+          draftId={draft.id}
           medications={medications}
           busy={busy}
           onChange={(next) => void saveMedications(next)}

@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from nutrition_agent.api import assessments, auth, photos
+from nutrition_agent.api import assessments, auth, medication_photos, photos
 from nutrition_agent.api.deps import (
     User,
     current_user,
@@ -55,6 +55,7 @@ def create_app(
     app.include_router(auth.router)
     app.include_router(assessments.router)
     app.include_router(photos.router)
+    app.include_router(medication_photos.router)
 
     @app.post("/api/ping")
     def ping(conn: psycopg.Connection = Depends(get_connection)) -> dict:
