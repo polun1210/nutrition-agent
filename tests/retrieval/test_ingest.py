@@ -142,3 +142,14 @@ def test_nccih_folder_is_optional_and_used_when_present(db, tmp_path):
     _write(tmp_path, "sources/nccih/Omega3.md", "# Omega-3\n\n## Side Effects\n\nMay thin blood.\n")
     ingest_corpus(db, BagOfWordsGateway(), tmp_path)
     assert [r[1] for r in _rows(db)] == ["nccih"]
+
+
+def test_nul_in_source_becomes_replacement_char_not_silently_dropped(db, tmp_path):
+    # 仿單轉檔時「≧」等符號可能變成 NUL；直接刪掉會把「≧2.0」變成「2.0」，改成替代字元標示此處有缺字。
+    _write(tmp_path, "sources/nih_ods/Zinc-HealthProfessional.md", "# Zinc\n\n## Intro\n\nMIC \x002 mcg/mL\n")
+
+    ingest_corpus(db, BagOfWordsGateway(), tmp_path)
+
+    texts = [row[-1] for row in _rows(db)]
+    assert any("MIC \ufffd2 mcg/mL" in t for t in texts)
+    assert not any("\x00" in t for t in texts)
