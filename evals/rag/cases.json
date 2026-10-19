@@ -1,0 +1,50 @@
+[
+  {
+    "id": "metformin-b12",
+    "question": "我吃 metformin，同時補充維生素 B12，這兩者有什麼關係？",
+    "ingredient_code": "vitamin_b12",
+    "drug_ingredient_codes": ["metformin"],
+    "expected_evidence": [
+      {
+        "document_path": "sources/nih_ods/VitaminB12-HealthProfessional.md",
+        "contains": "might reduce the absorption of vitamin B12"
+      }
+    ],
+    "expected_points": [
+      {"label": "藥物可能降低維生素 B12 吸收", "any_of": ["吸收"]},
+      {"label": "提到 metformin 或二甲雙胍", "any_of": ["metformin", "Metformin", "二甲雙胍"]}
+    ]
+  },
+  {
+    "id": "ppi-magnesium",
+    "question": "我長期吃氫離子幫浦抑制劑（esomeprazole），補充鎂有什麼要注意？",
+    "ingredient_code": "magnesium",
+    "drug_ingredient_codes": ["esomeprazole"],
+    "expected_evidence": [
+      {
+        "document_path": "sources/nih_ods/Magnesium-HealthProfessional.md",
+        "contains": "can cause hypomagnesemia when taken for prolonged periods"
+      }
+    ],
+    "expected_points": [
+      {"label": "長期使用可能使體內鎂偏低", "any_of": ["偏低", "降低", "不足"]},
+      {"label": "提到氫離子幫浦抑制劑", "any_of": ["氫離子幫浦", "PPI", "esomeprazole"]}
+    ]
+  },
+  {
+    "id": "levothyroxine-calcium",
+    "question": "我吃左旋甲狀腺素（levothyroxine），同時吃鈣片，有什麼關係？",
+    "ingredient_code": "calcium",
+    "drug_ingredient_codes": ["levothyroxine"],
+    "expected_evidence": [
+      {
+        "document_path": "sources/nih_ods/Calcium-HealthProfessional.md",
+        "contains": "can interfere with the absorption of levothyroxine"
+      }
+    ],
+    "expected_points": [
+      {"label": "鈣可能干擾甲狀腺素吸收", "any_of": ["干擾", "影響", "降低"]},
+      {"label": "提到錯開服用或間隔", "any_of": ["錯開", "間隔", "相隔"]}
+    ]
+  }
+]
