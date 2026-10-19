@@ -18,15 +18,19 @@ from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
 from nutrition_agent.config import get_settings, to_sqlalchemy_url
+from nutrition_agent.extraction import medication_pack
 from nutrition_agent.photos import PhotoStore
 
+MEDICATION_PACK_REPLY = '{"readable": true, "names": ["Amlodipine", "Zantac"]}'
 RECORDED_VLM = Path(__file__).resolve().parents[1] / "evals" / "vlm" / "recorded" / "vlm"
 
 
 class RecordedVlmGateway:
-    """煙霧測試用的假模型閘道：看照片一律回錄製的 p01 辨識結果，不打外部 API。"""
+    """煙霧測試用的假模型閘道：標示照片回錄製的 p01 辨識結果，藥包照片回固定的兩個藥名，不打外部 API。"""
 
     def vision(self, prompt: str, image: bytes, mime_type: str) -> str:
+        if prompt == medication_pack.PROMPT:  # 藥包照片：固定回兩個藥名
+            return MEDICATION_PACK_REPLY
         return (RECORDED_VLM / "p01-img01.json").read_text(encoding="utf-8")
 
     def complete(self, prompt: str, system: str | None = None) -> str:

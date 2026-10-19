@@ -92,6 +92,11 @@ export type DrugCandidate = {
   brand_names: string[];
 };
 
+export type MedicationPackResult = {
+  photos: { readable: boolean; names: string[]; hint: string | null }[];
+  medications: { raw_name: string; scope_status: "in_scope" | "out_of_scope" | "unconfirmed" }[];
+};
+
 export type Draft = {
   id: number;
   products: Product[];
