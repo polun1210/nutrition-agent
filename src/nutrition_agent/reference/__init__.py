@@ -1,6 +1,7 @@
 """參考資料：成分目錄、用藥類別、DRIs、單位換算、交互作用規則。"""
 
 from nutrition_agent.reference.checks import Violation, check_integrity
+from nutrition_agent.reference.compounds import Compound, CompoundCatalog
 from nutrition_agent.reference.dris import DriEntry, DriKind, DriTable, Sex, UlScope
 from nutrition_agent.reference.drugs import DrugCatalog, DrugClass, DrugIngredient, DrugRole
 from nutrition_agent.reference.ingredients import (
@@ -24,6 +25,8 @@ from nutrition_agent.reference.units import UnitConversions, UnitNotConvertible,
 __all__ = [
     "Advice",
     "Citation",
+    "Compound",
+    "CompoundCatalog",
     "ConditionType",
     "DriEntry",
     "DriKind",
