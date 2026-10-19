@@ -117,11 +117,23 @@ def _ul_lines(assessment: Assessment, names: _Names) -> list[str]:
 
 
 def _comparison_line(c: UlComparison, names: _Names) -> str:
-    head = f"{names(c.nutrient_code)}：來自補充劑的每日攝取量 {_num(c.intake)} {c.unit}"
+    # 上限比對一律用服用當日的峰值；非每日服用時，措辭明講是「服用當日」，平均只當參考。
+    if c.non_daily:
+        head = (
+            f"{names(c.nutrient_code)}：服用當日來自補充劑的攝取量 {_num(c.intake)} {c.unit}"
+            f"（平均每日 {_num(c.average_intake)} {c.unit}）"
+        )
+    else:
+        head = f"{names(c.nutrient_code)}：來自補充劑的每日攝取量 {_num(c.intake)} {c.unit}"
     if c.ul is None:
         return f"{head}；無已知上限攝取量"
     scope = "上限只計算補充劑來源" if c.supplement_only else "上限定義上包含飲食"
     flag = "，已超過上限" if c.exceeded else ""
+    if c.non_daily:
+        return (
+            f"{head}；你服用當日來自補充劑的攝取量已達上限的 "
+            f"{_num(c.ul_percent)}%{flag}（上限 {_num(c.ul)} {c.unit}；{scope}）"
+        )
     return f"{head}；佔上限 {_num(c.ul)} {c.unit} 的 {_num(c.ul_percent)}%{flag}（{scope}）"
 
 
