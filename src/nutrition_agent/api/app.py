@@ -4,13 +4,10 @@ from collections.abc import Callable, Iterator
 
 import psycopg
 from fastapi import Depends, FastAPI
-from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
 from nutrition_agent.api import assessments, auth, medication_photos, photos
 from nutrition_agent.api.deps import (
-    User,
-    current_user,
     get_connection,
     get_gateway,
     get_photo_store,
@@ -20,10 +17,6 @@ from nutrition_agent.gateway import ModelGateway
 from nutrition_agent.photos import PhotoStore
 
 SESSION_MAX_AGE = 14 * 24 * 3600
-
-
-class EchoRequest(BaseModel):
-    prompt: str
 
 
 def create_app(
@@ -62,14 +55,6 @@ def create_app(
         conn.execute("INSERT INTO ping DEFAULT VALUES")
         row = conn.execute("SELECT count(*) FROM ping").fetchone()
         return {"message": "pong", "count": row[0]}
-
-    @app.post("/api/echo-llm")
-    def echo_llm(
-        body: EchoRequest,
-        model: ModelGateway = Depends(get_gateway),
-        _user: User = Depends(current_user),
-    ) -> dict:
-        return {"reply": model.complete(body.prompt)}
 
     return app
 
