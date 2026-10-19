@@ -4,6 +4,7 @@
 |---|---|---|
 | `sources/dris/` | 是 | 《國人膳食營養素參考攝取量》第八版全文、總表、整理筆記 |
 | `sources/nih_ods/` | 是 | NIH Office of Dietary Supplements fact sheets（13 種營養素 × Consumer／HealthProfessional） |
+| `sources/nccih/` | 是 | NCCIH「What You Need To Know」頁面：紅麴、Omega-3（魚油）、葡萄糖胺與軟骨素 |
 | `raw/` | 否 | TFDA 仿單 Markdown（約 3,400 份、1.9 GB，含 base64 圖片） |
 | `processed/` | 是 | `scripts/ingest/` 產出：去重、去圖、按仿單章節切好的文字 |
 | `manifest.csv` | 是（待建） | 每份文件的來源、許可證字號、有效成分、抓取日期、雜湊值 |
@@ -23,6 +24,8 @@
 - 同一成分的學名藥重複嚴重（Acetaminophen 1,358 份），ingest 時每個成分只留代表仿單。
 - Markdown 約 98% 是 base64 圖片，切塊前要移除。
 - 高血壓、第二型糖尿病尚未轉檔；高血脂只轉了 Atorvastatin。
+- 少數仿單轉檔時把符號（例如 Lansoprazole 仿單抗藥性門檻的「≧」）弄丟，留下 NUL 字元；ingest 會換成替代字元「�」，引用時看得出此處缺字。
+  目前已知 4 份，都在 Lansoprazole（衛部藥輸字第026128號、衛署藥輸字第025972號、衛署藥製字第046246號、第048056號），內容是抗生素抗藥性與臨床試驗註腳，與營養素無關。
 
 ## ingest
 
@@ -40,6 +43,11 @@ uv run python -m nutrition_agent.retrieval.ingest [knowledge目錄，預設 know
 - 成分標記：NIH ODS／NCCIH 由檔名對照成分目錄；DRIs 依段落中出現的成分名稱標記；TFDA 以資料夾名稱對照用藥有效成分目錄。
 - 檢索：`nutrition_agent.retrieval.search.retrieve_evidence(conn, gateway, 成分代碼, [藥有效成分代碼])`。
 
+## sources/nccih/ 的來源
+
+2026-10-19 從 nccih.nih.gov 下載頁面，只取 `<main>` 轉成 Markdown（檔頭註明網址與抓取日期）。
+檔名開頭對照成分目錄：`RedYeastRice` → red_yeast_rice、`FishOil` → omega_3、`Glucosamine` → glucosamine。
+
 ## 授權
 
-TFDA 資料適用政府資料開放授權條款；NIH ODS fact sheets 為美國聯邦政府公有領域。
+TFDA 資料適用政府資料開放授權條款；NIH ODS fact sheets 與 NCCIH 頁面為美國聯邦政府公有領域。
