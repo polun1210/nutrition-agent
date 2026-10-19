@@ -1,12 +1,13 @@
 """測試夾具：本機測試資料庫、每個測試獨立的交易、假模型閘道。"""
 
 import os
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import psycopg
 import pytest
 from alembic import command
 from alembic.config import Config
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from psycopg import conninfo, sql
 
@@ -53,7 +54,50 @@ def gateway() -> FakeGateway:
 
 
 @pytest.fixture
-def client(db: psycopg.Connection, gateway: FakeGateway) -> Iterator[TestClient]:
-    app = create_app(connection_provider=lambda: db, gateway=gateway)
-    with TestClient(app) as test_client:
-        yield test_client
+def app(db: psycopg.Connection, gateway: FakeGateway) -> FastAPI:
+    return create_app(connection_provider=lambda: db, gateway=gateway)
+
+
+@pytest.fixture
+def make_client(app: FastAPI) -> Iterator[Callable[[], TestClient]]:
+    """每次呼叫回傳一個有獨立 cookie 的客戶端（模擬不同使用者的瀏覽器）。"""
+    clients: list[TestClient] = []
+
+    def _make() -> TestClient:
+        test_client = TestClient(app)
+        clients.append(test_client)
+        return test_client
+
+    yield _make
+    for test_client in clients:
+        test_client.close()
+
+
+@pytest.fixture
+def client(make_client: Callable[[], TestClient]) -> TestClient:
+    return make_client()
+
+
+VALID_PROFILE = {
+    "birth_year": 1950,
+    "birth_month": 6,
+    "sex": "female",
+    "conditions": ["hypertension"],
+}
+
+
+def register_payload(email: str = "a@example.com", **overrides) -> dict:
+    return {"email": email, "password": "correct-horse-battery", **VALID_PROFILE, **overrides}
+
+
+@pytest.fixture
+def login_as(make_client: Callable[[], TestClient]) -> Callable[..., TestClient]:
+    """註冊並登入一個新使用者，回傳已帶 session cookie 的客戶端。"""
+
+    def _login(email: str = "a@example.com", **overrides) -> TestClient:
+        user_client = make_client()
+        response = user_client.post("/api/auth/register", json=register_payload(email, **overrides))
+        assert response.status_code == 201, response.text
+        return user_client
+
+    return _login
