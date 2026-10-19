@@ -1,6 +1,7 @@
 """藥包 VLM：只讀包裝上的藥名原文，不判斷是什麼藥；名稱對照由確定性的藥名表負責。"""
 
 import json
+import logging
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -18,6 +19,8 @@ PROMPT = """你是藥品包裝的讀字工具。請只回報照片上看得到�
 }
 讀不清楚就不要列，不要猜。
 """
+
+log = logging.getLogger(__name__)
 
 UNREADABLE_HINT = "這張照片讀不到藥名，請重拍：對準藥盒或藥袋上的藥名，光線充足、避免反光，字要清晰。"
 
@@ -54,6 +57,7 @@ def parse_pack_reading(reply: str) -> MedicationPackReading:
     try:
         raw = MedicationPackReading.model_validate(json.loads(_json_text(reply)))
     except (ValueError, ValidationError):
+        log.warning("模型回覆無法解析，視為讀不到：%.200r", reply, exc_info=True)
         return UNREADABLE
     names = _clean_names(raw.names)
     if not raw.readable or not names:
