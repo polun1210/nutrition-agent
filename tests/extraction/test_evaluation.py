@@ -23,7 +23,7 @@ def catalog():
 
 def score(reply: str, catalog) -> EvalReport:
     report = EvalReport()
-    score_product(GOLD, build_extraction([(1, parse_reading(reply))], catalog), report)
+    score_product(GOLD, build_extraction([(1, parse_reading(reply))], catalog), report, catalog)
     return report
 
 
@@ -47,6 +47,24 @@ def test_欄位讀錯時對應的正確率下降(catalog):
     assert summary["product_name"] == 0.0
     assert 0 < summary["amount"] < 1.0
     assert summary["unit"] == 1.0
+
+
+def test_成分欄沒有含量的目標營養素不計範圍與代碼評分(catalog):
+    # 金標準舊慣例把成分欄的目標營養素標成範圍外，查表會判範圍內；這些列不進入評估，只算讀到與否
+    base = score(RECORDED, catalog)
+    reading = json.loads(RECORDED)
+    reading["rows"] += [
+        {"raw_name": "菸鹼醯胺", "section": "ingredient_list", "amount": None, "unit": None, "readable": True},
+        {"raw_name": "葡萄糖胺鹽酸鹽", "section": "ingredient_list", "amount": None, "unit": None, "readable": True},
+    ]
+
+    report = score(json.dumps(reading), catalog)
+
+    assert report.matched_rows == base.matched_rows + 2
+    assert report.summary()["scope_status"] == 1.0
+    assert report.summary()["standard_code"] == 1.0
+    # 允許成分只看有沒有，成分欄的列照常評分
+    assert report.fields["scope_status"].total == base.fields["scope_status"].total + 1
 
 
 def test_整張讀不到時列召回為零(catalog):

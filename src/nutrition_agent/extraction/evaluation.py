@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from nutrition_agent.extraction.normalize import normalize_unit
 from nutrition_agent.extraction.product import ProductExtraction
+from nutrition_agent.reference import IngredientCatalog, IngredientCategory
 from nutrition_agent.reference.ingredients import normalize_name
 
 # 金標準的劑型單位 → 本專案的劑型單位
@@ -65,7 +66,21 @@ def _row_key(name: str, section: str) -> tuple[str, str]:
     return normalize_name(name), section
 
 
-def score_product(gold: dict, extraction: ProductExtraction, report: EvalReport) -> None:
+def _scores_scope(gold_row: dict, row, catalog: IngredientCatalog) -> bool:
+    """成分欄沒有含量的列不進入評估，只算讀到與否、不評範圍與代碼：金標準舊慣例把其中的目標營養素
+    標成範圍外，查表則判範圍內，兩邊都不算錯。例外是允許成分（紅麴、葡萄糖胺、魚油）只看有沒有，
+    金標準或查表任一邊判成允許成分就照常評分。"""
+    if gold_row["label_section"] != "ingredient_list" or gold_row.get("per_serving") is not None:
+        return True
+    if gold_row.get("standard_code"):
+        return True
+    found = catalog.get(row.ingredient_code) if row.ingredient_code else None
+    return found is not None and found.category is IngredientCategory.ALLOWED_INGREDIENT
+
+
+def score_product(
+    gold: dict, extraction: ProductExtraction, report: EvalReport, catalog: IngredientCatalog
+) -> None:
     serving = gold["serving_info"]
     report.add("product_name", normalize_name(extraction.product_name or "") == normalize_name(gold["product_name"]))
     report.add("serving_size", _same_number(extraction.units_per_serving, serving.get("serving_size")))
@@ -83,6 +98,8 @@ def score_product(gold: dict, extraction: ProductExtraction, report: EvalReport)
         gold_unit = GOLD_UNIT_ALIASES.get(gold_unit, gold_unit)
         report.add("amount", _same_number(row.amount, gold_row.get("per_serving")))
         report.add("unit", normalize_unit(row.unit) == gold_unit)
+        if not _scores_scope(gold_row, row, catalog):
+            continue
         # 金標準只分範圍內／範圍外；我們的「無法確認」對金標準來說也是不進入評估
         ours = "in_scope" if row.scope_status == "in_scope" else "out_of_scope"
         report.add("scope_status", ours == gold_row["scope_status"])

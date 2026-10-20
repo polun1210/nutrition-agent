@@ -76,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
         if reading is None:
             skipped.append(image_id)
             continue
-        score_product(gold, build_extraction([(0, reading)], catalog), report)
+        score_product(gold, build_extraction([(0, reading)], catalog), report, catalog)
 
     if args.json:
         print(json.dumps(report.summary(), ensure_ascii=False, indent=2))
