@@ -7,6 +7,6 @@
 - `vlm/recorded/vlm/`：本專案 VLM 輸出（`extraction.reading.PROMPT` 的 JSON 格式）的錄製回應，`<image_id>.json`；目前只有 p01 一份手工依 gold 整理，其餘待打真模型後用 `--save-recorded` 補。
 - `vlm/run.py`：逐欄位比對 harness，重播錄製回應或 `--live` 打真模型，輸出各欄位正確率；用法見檔案開頭。
 - `medpack/`：藥包 VLM（只讀藥名原文）的 harness；`gold/<image_id>.json` 格式與用法見 `medpack/run.py` 開頭，gold 與錄製回應（`recorded/`）待開發者標註，沒有 gold 也能跑（結果 n/a）。
-- `rag/`：`cases.json`（問題 → 預期證據段落 → 預期解釋重點）與 `run.py`（`--dry-run` 離線檢查資料；`--live` 打真模型檢索與產生解釋，需先 ingest 語料）。
+- `rag/`：`cases.json`（問題 → 預期證據段落 → 預期解釋重點；每條審定規則至少一題，預期證據用規則的出處引文，題目刻意選引文沒點名的同類藥，測同類推廣與跨語言檢索）與 `run.py`（`--dry-run` 離線檢查資料；`--live` 打真模型檢索與產生解釋，需先 ingest 語料）。
 
 `vlm/` 的資料由舊專案組員標註，來源見 `docs/legacy/README.md`。
