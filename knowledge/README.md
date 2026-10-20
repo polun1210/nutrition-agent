@@ -5,9 +5,21 @@
 | `sources/dris/` | 是 | 《國人膳食營養素參考攝取量》第八版全文、總表、整理筆記 |
 | `sources/nih_ods/` | 是 | NIH Office of Dietary Supplements fact sheets（13 種營養素 × Consumer／HealthProfessional） |
 | `sources/nccih/` | 是 | NCCIH「What You Need To Know」頁面：紅麴、Omega-3（魚油）、葡萄糖胺與軟骨素 |
-| `raw/` | 否 | TFDA 仿單 Markdown（約 3,400 份、1.9 GB，含 base64 圖片） |
-| `processed/` | 是 | `scripts/ingest/` 產出：去重、去圖、按仿單章節切好的文字 |
-| `manifest.csv` | 是（待建） | 每份文件的來源、許可證字號、有效成分、抓取日期、雜湊值 |
+| `raw/` | 否 | TFDA 仿單 Markdown（約 3,400 份、1.9 GB，含 base64 圖片），只在維護者本機與 Google 雲端硬碟 |
+| `processed/` | 是（目前是空的） | 預留給進 git 的仿單節錄；規則若以 TFDA 仿單為出處，引文檢查只認這裡（`reference/checks.py`），`raw/` 不進 git 無法重現 |
+| `manifest.csv` | 尚未建立 | 預計記錄每份文件的來源、許可證字號、有效成分、抓取日期、雜湊值 |
+
+ingest 不經過 `processed/`：直接讀 `sources/` 與 `raw/tfda/`，切塊後寫進資料庫（見下方〈ingest〉）。
+
+## 只有 clone 這個 repo 時
+
+TFDA 仿單（`raw/`）刻意留在維護者本機，不隨 repo 分享，所以：
+
+| 能做 | 做不到 |
+|---|---|
+| `uv run pytest`、`uv run ruff check`（不打外部 API、不需要語料） | ingest 出含仿單的資料庫：只會有 DRIs／NIH ODS／NCCIH，藥物相關的檢索查不到仿單段落 |
+| 有自己的 `OPENROUTER_API_KEY` 時，ingest `sources/` 的語料並試檢索 | `evals/rag/run.py --dry-run` 全數通過：預期證據在 `raw/tfda/` 的題目會報「找不到文件」 |
+| 閱讀切塊、檢索、報告的程式與 `docs/adr/` | 重現 `evals/rag/` 的命中率（limit=8 時開發題預期段落 16/16、保留題 6/8，是在完整語料上量的） |
 
 ## raw/ 的來源
 
