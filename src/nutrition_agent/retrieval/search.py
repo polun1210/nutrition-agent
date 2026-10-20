@@ -11,6 +11,7 @@ from nutrition_agent.gateway import ModelGateway
 from nutrition_agent.reference import load_reference_data
 
 DEFAULT_LIMIT = 8
+MAX_CHUNKS_PER_DOCUMENT = 2
 
 
 @dataclass(frozen=True)
@@ -37,35 +38,55 @@ def retrieve_evidence(
     """替一個判定（成分＋藥）找證據段落。
 
     篩選條件：段落標記的成分或有效成分，至少有一個在 (成分, 藥) 之中。
-    排序：內文提到該藥名稱的段落優先，其次是與「成分 + 藥 交互作用」查詢文字的餘弦相似度。
+    排序：與查詢文字的餘弦相似度；查詢文字列出成分、藥與藥物類別的中英文名稱，
+    讓只寫類別（例如 "thiazide diuretics"）的證據也找得到。
+    入選順序：每份文件相似度前 MAX_CHUNKS_PER_DOCUMENT 段優先，名額有剩再依相似度補滿；
+    仿單每段都提到藥名，不這樣分配會佔滿結果。回傳時依相似度排序。
     """
     from nutrition_agent.retrieval.ingest import vector_literal
 
     codes = [ingredient_code, *drug_ingredient_codes]
-    query = f"{' '.join(codes)} interaction medication 交互作用"
-    (query_vector,) = gateway.embed([query])
+    (query_vector,) = gateway.embed([_query_text(ingredient_code, drug_ingredient_codes)])
     rows = conn.execute(
+        "WITH ranked AS ("
         "SELECT id, source_type, document_name, document_path, ingredients, section, "
-        "start_line, end_line, text, 1 - (embedding <=> %s::vector) AS similarity "
-        "FROM evidence_chunk WHERE ingredients && %s::text[] "
-        "ORDER BY (text ILIKE ANY(%s)) DESC, embedding <=> %s::vector, id LIMIT %s",
-        (
-            vector_literal(query_vector),
-            codes,
-            [f"%{name}%" for name in _drug_names(drug_ingredient_codes)],
-            vector_literal(query_vector),
-            limit,
-        ),
+        "start_line, end_line, text, 1 - (embedding <=> %(vector)s::vector) AS similarity, "
+        "row_number() OVER (PARTITION BY document_path "
+        "ORDER BY embedding <=> %(vector)s::vector, id) AS rank_in_document "
+        "FROM evidence_chunk WHERE ingredients && %(codes)s::text[]), "
+        "chosen AS (SELECT * FROM ranked "
+        "ORDER BY rank_in_document > %(per_document)s, similarity DESC, id LIMIT %(limit)s) "
+        "SELECT id, source_type, document_name, document_path, ingredients, section, "
+        "start_line, end_line, text, similarity FROM chosen ORDER BY similarity DESC, id",
+        {
+            "vector": vector_literal(query_vector),
+            "codes": codes,
+            "per_document": MAX_CHUNKS_PER_DOCUMENT,
+            "limit": limit,
+        },
     ).fetchall()
     return [Evidence(*row[:4], tuple(row[4]), *row[5:]) for row in rows]
 
 
-def _drug_names(drug_ingredient_codes: Sequence[str]) -> list[str]:
-    """藥的比對字樣：代碼，加上目錄中的英文與中文名稱。"""
-    catalog = {i.code: i for i in load_reference_data().drugs.ingredients}
-    names: list[str] = []
+def _query_text(ingredient_code: str, drug_ingredient_codes: Sequence[str]) -> str:
+    """查詢文字：成分的中文名與英文同義詞，藥的中英文名與類別；目錄外的代碼照原樣放入。"""
+    reference = load_reference_data()
+    ingredients = {i.code: i for i in reference.ingredients.ingredients}
+    drugs = {d.code: d for d in reference.drugs.ingredients}
+    parts: list[str] = []
+    ingredient = ingredients.get(ingredient_code)
+    if ingredient is None:
+        parts.append(ingredient_code)
+    else:
+        parts.append(ingredient.display_name_zh)
+        parts.extend(name for name in ingredient.synonyms if name.isascii())
     for code in drug_ingredient_codes:
-        names.append(code)
-        if code in catalog:
-            names.extend([catalog[code].name_en, catalog[code].name_zh])
-    return names
+        drug = drugs.get(code)
+        if drug is None:
+            parts.append(code)
+            continue
+        parts.extend([drug.name_en, drug.name_zh])
+        if drug.class_code:
+            drug_class = reference.drugs.get_class(drug.class_code)
+            parts.extend([drug.class_code.replace("_", " "), drug_class.name_zh])
+    return " ".join([*parts, "drug interaction 交互作用"])
