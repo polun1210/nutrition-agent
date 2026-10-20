@@ -10,7 +10,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from nutrition_agent.reference.names import contains_quantity_digit
+from nutrition_agent.reference.names import contains_quantity
 
 
 class RuleStatus(StrEnum):
@@ -86,7 +86,7 @@ class Rule(BaseModel):
         separate = self.advice is Advice.SEPARATE_TIMING
         if separate != (self.separation_hours is not None):
             raise ValueError(f"{self.id}: 錯開時數 ⟺ 建議行動是錯開服用")
-        if contains_quantity_digit(self.reason_zh):
+        if contains_quantity(self.reason_zh):
             raise ValueError(f"{self.id}: 規則說明文字不得含數字")
         approved = self.status is RuleStatus.APPROVED
         if approved != bool(self.approved_by):

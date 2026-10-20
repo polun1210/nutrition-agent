@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict
 from nutrition_agent.assessment import Assessment, InteractionFinding
 from nutrition_agent.gateway import ModelGateway
 from nutrition_agent.reference import ReferenceData
-from nutrition_agent.reference.names import contains_quantity_digit
+from nutrition_agent.reference.names import contains_quantity
 from nutrition_agent.reporting.forbidden import find_forbidden_terms
 from nutrition_agent.retrieval.search import Evidence, retrieve_evidence
 
@@ -78,7 +78,7 @@ def check_sentences(
         return ["沒有任何句子"]
     problems: list[str] = []
     for text, ids in sentences:
-        if contains_quantity_digit(text):
+        if contains_quantity(text):
             problems.append(f"含數字：{text}")
         if not ids:
             problems.append(f"沒有附證據段落 ID：{text}")
@@ -110,7 +110,7 @@ def _prompt(finding: InteractionFinding, ingredient_name: str, evidence: Sequenc
         f"證據段落：\n{passages}\n\n"
         "請用白話繁體中文寫 1 到 3 句解釋這個判定，規則：\n"
         "- 每一句都必須引用至少一個上面的證據段落 ID，且只能用上面列出的 ID。\n"
-        "- 不得出現任何阿拉伯數字或數量（數值由系統另外呈現）；成分與藥品名稱本身可以寫。\n"
+        "- 不得出現任何數字或數量，中文數字也算（例如「一年」「兩粒」），數值由系統另外呈現；成分與藥品名稱本身可以寫。\n"
         "- 不得說「安全」「未發現問題」，不得下診斷，不得建議劑量、停用或購買。\n"
         '只輸出 JSON 陣列，例如：[{"text": "…", "evidence_ids": ["ev-…"]}]'
     )

@@ -9,7 +9,7 @@ from nutrition_agent.reference import (
     check_integrity,
     load_reference_data,
 )
-from nutrition_agent.reference.names import contains_quantity_digit
+from nutrition_agent.reference.names import contains_quantity
 
 
 @pytest.fixture(scope="module")
@@ -23,9 +23,9 @@ def rules(data):
 
 
 def test_說明文字可提到成分名稱中的數字但不可含量值():
-    assert not contains_quantity_digit("這個藥可能降低維生素 B12 的吸收，也和 B6、n-3、Q10 有關。")
-    assert contains_quantity_digit("每天補充 B12 超過 5 微克可能有影響。")
-    assert contains_quantity_digit("服藥後 2 小時再吃維生素 B12。")
+    assert not contains_quantity("這個藥可能降低維生素 B12 的吸收，也和 B6、n-3、Q10 有關。")
+    assert contains_quantity("每天補充 B12 超過 5 微克可能有影響。")
+    assert contains_quantity("服藥後 2 小時再吃維生素 B12。")
 
 
 def test_已草擬規則的最低數量(rules):
