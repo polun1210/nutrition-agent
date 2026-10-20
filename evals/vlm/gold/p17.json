@@ -1,0 +1,363 @@
+{
+  "product_id": "f629fc14-d0e4-583e-a1ca-2afc36b8e726",
+  "product_name": "克補+鋅加強錠",
+  "source_images": [
+    {
+      "image_id": "p17-img01",
+      "quality_status": "accepted"
+    }
+  ],
+  "serving_info": {
+    "serving_size": 1.0,
+    "dose_unit": "tablet",
+    "source_image_id": "p17-img01"
+  },
+  "nutrients": [
+    {
+      "row_id": "r01",
+      "raw_name": "維生素B1",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 26.7,
+      "unit": "mg",
+      "percent_dv": 1907.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r02",
+      "raw_name": "維生素B2",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 30.0,
+      "unit": "mg",
+      "percent_dv": 1875.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r03",
+      "raw_name": "維生素B6",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "standard_code": "vitamin_b6",
+      "scope_status": "in_scope",
+      "per_serving": 10.9,
+      "unit": "mg",
+      "percent_dv": 681.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r04",
+      "raw_name": "維生素B12",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "standard_code": "vitamin_b12",
+      "scope_status": "in_scope",
+      "per_serving": 140.0,
+      "unit": "ug",
+      "percent_dv": 5833.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r05",
+      "raw_name": "維生素C",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "standard_code": "vitamin_c",
+      "scope_status": "in_scope",
+      "per_serving": 300.0,
+      "unit": "mg",
+      "percent_dv": 300.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r06",
+      "raw_name": "維生素E",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "standard_code": "vitamin_e",
+      "scope_status": "in_scope",
+      "per_serving": 20.1,
+      "unit": "mg_ate",
+      "percent_dv": 155.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r07",
+      "raw_name": "菸鹼素",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "standard_code": "niacin",
+      "scope_status": "in_scope",
+      "per_serving": 66.0,
+      "unit": "mg_ne",
+      "percent_dv": 367.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r08",
+      "raw_name": "葉酸",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "standard_code": "folate",
+      "scope_status": "in_scope",
+      "per_serving": 300.0,
+      "unit": "ug",
+      "percent_dv": 75.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r09",
+      "raw_name": "泛酸",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 20.0,
+      "unit": "mg",
+      "percent_dv": 400.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r10",
+      "raw_name": "生物素",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 40.0,
+      "unit": "ug",
+      "percent_dv": 133.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r11",
+      "raw_name": "葉黃素",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.6,
+      "unit": "mg",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r12",
+      "raw_name": "銅",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.5,
+      "unit": "mg",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r13",
+      "raw_name": "鋅",
+      "label_section": "nutrition_table",
+      "source_image_id": "p17-img01",
+      "standard_code": "zinc",
+      "scope_status": "in_scope",
+      "per_serving": 15.0,
+      "unit": "mg",
+      "percent_dv": 100.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r14",
+      "raw_name": "維生素C(維生素C、羥丙基甲基纖維素)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r15",
+      "raw_name": "微結晶狀α-纖維素",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r16",
+      "raw_name": "菸鹼醯胺",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r17",
+      "raw_name": "乙酸dl-α-生育醇酯(維生素E)(維生素E、辛烯基丁二酸鈉澱粉、二氧化矽)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r18",
+      "raw_name": "鹽酸吡哆辛(維生素B6)(脂肪酸甘油酯、維生素B6)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r19",
+      "raw_name": "硝酸硫胺明(維生素B1，硝酸噻胺)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r20",
+      "raw_name": "核黃素(維生素B2)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r21",
+      "raw_name": "本多酸鈣",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r22",
+      "raw_name": "氰鈷胺明(維生素B12)(辛烯基丁二酸鈉澱粉、檸檬酸鈉、檸檬酸、二氧化矽、維生素B12)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r23",
+      "raw_name": "氧化鋅",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r24",
+      "raw_name": "留蘭香香料(麥芽糊精、留蘭香油、辛烯基丁二酸鈉澱粉)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r25",
+      "raw_name": "聚乙烯醇",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r26",
+      "raw_name": "葉黃素(明膠、蔗糖、玉米澱粉、水、葉黃素、磷酸鈣、生育醇(維生素E)(抗氧化劑)、L-抗壞血酸鈉(抗氧化劑)、L-抗壞血酸棕櫚酸酯(抗氧化劑))",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r27",
+      "raw_name": "聚乙烯聚吡咯烷酮",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r28",
+      "raw_name": "二氧化鈦",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r29",
+      "raw_name": "滑石粉",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r30",
+      "raw_name": "生物素(磷酸氫鈣(無水)、生物素)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r31",
+      "raw_name": "二氧化矽",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r32",
+      "raw_name": "硬脂酸鎂",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r33",
+      "raw_name": "食用黃色五號鋁麗基",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r34",
+      "raw_name": "硫酸銅",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r35",
+      "raw_name": "卵磷脂",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r36",
+      "raw_name": "葉酸",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r37",
+      "raw_name": "玉米糖膠",
+      "label_section": "ingredient_list",
+      "source_image_id": "p17-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    }
+  ],
+  "extraction_meta": {
+    "ocr_version": "gold-annotation",
+    "rule_layer_version": "gold-annotation",
+    "synonym_table_version": "gold-annotation",
+    "extracted_at": "2026-10-20T00:00:00+08:00"
+  }
+}

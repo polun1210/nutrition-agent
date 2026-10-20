@@ -1,0 +1,304 @@
+{
+  "product_id": "70fda210-ebef-5563-bdf1-48db3cd096f3",
+  "product_name": "銀寶善存50+男性綜合維他命錠（品名未入鏡）",
+  "source_images": [
+    {
+      "image_id": "p22-img01",
+      "quality_status": "accepted"
+    }
+  ],
+  "serving_info": {
+    "serving_size": 1.0,
+    "dose_unit": "tablet",
+    "source_image_id": "p22-img01"
+  },
+  "nutrients": [
+    {
+      "row_id": "r01",
+      "raw_name": "維生素A",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 750.0,
+      "unit": "ug_re",
+      "percent_dv": 107.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r02",
+      "raw_name": "維生素B1",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 4.6,
+      "unit": "mg",
+      "percent_dv": 329.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r03",
+      "raw_name": "維生素B2",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 4.6,
+      "unit": "mg",
+      "percent_dv": 288.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r04",
+      "raw_name": "維生素B6",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "vitamin_b6",
+      "scope_status": "in_scope",
+      "per_serving": 12.0,
+      "unit": "mg",
+      "percent_dv": 750.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r05",
+      "raw_name": "維生素B12",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "vitamin_b12",
+      "scope_status": "in_scope",
+      "per_serving": 45.0,
+      "unit": "ug",
+      "percent_dv": 1875.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r06",
+      "raw_name": "維生素C",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "vitamin_c",
+      "scope_status": "in_scope",
+      "per_serving": 150.0,
+      "unit": "mg",
+      "percent_dv": 150.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r07",
+      "raw_name": "維生素D",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "vitamin_d",
+      "scope_status": "in_scope",
+      "per_serving": 12.5,
+      "unit": "ug",
+      "percent_dv": 125.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r08",
+      "raw_name": "維生素E",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "vitamin_e",
+      "scope_status": "in_scope",
+      "per_serving": 40.2,
+      "unit": "mg_ate",
+      "percent_dv": 309.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r09",
+      "raw_name": "維生素K",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 50.0,
+      "unit": "ug",
+      "percent_dv": 42.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r10",
+      "raw_name": "菸鹼素",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "niacin",
+      "scope_status": "in_scope",
+      "per_serving": 16.0,
+      "unit": "mg_ne",
+      "percent_dv": 89.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r11",
+      "raw_name": "葉酸",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "folate",
+      "scope_status": "in_scope",
+      "per_serving": 300.0,
+      "unit": "ug",
+      "percent_dv": 75.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r12",
+      "raw_name": "泛酸",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 13.6,
+      "unit": "mg",
+      "percent_dv": 272.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r13",
+      "raw_name": "生物素",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 54.0,
+      "unit": "ug",
+      "percent_dv": 180.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r14",
+      "raw_name": "葉黃素",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 1.2,
+      "unit": "mg",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r15",
+      "raw_name": "鈣",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "calcium",
+      "scope_status": "in_scope",
+      "per_serving": 230.0,
+      "unit": "mg",
+      "percent_dv": 19.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r16",
+      "raw_name": "鐵",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "iron",
+      "scope_status": "in_scope",
+      "per_serving": 4.0,
+      "unit": "mg",
+      "percent_dv": 27.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r17",
+      "raw_name": "碘",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 130.0,
+      "unit": "ug",
+      "percent_dv": 93.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r18",
+      "raw_name": "鎂",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "magnesium",
+      "scope_status": "in_scope",
+      "per_serving": 84.0,
+      "unit": "mg",
+      "percent_dv": 22.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r19",
+      "raw_name": "鋅",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "zinc",
+      "scope_status": "in_scope",
+      "per_serving": 11.0,
+      "unit": "mg",
+      "percent_dv": 73.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r20",
+      "raw_name": "硒",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "standard_code": "selenium",
+      "scope_status": "in_scope",
+      "per_serving": 55.0,
+      "unit": "ug",
+      "percent_dv": 100.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r21",
+      "raw_name": "錳",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 3.0,
+      "unit": "mg",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r22",
+      "raw_name": "銅",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.5,
+      "unit": "mg",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r23",
+      "raw_name": "鉻",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 100.0,
+      "unit": "ug",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r24",
+      "raw_name": "鉬",
+      "label_section": "nutrition_table",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 50.0,
+      "unit": "ug",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r25",
+      "raw_name": "番茄紅素",
+      "label_section": "per_unit_note",
+      "source_image_id": "p22-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.6,
+      "unit": "mg",
+      "requires_user_input": false
+    }
+  ],
+  "extraction_meta": {
+    "ocr_version": "gold-annotation",
+    "rule_layer_version": "gold-annotation",
+    "synonym_table_version": "gold-annotation",
+    "extracted_at": "2026-10-20T00:00:00+08:00"
+  }
+}

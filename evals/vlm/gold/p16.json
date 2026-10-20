@@ -1,0 +1,232 @@
+{
+  "product_id": "1742d160-ba50-582c-bca9-a80b69d7ed64",
+  "product_name": "武倍魚油",
+  "source_images": [
+    {
+      "image_id": "p16-img01",
+      "quality_status": "accepted"
+    }
+  ],
+  "serving_info": {
+    "serving_size": 1.0,
+    "dose_unit": "softgel",
+    "source_image_id": "p16-img01"
+  },
+  "nutrients": [
+    {
+      "row_id": "r01",
+      "raw_name": "熱量",
+      "label_section": "nutrition_table",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 3.66,
+      "unit": "kcal",
+      "percent_dv": 0.2,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r02",
+      "raw_name": "蛋白質",
+      "label_section": "nutrition_table",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.01,
+      "unit": "g",
+      "percent_dv": 0.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r03",
+      "raw_name": "脂肪",
+      "label_section": "nutrition_table",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.26,
+      "unit": "g",
+      "percent_dv": 0.4,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r04",
+      "raw_name": "飽和脂肪",
+      "label_section": "nutrition_table",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.0,
+      "unit": "g",
+      "percent_dv": 0.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r05",
+      "raw_name": "反式脂肪",
+      "label_section": "nutrition_table",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.0,
+      "unit": "g",
+      "percent_dv": 0.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r06",
+      "raw_name": "碳水化合物",
+      "label_section": "nutrition_table",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.11,
+      "unit": "g",
+      "percent_dv": 0.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r07",
+      "raw_name": "糖",
+      "label_section": "nutrition_table",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.01,
+      "unit": "g",
+      "percent_dv": 0.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r08",
+      "raw_name": "鈉",
+      "label_section": "nutrition_table",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 0.08,
+      "unit": "mg",
+      "percent_dv": 0.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r09",
+      "raw_name": "魚油(魚油、混合生育酚)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "standard_code": "omega_3",
+      "scope_status": "in_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r10",
+      "raw_name": "L-精胺酸",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r11",
+      "raw_name": "葫蘆巴萃取物",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r12",
+      "raw_name": "南非醉茄萃取物(南非醉茄萃取物、牛奶)",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r13",
+      "raw_name": "葡萄糖酸鋅",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r14",
+      "raw_name": "瑪卡萃取物",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r15",
+      "raw_name": "日本專利香蕉萃取物",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r16",
+      "raw_name": "明膠",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r17",
+      "raw_name": "甘油",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r18",
+      "raw_name": "D-山梨醇液70%",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r19",
+      "raw_name": "水",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r20",
+      "raw_name": "聚乙二醇",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r21",
+      "raw_name": "食用藍色一號",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r22",
+      "raw_name": "二氧化鈦",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r23",
+      "raw_name": "食用紅色六號",
+      "label_section": "ingredient_list",
+      "source_image_id": "p16-img01",
+      "scope_status": "out_of_scope",
+      "requires_user_input": false
+    }
+  ],
+  "extraction_meta": {
+    "ocr_version": "gold-annotation",
+    "rule_layer_version": "gold-annotation",
+    "synonym_table_version": "gold-annotation",
+    "extracted_at": "2026-10-20T00:00:00+08:00"
+  }
+}

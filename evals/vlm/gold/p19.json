@@ -1,0 +1,90 @@
+{
+  "product_id": "1ce8a07c-2251-504b-a6c9-991f38ce3151",
+  "product_name": "哈克麗康-海藻鈣錠（品名未入鏡）",
+  "source_images": [
+    {
+      "image_id": "p19-img01",
+      "quality_status": "accepted"
+    }
+  ],
+  "serving_info": {
+    "serving_size": 3.0,
+    "dose_unit": "tablet",
+    "source_image_id": "p19-img01"
+  },
+  "nutrients": [
+    {
+      "row_id": "r01",
+      "raw_name": "維生素D",
+      "label_section": "nutrition_table",
+      "source_image_id": "p19-img01",
+      "standard_code": "vitamin_d",
+      "scope_status": "in_scope",
+      "per_serving": 6.0,
+      "unit": "ug",
+      "percent_dv": 60.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r02",
+      "raw_name": "維生素K",
+      "label_section": "nutrition_table",
+      "source_image_id": "p19-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 3.0,
+      "unit": "ug",
+      "percent_dv": 2.5,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r03",
+      "raw_name": "鈣",
+      "label_section": "nutrition_table",
+      "source_image_id": "p19-img01",
+      "standard_code": "calcium",
+      "scope_status": "in_scope",
+      "per_serving": 300.0,
+      "unit": "mg",
+      "percent_dv": 25.0,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r04",
+      "raw_name": "鎂",
+      "label_section": "nutrition_table",
+      "source_image_id": "p19-img01",
+      "standard_code": "magnesium",
+      "scope_status": "in_scope",
+      "per_serving": 150.0,
+      "unit": "mg",
+      "percent_dv": 38.5,
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r05",
+      "raw_name": "紅海藻粉(含鈣)",
+      "label_section": "per_unit_note",
+      "source_image_id": "p19-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 937.5,
+      "unit": "mg",
+      "requires_user_input": false
+    },
+    {
+      "row_id": "r06",
+      "raw_name": "納豆菌發酵物(含維生素K2)",
+      "label_section": "per_unit_note",
+      "source_image_id": "p19-img01",
+      "scope_status": "out_of_scope",
+      "per_serving": 3.0,
+      "unit": "mg",
+      "requires_user_input": false
+    }
+  ],
+  "extraction_meta": {
+    "ocr_version": "gold-annotation",
+    "rule_layer_version": "gold-annotation",
+    "synonym_table_version": "gold-annotation",
+    "extracted_at": "2026-10-20T00:00:00+08:00"
+  }
+}
