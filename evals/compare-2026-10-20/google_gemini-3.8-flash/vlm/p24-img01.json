@@ -1,0 +1,22 @@
+{
+  "readable": true,
+  "product_name": null,
+  "serving_size": 1.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "鈣",
+      "section": "nutrition_table",
+      "amount": 199.5,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素D",
+      "section": "nutrition_table",
+      "amount": 5.0,
+      "unit": "ug",
+      "readable": true
+    }
+  ]
+}

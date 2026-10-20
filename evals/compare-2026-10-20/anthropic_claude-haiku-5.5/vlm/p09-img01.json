@@ -1,0 +1,78 @@
+{
+  "readable": true,
+  "product_name": "克補",
+  "serving_size": 1.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "維生素B1",
+      "section": "nutrition_table",
+      "amount": 14.6,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B2",
+      "section": "nutrition_table",
+      "amount": 10.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B6",
+      "section": "nutrition_table",
+      "amount": 6.1,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B12",
+      "section": "nutrition_table",
+      "amount": 12.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素C",
+      "section": "nutrition_table",
+      "amount": 500.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素E",
+      "section": "nutrition_table",
+      "amount": 20.1,
+      "unit": "mg_alpha_te",
+      "readable": true
+    },
+    {
+      "raw_name": "菸鹼素",
+      "section": "nutrition_table",
+      "amount": 100.0,
+      "unit": "mg_ne",
+      "readable": true
+    },
+    {
+      "raw_name": "葉酸",
+      "section": "nutrition_table",
+      "amount": 400.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "泛酸",
+      "section": "nutrition_table",
+      "amount": 20.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "生物素",
+      "section": "nutrition_table",
+      "amount": 45.0,
+      "unit": "ug",
+      "readable": true
+    }
+  ]
+}

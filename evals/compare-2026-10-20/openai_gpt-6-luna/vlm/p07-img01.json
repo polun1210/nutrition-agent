@@ -1,0 +1,134 @@
+{
+  "readable": true,
+  "product_name": null,
+  "serving_size": null,
+  "dose_unit": null,
+  "rows": [
+    {
+      "raw_name": "熱量",
+      "section": "nutrition_table",
+      "amount": 3.0,
+      "unit": "kcal",
+      "readable": true
+    },
+    {
+      "raw_name": "蛋白質",
+      "section": "nutrition_table",
+      "amount": 0.1,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "脂肪",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "飽和脂肪",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "反式脂肪",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "碳水化合物",
+      "section": "nutrition_table",
+      "amount": 0.6,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "糖",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "鈉",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "紅麴粉",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "明膠(源自牛)",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "磷酸鈣",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "黃豆發酵物",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "水",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "硬脂酸鎂",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "乳糖",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "二氧化矽",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "硫酸月桂酯鈉",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "甘油",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    }
+  ]
+}

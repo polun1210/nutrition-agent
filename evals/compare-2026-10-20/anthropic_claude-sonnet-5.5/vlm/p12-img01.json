@@ -1,0 +1,71 @@
+{
+  "readable": true,
+  "product_name": null,
+  "serving_size": 2.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "維生素D",
+      "section": "nutrition_table",
+      "amount": 6.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "鈣",
+      "section": "nutrition_table",
+      "amount": 300.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "鎂",
+      "section": "nutrition_table",
+      "amount": 150.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "鋅",
+      "section": "nutrition_table",
+      "amount": 3.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "銅",
+      "section": "nutrition_table",
+      "amount": 0.6,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "錳",
+      "section": "nutrition_table",
+      "amount": 0.6,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "大豆胜肽",
+      "section": "ingredient_list",
+      "amount": 40.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "納豆發酵物(含維生素K2)",
+      "section": "ingredient_list",
+      "amount": 30.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "菊苣根萃取物(含寡多醣)",
+      "section": "ingredient_list",
+      "amount": 20.0,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

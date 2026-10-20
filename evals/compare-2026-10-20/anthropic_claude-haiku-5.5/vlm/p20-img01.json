@@ -1,0 +1,50 @@
+{
+  "readable": true,
+  "product_name": "HAC-Algae Calcium Tablets",
+  "serving_size": 3.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "Vitamin D",
+      "section": "nutrition_table",
+      "amount": 6.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "Vitamin K",
+      "section": "nutrition_table",
+      "amount": 3.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "Calcium",
+      "section": "nutrition_table",
+      "amount": 300.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Magnesium",
+      "section": "nutrition_table",
+      "amount": 150.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Red Algae Powder",
+      "section": "ingredient_list",
+      "amount": 937.5,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Natto Fermentation Extract",
+      "section": "ingredient_list",
+      "amount": 3.0,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

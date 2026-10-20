@@ -1,0 +1,169 @@
+{
+  "readable": true,
+  "product_name": "武倍魚油",
+  "serving_size": 1.0,
+  "dose_unit": "粒",
+  "rows": [
+    {
+      "raw_name": "魚油(魚油、混合生育醇)",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "L-精胺酸",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "葫蘆巴萃取物",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "南非醉茄萃取物(南非醉茄萃取物、牛奶)",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "葡萄糖酸鋅",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "瑪卡萃取物",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "日本專利香蕉萃取物",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "明膠",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "甘油",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "D-山梨醇液70%",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "水",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "聚乙二醇",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "食用藍色一號",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "二氧化鈦",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "食用紅色六號",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "熱量",
+      "section": "nutrition_table",
+      "amount": 3.66,
+      "unit": "kcal",
+      "readable": true
+    },
+    {
+      "raw_name": "蛋白質",
+      "section": "nutrition_table",
+      "amount": 0.01,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "脂肪",
+      "section": "nutrition_table",
+      "amount": 0.26,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "飽和脂肪",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "反式脂肪",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "碳水化合物",
+      "section": "nutrition_table",
+      "amount": 0.11,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "糖",
+      "section": "nutrition_table",
+      "amount": 0.01,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "鈉",
+      "section": "nutrition_table",
+      "amount": 0.08,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

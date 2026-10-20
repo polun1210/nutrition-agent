@@ -1,0 +1,29 @@
+{
+  "readable": true,
+  "product_name": "AlaskOmega",
+  "serving_size": null,
+  "dose_unit": null,
+  "rows": [
+    {
+      "raw_name": "Concentrated fish Omega-3 triglycerides",
+      "section": "per_unit_note",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "eicosapentaenoic acid (EPA)",
+      "section": "per_unit_note",
+      "amount": 563.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "docosahexaenoic acid (DHA)",
+      "section": "per_unit_note",
+      "amount": 215.0,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "readable": true,
+  "product_name": null,
+  "serving_size": null,
+  "dose_unit": "粒",
+  "rows": [
+    {
+      "raw_name": "Concentrated fish Omega-3 triglycerides",
+      "section": "per_unit_note",
+      "amount": 1.02,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "equiv. to eicosapentaenoic acid (EPA)",
+      "section": "per_unit_note",
+      "amount": 563.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "equiv. to docosahexaenoic acid (DHA)",
+      "section": "per_unit_note",
+      "amount": 215.0,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

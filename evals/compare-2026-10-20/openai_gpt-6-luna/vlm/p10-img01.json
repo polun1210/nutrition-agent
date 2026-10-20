@@ -1,0 +1,85 @@
+{
+  "readable": true,
+  "product_name": "全方位維生素B群加C活力錠",
+  "serving_size": 1.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "維生素B1 Vitamin B₁",
+      "section": "nutrition_table",
+      "amount": 35.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B2 Vitamin B₂",
+      "section": "nutrition_table",
+      "amount": 50.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B6 Vitamin B₆",
+      "section": "nutrition_table",
+      "amount": 50.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B12 Vitamin B₁₂",
+      "section": "nutrition_table",
+      "amount": 50.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素C Vitamin C",
+      "section": "nutrition_table",
+      "amount": 300.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "菸鹼素 Niacin",
+      "section": "nutrition_table",
+      "amount": 30.0,
+      "unit": "mg_ne",
+      "readable": true
+    },
+    {
+      "raw_name": "葉酸 Folic Acid",
+      "section": "nutrition_table",
+      "amount": 400.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "泛酸 Pantothenic Acid",
+      "section": "nutrition_table",
+      "amount": 100.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "生物素 Biotin",
+      "section": "nutrition_table",
+      "amount": 100.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "鈣 Calcium",
+      "section": "nutrition_table",
+      "amount": 26.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "肌醇 Inositol",
+      "section": "nutrition_table",
+      "amount": 25.0,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

@@ -1,0 +1,183 @@
+{
+  "readable": true,
+  "product_name": "銀寶善存50+女性綜合維他命錠",
+  "serving_size": 1.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "維生素A",
+      "section": "nutrition_table",
+      "amount": 600.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B1",
+      "section": "nutrition_table",
+      "amount": 4.2,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B2",
+      "section": "nutrition_table",
+      "amount": 3.85,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B6",
+      "section": "nutrition_table",
+      "amount": 12.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B12",
+      "section": "nutrition_table",
+      "amount": 35.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素C",
+      "section": "nutrition_table",
+      "amount": 120.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素D",
+      "section": "nutrition_table",
+      "amount": 12.5,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素E",
+      "section": "nutrition_table",
+      "amount": 36.8,
+      "unit": "mg_alpha_te",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素K",
+      "section": "nutrition_table",
+      "amount": 50.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "菸鹼素",
+      "section": "nutrition_table",
+      "amount": 14.0,
+      "unit": "mg_ne",
+      "readable": true
+    },
+    {
+      "raw_name": "葉酸",
+      "section": "nutrition_table",
+      "amount": 400.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "泛酸",
+      "section": "nutrition_table",
+      "amount": 12.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "生物素",
+      "section": "nutrition_table",
+      "amount": 45.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "葉黃素",
+      "section": "nutrition_table",
+      "amount": 1.2,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "鈣",
+      "section": "nutrition_table",
+      "amount": 280.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "鐵",
+      "section": "nutrition_table",
+      "amount": 6.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "碘",
+      "section": "nutrition_table",
+      "amount": 130.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "鎂",
+      "section": "nutrition_table",
+      "amount": 64.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "鋅",
+      "section": "nutrition_table",
+      "amount": 8.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "硒",
+      "section": "nutrition_table",
+      "amount": 55.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "錳",
+      "section": "nutrition_table",
+      "amount": 3.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "銅",
+      "section": "nutrition_table",
+      "amount": 0.5,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "鉻",
+      "section": "nutrition_table",
+      "amount": 100.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "鉬",
+      "section": "nutrition_table",
+      "amount": 50.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "番茄紅素",
+      "section": "nutrition_table",
+      "amount": 0.3,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

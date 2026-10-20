@@ -1,0 +1,50 @@
+{
+  "readable": true,
+  "product_name": null,
+  "serving_size": 3.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "維生素D",
+      "section": "nutrition_table",
+      "amount": 6.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素K",
+      "section": "nutrition_table",
+      "amount": 3.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "鈣",
+      "section": "nutrition_table",
+      "amount": 300.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "鎂",
+      "section": "nutrition_table",
+      "amount": 150.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "紅海藻粉(含鈣)",
+      "section": "ingredient_list",
+      "amount": 937.5,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "納豆菌發酵物(含維生素K2)",
+      "section": "ingredient_list",
+      "amount": 3.0,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

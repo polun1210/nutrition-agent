@@ -1,0 +1,29 @@
+{
+  "readable": true,
+  "product_name": "桂格康研家UC-II®葡萄糖胺膠囊",
+  "serving_size": 2.0,
+  "dose_unit": "粒",
+  "rows": [
+    {
+      "raw_name": "維生素E",
+      "section": "nutrition_table",
+      "amount": 3.9,
+      "unit": "mg_alpha_te",
+      "readable": true
+    },
+    {
+      "raw_name": "UC-II®膠原蛋白複合物(含非變性第二型膠原蛋白)",
+      "section": "nutrition_table",
+      "amount": 40.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "葡萄糖胺鹽酸鹽",
+      "section": "nutrition_table",
+      "amount": 200.0,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

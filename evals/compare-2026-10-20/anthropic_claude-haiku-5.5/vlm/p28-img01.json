@@ -1,0 +1,29 @@
+{
+  "readable": true,
+  "product_name": null,
+  "serving_size": 1.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "維生素C",
+      "section": "nutrition_table",
+      "amount": 500.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "泛酸",
+      "section": "nutrition_table",
+      "amount": 9.1,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "生物素",
+      "section": "nutrition_table",
+      "amount": 10.0,
+      "unit": "ug",
+      "readable": true
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "readable": true,
+  "product_name": "桂格康研家UC-II®葡萄糖胺膠囊",
+  "serving_size": 2.0,
+  "dose_unit": "粒",
+  "rows": [
+    {
+      "raw_name": "維生素E",
+      "section": "nutrition_table",
+      "amount": 3.9,
+      "unit": "mg_alpha_te",
+      "readable": true
+    },
+    {
+      "raw_name": "UC-II®膠原蛋白複合物(含非變性第二型膠原蛋白)",
+      "section": "nutrition_table",
+      "amount": 40.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "葡萄糖胺鹽酸鹽",
+      "section": "nutrition_table",
+      "amount": 200.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "龜鹿雙寶(玉米澱粉、龜鹿萃取物、枸杞、人蔘)",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "葡萄糖胺鹽酸鹽",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "乳酸菌(Bifidobacterium lactis、Lactobacillus acidophilus、Bacillus coagulans、Lactobacillus casei)",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "UC-II®膠原蛋白複合物(雞胸軟骨、氯化鉀)",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "維生素E",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "明膠",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "甘油",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "硫酸月桂酯鈉",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "純水",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "readable": true,
+  "product_name": "諾得®頂級紅麴膠囊",
+  "serving_size": 2.0,
+  "dose_unit": null,
+  "rows": [
+    {
+      "raw_name": "紅麴粉末",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "羥丙基甲基纖維素",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "純水",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "食用色素紅色六號",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "二氧化鈦",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "食用色素藍色一號",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "熱量",
+      "section": "nutrition_table",
+      "amount": 4.0,
+      "unit": "kcal",
+      "readable": true
+    },
+    {
+      "raw_name": "蛋白質",
+      "section": "nutrition_table",
+      "amount": 0.2,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "脂肪",
+      "section": "nutrition_table",
+      "amount": 0.2,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "飽和脂肪",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "反式脂肪",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "碳水化合物",
+      "section": "nutrition_table",
+      "amount": 0.4,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "糖",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "鈉",
+      "section": "nutrition_table",
+      "amount": 5.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "HMG-COA還原酵素抑制劑 Monacolin K",
+      "section": "per_unit_note",
+      "amount": 11.0,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

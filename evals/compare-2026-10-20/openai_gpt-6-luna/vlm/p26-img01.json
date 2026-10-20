@@ -1,0 +1,78 @@
+{
+  "readable": true,
+  "product_name": null,
+  "serving_size": null,
+  "dose_unit": "粒",
+  "rows": [
+    {
+      "raw_name": "結晶型硫酸鹽葡萄糖胺 (Crystalline Glucosamine Sulphate)",
+      "section": "per_unit_note",
+      "amount": 314.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Glucosamine Sulphate",
+      "section": "per_unit_note",
+      "amount": 250.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Sodium Chloride",
+      "section": "per_unit_note",
+      "amount": 64.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "starch",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "lactose",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "magnesium stearate",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "talc",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "erythrosine(FD&C Red No.3)",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "titanium dioxide",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "iron oxide",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    }
+  ]
+}

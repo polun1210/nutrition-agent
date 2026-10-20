@@ -1,0 +1,127 @@
+{
+  "readable": true,
+  "product_name": "HAC-Algae Calcium Tablets",
+  "serving_size": 3.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "Vitamin D",
+      "section": "nutrition_table",
+      "amount": 6.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "Vitamin K",
+      "section": "nutrition_table",
+      "amount": 3.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "Calcium",
+      "section": "nutrition_table",
+      "amount": 300.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Magnesium",
+      "section": "nutrition_table",
+      "amount": 150.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Red Algae Powder",
+      "section": "ingredient_list",
+      "amount": 937.5,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Natto Fermentation Extract",
+      "section": "ingredient_list",
+      "amount": 3.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Red Algae Powder",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Microcrystalline α-Cellulose",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Magnesium Oxide",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Sepifilm LP770(Hydroxypropyl Methylcellulose, Titanium Dioxide, Microcrystalline α-Cellulose, Stearic acid)",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Corn Starch",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Hydroxypropyl Cellulose",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Sodium Starch Glycolate",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Magnesium Stearate",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Silicon Dioxide",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Natto Fermentation Extract(Maltodextrin, Natto Fermentation Extract(Contain Vitamin K2))",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    },
+    {
+      "raw_name": "Vitamin D3(Tapioca Starch, Arabic Gum, Medium Chain Triglycerides, L-Ascorbic Acid(Antioxidants), Tricalcium Phosphate, Vitamin D3(Cholecalciferol), D-α-TocopherolConcentrate(Antioxidants))",
+      "section": "ingredient_list",
+      "amount": null,
+      "unit": null,
+      "readable": true
+    }
+  ]
+}

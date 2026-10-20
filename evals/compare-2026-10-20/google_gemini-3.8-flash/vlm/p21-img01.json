@@ -1,0 +1,78 @@
+{
+  "readable": true,
+  "product_name": "娘家大紅麴",
+  "serving_size": 1.0,
+  "dose_unit": "粒",
+  "rows": [
+    {
+      "raw_name": "熱量",
+      "section": "nutrition_table",
+      "amount": 2.1,
+      "unit": "kcal",
+      "readable": true
+    },
+    {
+      "raw_name": "蛋白質",
+      "section": "nutrition_table",
+      "amount": 0.01,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "脂肪",
+      "section": "nutrition_table",
+      "amount": 0.02,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "飽和脂肪",
+      "section": "nutrition_table",
+      "amount": 0.01,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "反式脂肪",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "碳水化合物",
+      "section": "nutrition_table",
+      "amount": 0.5,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "糖",
+      "section": "nutrition_table",
+      "amount": 0.0,
+      "unit": "g",
+      "readable": true
+    },
+    {
+      "raw_name": "鈉",
+      "section": "nutrition_table",
+      "amount": 1.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Monascin",
+      "section": "per_unit_note",
+      "amount": null,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "Ankaflavin",
+      "section": "per_unit_note",
+      "amount": null,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "readable": true,
+  "product_name": "窈窕B群",
+  "serving_size": 1.0,
+  "dose_unit": "錠",
+  "rows": [
+    {
+      "raw_name": "維生素B₁",
+      "section": "nutrition_table",
+      "amount": 25.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B₂",
+      "section": "nutrition_table",
+      "amount": 30.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B₆",
+      "section": "nutrition_table",
+      "amount": 10.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素B₁₂",
+      "section": "nutrition_table",
+      "amount": 100.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素C",
+      "section": "nutrition_table",
+      "amount": 50.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "維生素E",
+      "section": "nutrition_table",
+      "amount": 15.0,
+      "unit": "mg_alpha_te",
+      "readable": true
+    },
+    {
+      "raw_name": "菸鹼素",
+      "section": "nutrition_table",
+      "amount": 18.0,
+      "unit": "mg_ne",
+      "readable": true
+    },
+    {
+      "raw_name": "葉酸",
+      "section": "nutrition_table",
+      "amount": 400.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "泛酸",
+      "section": "nutrition_table",
+      "amount": 50.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "生物素",
+      "section": "nutrition_table",
+      "amount": 50.0,
+      "unit": "ug",
+      "readable": true
+    },
+    {
+      "raw_name": "鐵",
+      "section": "nutrition_table",
+      "amount": 15.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "牛磺酸",
+      "section": "nutrition_table",
+      "amount": 20.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "血紅素鐵",
+      "section": "ingredient_list",
+      "amount": 5.0,
+      "unit": "mg",
+      "readable": true
+    },
+    {
+      "raw_name": "米胚芽提取物",
+      "section": "ingredient_list",
+      "amount": 1.8,
+      "unit": "mg",
+      "readable": true
+    }
+  ]
+}
