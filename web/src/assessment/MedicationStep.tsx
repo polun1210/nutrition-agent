@@ -153,7 +153,7 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
             <button type="button" className="secondary" onClick={() => add(query)}>
               以「{query.trim()}」自行輸入加入
             </button>
-            （系統會標示為無法確認）
+            （系統會再對照一次藥名表，對不到就標示為無法確認）
           </p>
         </div>
       )}

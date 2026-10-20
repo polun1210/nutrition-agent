@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import io
 import unicodedata
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Self
 
@@ -28,9 +29,14 @@ _SEPARATOR = "|"
 _BANNED_NAMES = ("ranitidine", "雷尼替丁")  # NDMA 汙染已全球下架
 
 
+_TRADEMARKS = str.maketrans("", "", "®™©")
+
+
 def normalize_name(text: str) -> str:
-    """NFKC、忽略大小寫、壓縮空白。"""
-    return " ".join(unicodedata.normalize("NFKC", text).casefold().split())
+    """NFKC、忽略大小寫、壓縮空白、去掉商標符號（® ™ ©）。"""
+    # 先去商標符號再 NFKC：NFKC 會把 ™ 拆成 TM
+    folded = unicodedata.normalize("NFKC", text.translate(_TRADEMARKS)).casefold()
+    return " ".join(folded.split())
 
 
 class DrugNameEntry(BaseModel):
@@ -66,9 +72,19 @@ class DrugNameTable(BaseModel):
             raise ValueError("藥名表的品名（正規化後）重複")
         return self
 
+    @cached_property
+    def normalized(self) -> tuple[tuple[str, DrugNameEntry], ...]:
+        """(正規化品名, 品名) 對照；表有四萬筆，只算一次。"""
+        return tuple((normalize_name(e.name), e) for e in self.entries)
+
     def lookup(self, name: str) -> DrugNameEntry | None:
         key = normalize_name(name)
-        return next((e for e in self.entries if normalize_name(e.name) == key), None)
+        return next((e for n, e in self.normalized if n == key), None)
+
+    def containing(self, name: str) -> list[DrugNameEntry]:
+        """品名包含這段文字的所有品名（部分比對）。"""
+        key = normalize_name(name)
+        return [e for n, e in self.normalized if key in n] if key else []
 
 
 def write_drug_names(table: DrugNameTable, path: Path) -> None:
