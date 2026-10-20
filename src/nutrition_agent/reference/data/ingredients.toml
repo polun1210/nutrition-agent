@@ -2,7 +2,7 @@
 # sort_order 是報告中固定的排列順序；synonyms 用於標示成分名稱對照（比對前會做 NFKC 正規化、忽略大小寫）。
 # canonical_unit 是 DRIs 使用的單位（目標營養素才有）。
 
-version = "2026.10.1"
+version = "2026.10.2"
 
 # ---- 目標營養素（DRIs 第八版，做數值判定）----
 
@@ -117,21 +117,22 @@ canonical_unit = "ug"
 code = "red_yeast_rice"
 category = "allowed_ingredient"
 display_name_zh = "紅麴"
-synonyms = ["Red Yeast Rice", "紅麴菌發酵米", "紅麴米", "紅麴萃取物", "Monacolin K", "莫那可林 K"]
+synonyms = ["Red Yeast Rice", "紅麴菌發酵米", "紅麴米", "紅麴萃取物", "紅麴粉", "紅麴粉末", "Monacolin K", "莫那可林 K"]
 sort_order = 101
 
 [[ingredient]]
 code = "glucosamine"
 category = "allowed_ingredient"
 display_name_zh = "葡萄糖胺"
-synonyms = ["Glucosamine", "氨基葡萄糖", "胺基葡萄糖", "硫酸葡萄糖胺", "鹽酸葡萄糖胺"]
+synonyms = ["Glucosamine", "氨基葡萄糖", "胺基葡萄糖", "硫酸葡萄糖胺", "鹽酸葡萄糖胺", "葡萄糖胺鹽酸鹽",
+            "結晶型硫酸鹽葡萄糖胺", "Glucosamine Sulfate", "Glucosamine Sulphate"]
 sort_order = 102
 
 [[ingredient]]
 code = "omega_3"
 category = "allowed_ingredient"
 display_name_zh = "魚油 n-3"
-synonyms = ["魚油", "Fish Oil", "Omega-3", "Omega 3", "n-3", "EPA", "DHA", "深海魚油"]
+synonyms = ["魚油", "Fish Oil", "Omega-3", "Omega 3", "n-3", "EPA", "DHA", "深海魚油", "Concentrated fish Omega-3 triglycerides"]
 sort_order = 103
 
 # ---- 常見範圍外成分（知道是什麼，但不評估）----

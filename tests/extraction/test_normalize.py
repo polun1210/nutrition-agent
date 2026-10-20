@@ -27,3 +27,20 @@ def test_巢狀括號裡的成分不會蓋過外層成分(catalog):
 )
 def test_外層括號裡的名稱仍可對到成分(catalog, raw, code):
     assert classify(raw, catalog)[0] == code
+
+
+@pytest.mark.parametrize(
+    ("raw", "code"),
+    [
+        ("葡萄糖胺鹽酸鹽", "glucosamine"),
+        ("結晶型硫酸鹽葡萄糖胺(Crystalline Glucosamine Sulphate)", "glucosamine"),
+        ("Glucosamine Sulphate", "glucosamine"),
+        ("Glucosamine Sulfate", "glucosamine"),
+        ("紅麴粉", "red_yeast_rice"),
+        ("紅麴粉末", "red_yeast_rice"),
+        ("Concentrated fish Omega-3 triglycerides", "omega_3"),
+    ],
+)
+def test_允許成分的實際標示寫法(catalog, raw, code):
+    # 2026-10-20 實拍標示（evals/vlm/gold p01、p07、p08、p23、p26、p27）出現、原本對不到的寫法
+    assert classify(raw, catalog) == (code, "in_scope")
