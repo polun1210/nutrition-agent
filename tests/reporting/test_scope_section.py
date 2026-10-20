@@ -134,3 +134,18 @@ def test_forbidden_term_checker_catches_safety_claims_and_instructions():
     for text in bad:
         assert find_forbidden_terms(text), text
     assert find_forbidden_terms("錯開服用，至少相隔 2 小時") == []
+
+
+def test_advice_to_people_taking_a_drug_is_not_an_instruction_to_take_it():
+    """「建議服用此類藥物的人……」的「建議」對象是服藥的人，不是叫使用者服用。"""
+    allowed = [
+        "專家建議服用此類藥物的人應由醫療人員監測血鉀狀態。",
+        "專家建議服用此類藥物者需要監測鉀的狀態。",
+        "藥品仿單也建議服用含碳酸鈣的補充劑者，應與左旋甲狀腺素錯開服用時間。",
+    ]
+    still_forbidden = ["建議服用鈣片。", "我們建議服用此類藥物。", "建議服用維生素 D，可以補充不足。"]
+
+    for text in allowed:
+        assert find_forbidden_terms(text) == [], text
+    for text in still_forbidden:
+        assert find_forbidden_terms(text) == ["建議服用"], text
