@@ -1,6 +1,5 @@
 """確定性的名稱與單位標準化：查成分目錄，不交給 VLM。"""
 
-import re
 from typing import Literal
 
 from nutrition_agent.reference import IngredientCatalog, IngredientCategory
@@ -17,7 +16,7 @@ _UNIT_ALIASES = {
     "微克dfe": "ug_dfe", "kcal": "kcal", "大卡": "kcal",
 }  # fmt: skip
 DOSE_UNITS = ("粒", "錠", "包", "匙", "毫升")
-_PAREN = re.compile(r"[(（]([^()（）]*)[)）]")
+_OPEN, _CLOSE = "(（", ")）"
 
 
 def normalize_unit(unit: str | None) -> str | None:
@@ -31,9 +30,30 @@ def normalize_dose_unit(unit: str | None) -> str | None:
     return unit if unit in DOSE_UNITS else None
 
 
+def _split_top_level(raw_name: str) -> tuple[str, list[str]]:
+    """拆出最外層括號：(括號外的文字, [各組最外層括號的內容])。內層括號屬於括號裡那個成分，不單獨查表。"""
+    outside, groups, current, depth = [], [], [], 0
+    for ch in raw_name:
+        if ch in _OPEN:
+            if depth:
+                current.append(ch)
+            depth += 1
+        elif ch in _CLOSE and depth:
+            depth -= 1
+            if depth:
+                current.append(ch)
+            else:
+                groups.append("".join(current))
+                current = []
+        elif depth:
+            current.append(ch)
+        else:
+            outside.append(ch)
+    return "".join(outside).strip(), groups
+
+
 def _name_candidates(raw_name: str) -> list[str]:
-    without_parens = _PAREN.sub("", raw_name).strip()
-    inner = _PAREN.findall(raw_name)
+    without_parens, inner = _split_top_level(raw_name)
     return [raw_name, without_parens, *inner]
 
 
