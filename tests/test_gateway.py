@@ -1,8 +1,9 @@
 import json
 
 import httpx
+import pytest
 
-from nutrition_agent.gateway import OpenRouterGateway
+from nutrition_agent.gateway import MAX_ATTEMPTS, OpenRouterGateway
 
 
 def _gateway(handler, **overrides) -> OpenRouterGateway:
@@ -66,3 +67,44 @@ def test_provider_setting_is_forwarded_when_present():
     _gateway(handler, provider="some-provider").complete("q")
 
     assert seen["body"]["provider"] == {"order": ["some-provider"], "allow_fallbacks": False}
+
+
+def _flaky(statuses: list[int]):
+    """依序回傳指定狀態碼，最後一次回 200（embedding 格式）。"""
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        status = statuses[len(calls) - 1] if len(calls) <= len(statuses) else 200
+        if status != 200:
+            return httpx.Response(status)
+        return httpx.Response(200, json={"data": [{"index": 0, "embedding": [1.0]}]})
+
+    return handler, calls
+
+
+def test_rate_limited_and_server_errors_are_retried_with_backoff():
+    handler, calls = _flaky([429, 503])
+    waits: list[float] = []
+
+    vectors = _gateway(handler, sleep=waits.append).embed(["a"])
+
+    assert vectors == [[1.0]]
+    assert len(calls) == 3
+    assert waits == [1.0, 2.0]
+
+
+def test_client_errors_are_not_retried():
+    handler, calls = _flaky([400])
+
+    with pytest.raises(httpx.HTTPStatusError):
+        _gateway(handler, sleep=lambda _: None).embed(["a"])
+    assert len(calls) == 1
+
+
+def test_gives_up_after_max_attempts():
+    handler, calls = _flaky([429] * 10)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        _gateway(handler, sleep=lambda _: None).complete("q")
+    assert len(calls) == MAX_ATTEMPTS

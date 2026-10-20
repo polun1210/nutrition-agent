@@ -45,6 +45,7 @@ uv run python -m nutrition_agent.retrieval.ingest [knowledge目錄，預設 know
 - 處理：移除 base64 圖片（只在行內刪，行號與原檔一致）；依 Markdown 標題或 `【章節】` 切塊，過長的章節再依段落切到 1500 字以內；不收 References／Disclaimer。
 - 寫入 pgvector 的 `evidence_chunk` 表：來源類型、文件名稱與相對路徑、成分或有效成分代碼、章節路徑、字元位置與起訖行號、原文。切塊文字與原檔逐字一致，可回溯。
 - 冪等：切塊 ID 由「文件路徑＋章節＋內容」雜湊而來；重跑只 embedding 新增的塊，內容改變的文件會換掉舊塊。
+- 每份文件一個交易，被限速時模型閘道會自動重試；仍然中斷的話直接重跑，從沒寫完的文件接著做。
 - 成分標記：NIH ODS／NCCIH 由檔名對照成分目錄；DRIs 依段落中出現的成分名稱標記；TFDA 以資料夾名稱對照用藥有效成分目錄。
 - 檢索：`nutrition_agent.retrieval.search.retrieve_evidence(conn, gateway, 成分代碼, [藥有效成分代碼])`。
 

@@ -66,9 +66,11 @@ def ingest_corpus(
         }
         new = [p for p in prepared if p.id not in existing]
         stale = existing - {p.id for p in prepared}
-        _insert(conn, gateway, document, new)
-        if stale:
-            conn.execute("DELETE FROM evidence_chunk WHERE id = ANY(%s)", (sorted(stale),))
+        # 每份文件一個交易：中途失敗不留半份；搭配 autocommit 連線，重跑從下一份接著做。
+        with conn.transaction():
+            _insert(conn, gateway, document, new)
+            if stale:
+                conn.execute("DELETE FROM evidence_chunk WHERE id = ANY(%s)", (sorted(stale),))
         added += len(new)
         removed += len(stale)
     return IngestResult(documents=len(documents), added=added, removed=removed)
@@ -153,7 +155,7 @@ def main(argv: list[str]) -> int:
     knowledge_dir = Path(argv[1]) if len(argv) > 1 else Path("knowledge")
     settings = get_settings()
     gateway = OpenRouterGateway.from_settings(settings)
-    with psycopg.connect(settings.database_url) as conn:
+    with psycopg.connect(settings.database_url, autocommit=True) as conn:
         result = ingest_corpus(conn, gateway, knowledge_dir)
     print(f"文件 {result.documents} 份，新增 {result.added} 塊，移除 {result.removed} 塊")
     return 0

@@ -153,3 +153,33 @@ def test_nul_in_source_becomes_replacement_char_not_silently_dropped(db, tmp_pat
     texts = [row[-1] for row in _rows(db)]
     assert any("MIC \ufffd2 mcg/mL" in t for t in texts)
     assert not any("\x00" in t for t in texts)
+
+
+class _FailsOnSecondBatchOf(BagOfWordsGateway):
+    """指定文件的第二批 embedding 失敗（模擬中途被限速）。"""
+
+    def __init__(self, document_name: str) -> None:
+        super().__init__()
+        self._name = document_name
+        self._batches = 0
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        if any(t.startswith(self._name) for t in texts):
+            self._batches += 1
+            if self._batches == 2:
+                raise RuntimeError("429")
+        return super().embed(texts)
+
+
+def test_failure_mid_document_keeps_finished_documents_and_writes_none_of_the_failed_one(
+    db, knowledge
+):
+    sections = "".join(f"## Part {i}\n\nZinc fact {i}.\n\n" for i in range(70))
+    _write(knowledge, "sources/nih_ods/Zinc-HealthProfessional.md", "# Zinc\n\n" + sections)
+
+    with pytest.raises(RuntimeError):
+        ingest_corpus(db, _FailsOnSecondBatchOf("Zinc-HealthProfessional.md"), knowledge)
+
+    paths = {r[3] for r in _rows(db)}
+    assert "sources/nih_ods/Zinc-HealthProfessional.md" not in paths
+    assert "sources/nih_ods/Calcium-HealthProfessional.md" in paths

@@ -1,11 +1,17 @@
 """模型閘道：VLM、LLM、embedding 共用的單一介面，正式實作走 OpenRouter。"""
 
 import base64
+import time
+from collections.abc import Callable
 from typing import Protocol
 
 import httpx
 
 from nutrition_agent.config import Settings
+
+# 被限速（429）或供應商暫時錯誤（5xx）時重試，等待 1、2、4、8 秒。
+MAX_ATTEMPTS = 5
+_RETRYABLE = frozenset({429, 500, 502, 503, 504})
 
 
 class ModelGateway(Protocol):
@@ -28,11 +34,13 @@ class OpenRouterGateway:
         provider: str = "",
         transport: httpx.BaseTransport | None = None,
         timeout: float = 60.0,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self._vlm_model = vlm_model
         self._llm_model = llm_model
         self._embedding_model = embedding_model
         self._provider = provider
+        self._sleep = sleep
         self._client = httpx.Client(
             base_url=base_url,
             headers={"Authorization": f"Bearer {api_key}"},
@@ -65,10 +73,7 @@ class OpenRouterGateway:
         return self._chat(self._llm_model, messages)
 
     def embed(self, texts: list[str]) -> list[list[float]]:
-        response = self._client.post(
-            "/embeddings", json={"model": self._embedding_model, "input": texts}
-        )
-        response.raise_for_status()
+        response = self._post("/embeddings", {"model": self._embedding_model, "input": texts})
         rows = sorted(response.json()["data"], key=lambda row: row["index"])
         return [row["embedding"] for row in rows]
 
@@ -76,6 +81,14 @@ class OpenRouterGateway:
         body: dict = {"model": model, "messages": messages}
         if self._provider:
             body["provider"] = {"order": [self._provider], "allow_fallbacks": False}
-        response = self._client.post("/chat/completions", json=body)
-        response.raise_for_status()
+        response = self._post("/chat/completions", body)
         return response.json()["choices"][0]["message"]["content"]
+
+    def _post(self, path: str, body: dict) -> httpx.Response:
+        for attempt in range(MAX_ATTEMPTS):
+            response = self._client.post(path, json=body)
+            if response.status_code not in _RETRYABLE or attempt == MAX_ATTEMPTS - 1:
+                break
+            self._sleep(float(2**attempt))
+        response.raise_for_status()
+        return response
