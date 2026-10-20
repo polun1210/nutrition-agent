@@ -35,7 +35,52 @@ def test_gold_標為讀不到的照片要讀不到才算對():
 def test_沒有資料時指標是None不報錯():
     summary = PackEvalReport().summary()
 
-    assert summary == {"name_recall": None, "name_precision": None, "unreadable_accuracy": None}
+    assert summary == {
+        "name_recall": None,
+        "name_precision": None,
+        "ingredient_recall": None,
+        "ingredient_precision": None,
+        "unreadable_accuracy": None,
+    }
+
+
+TABLE = {"norvasc": ["amlodipine"], "hyzaar": ["losartan", "hydrochlorothiazide"], "concor": []}
+
+
+def resolve(name):
+    return TABLE.get(name.casefold(), [])
+
+
+def test_讀到的藥名經查表後與金標準的成分比對():
+    report = PackEvalReport()
+
+    # 藥名字串跟 gold 寫法不同也沒關係，查表對到的成分相同就算對
+    score_pack({"names": ["Hyzaar 50/12.5"], "ingredients": ["losartan", "hydrochlorothiazide"]},
+               reading("Hyzaar"), report, resolve)
+    score_pack({"names": ["Norvasc"], "ingredients": ["amlodipine"]}, reading("脈優"), report, resolve)
+
+    assert (report.gold_ingredients, report.matched_ingredients, report.found_ingredients) == (3, 2, 2)
+    assert report.name_recall == 0.0
+    assert report.ingredient_recall == 2 / 3 and report.ingredient_precision == 1.0
+
+
+def test_目錄外的藥對到成分算錯():
+    report = PackEvalReport()
+    wrong = {"concor": ["amlodipine"]}
+
+    score_pack({"names": ["Concor"], "ingredients": []}, reading("Concor"), report, lambda n: wrong.get(n.casefold(), []))
+
+    assert (report.gold_ingredients, report.found_ingredients) == (0, 1)
+    assert report.ingredient_precision == 0.0
+
+
+def test_沒有_resolve_或_gold_沒有成分時不計成分指標():
+    report = PackEvalReport()
+
+    score_pack({"names": ["Norvasc"], "ingredients": ["amlodipine"]}, reading("Norvasc"), report)
+    score_pack({"names": ["Norvasc"]}, reading("Norvasc"), report, resolve)
+
+    assert report.summary()["ingredient_recall"] is None
 
 
 def load_run():
