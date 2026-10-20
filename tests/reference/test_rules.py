@@ -84,12 +84,11 @@ def test_建議行動只能是三種封閉選項之一(fixture_rules):
         type(fixture_rules.rules[0]).model_validate(bad)
 
 
-@pytest.mark.parametrize("text", ["每日不要超過 350 毫克。", "請間隔二小時，共 2 次", "上限為３５０"])
-def test_規則說明文字不得含數字(fixture_rules, text):
-    bad = raw_rule(fixture_rules, "fx-ppi-magnesium") | {"reason_zh": text}
-    if any(ch.isdigit() for ch in text):
-        with pytest.raises(ValidationError):
-            type(fixture_rules.rules[0]).model_validate(bad)
+def test_規則說明文字由人審定可寫引文載明的條件(fixture_rules):
+    # ADR 0001：數字限制只管 LLM 解釋；審定說明可寫引文裡的時間長度等條件
+    text = "長期使用（通常超過一年）可能造成血鎂偏低。"
+    rule = type(fixture_rules.rules[0]).model_validate(raw_rule(fixture_rules, "fx-ppi-magnesium") | {"reason_zh": text})
+    assert rule.reason_zh == text
 
 
 def test_審定規則必須有審定者而草稿不能有(fixture_rules):

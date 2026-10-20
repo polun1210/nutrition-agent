@@ -33,3 +33,9 @@ def test_中文或全形數字加上量詞要擋(text):
 )
 def test_一般用語與病名裡的數字不擋(text):
     assert not contains_quantity(text)
+
+
+def test_可提到成分名稱中的數字但不可含量值():
+    assert not contains_quantity("這個藥可能降低維生素 B12 的吸收，也和 B6、n-3、Q10 有關。")
+    assert contains_quantity("每天補充 B12 超過 5 微克可能有影響。")
+    assert contains_quantity("服藥後 2 小時再吃維生素 B12。")

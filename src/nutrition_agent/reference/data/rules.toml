@@ -2,6 +2,8 @@
 # 狀態：草稿（draft）、審定（approved）、退役（retired，不進入判定）。判定引擎只讀審定規則。
 # 審定只能由開發者手動標記，並同時填 approved_by；agent 只能草擬，不能審定。
 # 2026-10-19 人工審查：審定 10 條、退役 5 條，目前沒有草稿。
+# 2026-10-20 人工審查：對照引文前後文補上省略的條件（PPI × 鎂的時間長度、PPI × 鐵只影響原本缺鐵者、
+#   高危險群），「制酸類藥物」改為「抑制胃酸分泌的藥物」，避免與含鈣／含鎂制酸劑混淆。
 #
 # 明確排除（不草擬規則，2026-10-19 人工審查）：
 # - COX-2 選擇性抑制劑（celecoxib、etoricoxib）× 鐵：已取得的 Celecoxib、Etoricoxib 仿單只在 PRECISION 試驗提到
@@ -13,7 +15,7 @@
 # 出處只用 NIH ODS HealthProfessional 版（TFDA 仿單 raw 尚未取得，沒有引用）。
 # 錯開時數：原文都沒有針對這些組合明載，所以全部不填。
 
-version = "2026.10.2"
+version = "2026.10.3"
 
 [[rule]]
 id = "metformin-vitamin-b12"
@@ -40,7 +42,7 @@ ingredient_code = "vitamin_b12"
 interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
-reason_zh = "制酸類藥物會減少胃酸，影響食物中維生素 B12 的吸收，長期使用可能造成缺乏。"
+reason_zh = "抑制胃酸分泌的藥物會減少胃酸，影響食物中維生素 B12 的吸收，長期使用可能造成缺乏。"
 status = "approved"
 approved_by = "PolunChao"
 
@@ -62,7 +64,7 @@ ingredient_code = "vitamin_b12"
 interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
-reason_zh = "制酸類藥物會減少胃酸，影響食物中維生素 B12 的吸收，長期使用可能造成缺乏。"
+reason_zh = "抑制胃酸分泌的藥物會減少胃酸，影響食物中維生素 B12 的吸收，長期使用可能造成缺乏。"
 status = "approved"
 approved_by = "PolunChao"
 
@@ -84,7 +86,7 @@ ingredient_code = "magnesium"
 interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
-reason_zh = "長期使用質子幫浦抑制劑可能造成血鎂偏低，建議讓醫療人員知道並視情況檢查血鎂。"
+reason_zh = "長期使用質子幫浦抑制劑（通常超過一年）可能造成血鎂偏低，建議讓醫療人員知道並視情況檢查血鎂。"
 status = "approved"
 approved_by = "PolunChao"
 
@@ -101,7 +103,7 @@ ingredient_code = "iron"
 interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
-reason_zh = "質子幫浦抑制劑會降低胃的酸度，可能減少鐵的吸收。"
+reason_zh = "質子幫浦抑制劑會降低胃的酸度，可能減少鐵的吸收；鐵儲存正常的人通常不會因此缺鐵，但本身缺鐵、正在補鐵的人，補充效果可能較差。"
 status = "approved"
 approved_by = "PolunChao"
 
@@ -109,6 +111,16 @@ approved_by = "PolunChao"
 source_type = "nih_ods_hp"
 document = "sources/nih_ods/Iron-HealthProfessional.md"
 quote = "Because proton pump inhibitors, such as lansoprazole (Prevacid) and omeprazole (Prilosec), reduce the acidity of stomach contents, they can reduce iron absorption"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Iron-HealthProfessional.md"
+quote = "Treatment with proton pump inhibitors for up to 10 years is not associated with iron depletion or anemia in people with normal iron stores"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Iron-HealthProfessional.md"
+quote = "patients with iron deficiency taking proton pump inhibitors can have suboptimal responses to iron supplementation"
 
 [[rule]]
 id = "ppi-calcium"
@@ -156,7 +168,7 @@ ingredient_code = "potassium"
 interaction_type = "drug_affects_nutrient"
 requires_supplement_intake = false
 advice = "inform_provider"
-reason_zh = "利尿劑會增加鉀從尿液流失，可能造成低血鉀。"
+reason_zh = "利尿劑會增加鉀從尿液流失，可能造成低血鉀，建議由醫療人員監測血鉀。"
 status = "approved"
 approved_by = "PolunChao"
 
@@ -164,6 +176,11 @@ approved_by = "PolunChao"
 source_type = "nih_ods_hp"
 document = "sources/nih_ods/Potassium-HealthProfessional.md"
 quote = "Treatment with loop diuretics, such as furosemide (Lasix) and bumetanide (Bumex), and thiazide diuretics, such as chlorothiazide (Diuril) and metolazone (Zaroxolyn), increases urinary potassium excretion and can lead to hypokalemia"
+
+[[rule.citations]]
+source_type = "nih_ods_hp"
+document = "sources/nih_ods/Potassium-HealthProfessional.md"
+quote = "Experts recommend monitoring potassium status in people taking these medications"
 
 [[rule]]
 id = "thiazide-zinc"
@@ -190,14 +207,14 @@ ingredient_code = "vitamin_d"
 interaction_type = "pharmacodynamic"
 requires_supplement_intake = true
 advice = "consult_before_combining"
-reason_zh = "這類利尿劑會減少鈣從尿液排出，與維生素 D 補充劑併用（增加腸道鈣吸收）可能造成高血鈣，年長者與腎功能不佳者尤其要注意。"
+reason_zh = "這類利尿劑會減少鈣從尿液排出，與維生素 D 補充劑併用（增加腸道鈣吸收）可能造成高血鈣，年長者、腎功能不佳者或副甲狀腺機能亢進者尤其要注意。"
 status = "approved"
 approved_by = "PolunChao"
 
 [[rule.citations]]
 source_type = "nih_ods_hp"
 document = "sources/nih_ods/VitaminD-HealthProfessional.md"
-quote = "Thiazide diuretics (e.g., Hygroton, Lozol, and Microzide) decrease urinary calcium excretion. The combination of these diuretics with vitamin D supplements (which increase intestinal calcium absorption) might lead to hypercalcemia"
+quote = "Thiazide diuretics (e.g., Hygroton, Lozol, and Microzide) decrease urinary calcium excretion. The combination of these diuretics with vitamin D supplements (which increase intestinal calcium absorption) might lead to hypercalcemia, especially among older adults and individuals with compromised renal function or hyperparathyroidism"
 
 [[rule]]
 id = "acei-arb-potassium"
@@ -207,7 +224,7 @@ ingredient_code = "potassium"
 interaction_type = "pharmacodynamic"
 requires_supplement_intake = true
 advice = "consult_before_combining"
-reason_zh = "這類降血壓藥會減少鉀從尿液排出，再補充鉀可能造成高血鉀，需要由醫療人員監測。"
+reason_zh = "這類降血壓藥會減少鉀從尿液排出，再補充鉀可能造成高血鉀，需要由醫療人員監測，腎功能不佳者尤其要注意。"
 status = "approved"
 approved_by = "PolunChao"
 
@@ -219,7 +236,7 @@ quote = "These medications reduce urinary potassium excretion, which can lead to
 [[rule.citations]]
 source_type = "nih_ods_hp"
 document = "sources/nih_ods/Potassium-HealthProfessional.md"
-quote = "Experts recommend monitoring potassium status in people taking ACE inhibitors or ARBs"
+quote = "Experts recommend monitoring potassium status in people taking ACE inhibitors or ARBs, especially if they have other risk factors for hyperkalemia, such as impaired kidney function"
 
 [[rule]]
 id = "atorvastatin-vitamin-d"
