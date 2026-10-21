@@ -80,8 +80,8 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await expect(page.getByText(/用藥 Amlodipine：在評估範圍內.*氨氯地平/)).toBeVisible();
   await page.getByRole("button", { name: "回首頁" }).click();
 
-  // 從上一次評估複製：用藥與兩項保健食品帶進新草稿，刪掉一項後送出
-  await page.getByRole("button", { name: "從上一次評估複製" }).click();
+  // 沿用上次的藥和保健食品：用藥與兩項保健食品帶進新草稿，刪掉一項後送出
+  await page.getByRole("button", { name: "沿用上次的藥和保健食品" }).click();
   await page.getByRole("button", { name: "資料正確，下一步" }).click();
   await expect(page.getByRole("button", { name: "刪除 Amlodipine" })).toBeVisible();
   // 複製來的用藥重新載入後仍顯示範圍狀態（由後端附上，不靠前端暫存）
@@ -101,6 +101,32 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await page.getByRole("button", { name: /的評估（2 項保健食品/ }).click();
   await expect(page.getByText(/已達上限的 40%/)).toBeVisible();
   await expect(page.getByTestId("reference-versions")).toContainText("dris");
+
+  // 瀏覽器上一頁：報告 → 歷史列表 → 首頁，不會離開 app（#21）
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "歷史報告" })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "補對了嗎？" })).toBeVisible();
+});
+
+test("評估中按瀏覽器上一頁回到前一個步驟，每一步都有返回按鈕", async ({ page }) => {
+  await registerAndOpenMedications(page);
+  await expect(page.getByRole("heading", { name: "用藥", exact: true })).toBeVisible();
+
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "確認個人資料" })).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole("heading", { name: "用藥", exact: true })).toBeVisible();
+
+  // 用藥步驟有「上一步」，個人資料步驟有「回首頁」
+  await page.getByRole("button", { name: "上一步" }).click();
+  await expect(page.getByRole("heading", { name: "確認個人資料" })).toBeVisible();
+  await page.getByRole("button", { name: "回首頁" }).click();
+  await expect(page.getByRole("heading", { name: "補對了嗎？" })).toBeVisible();
+
+  // 首頁再按上一頁仍留在 app 內
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "確認個人資料" })).toBeVisible();
 });
 
 // 後端以錄製的 VLM 回應（evals/vlm/recorded/vlm/p01-img01.json）取代真模型，照片內容不影響結果。

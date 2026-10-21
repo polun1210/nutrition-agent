@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { request } from "../api";
+import { useHistoryState } from "../history";
 import ReportView from "./ReportView";
 import type { AssessmentCase, HistoryItem } from "./types";
 
 /** 歷史報告：列出自己所有的評估個案，點進去看當時凍結的報告。 */
 export default function HistoryPage({ goHome }: { goHome: () => void }) {
   const [items, setItems] = useState<HistoryItem[] | null>(null);
+  const [openId, setOpenId] = useHistoryState<number | null>("report", null);
   const [selected, setSelected] = useState<AssessmentCase | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,16 +17,16 @@ export default function HistoryPage({ goHome }: { goHome: () => void }) {
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
 
-  const open = async (id: number) => {
+  useEffect(() => {
     setError(null);
-    try {
-      setSelected(await request<AssessmentCase>("GET", `/api/assessments/${id}`));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  };
+    setSelected(null);
+    if (openId === null) return;
+    request<AssessmentCase>("GET", `/api/assessments/${openId}`)
+      .then(setSelected)
+      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+  }, [openId]);
 
-  if (selected) return <ReportView report={selected} goHome={() => setSelected(null)} backLabel="回歷史列表" />;
+  if (selected) return <ReportView report={selected} goHome={() => setOpenId(null)} backLabel="回歷史列表" />;
 
   return (
     <main className="page">
@@ -38,7 +40,7 @@ export default function HistoryPage({ goHome }: { goHome: () => void }) {
         <ul>
           {items.map((item) => (
             <li key={item.id}>
-              <button type="button" className="secondary" onClick={() => void open(item.id)}>
+              <button type="button" className="secondary" onClick={() => setOpenId(item.id)}>
                 {item.assessed_on} 的評估（{item.product_count} 項保健食品、{item.medication_count} 項用藥）
               </button>
             </li>

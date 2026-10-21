@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchMe, request, type Me } from "./api";
 import AssessmentFlow from "./assessment/AssessmentFlow";
 import HistoryPage from "./assessment/HistoryPage";
+import { useHistoryState } from "./history";
 import { HomePage, LoginPage, ProfilePage, RegisterPage } from "./pages";
 
 type View = "home" | "profile" | "login" | "register" | "assess" | "history";
@@ -10,20 +11,20 @@ export default function App() {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<View>("login");
+  const [view, navigate, replaceView] = useHistoryState<View>("view", "login");
   const [copyLatest, setCopyLatest] = useState(false);
 
   const refresh = useCallback(async (next?: View) => {
     try {
       const current = await fetchMe();
       setMe(current);
-      setView(current ? (next ?? "home") : "login");
+      replaceView(current ? (next ?? "home") : "login");
     } catch (err) {
       setError(String(err));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [replaceView]);
 
   useEffect(() => {
     void refresh();
@@ -32,7 +33,7 @@ export default function App() {
   const logout = async () => {
     await request("POST", "/api/auth/logout");
     setMe(null);
-    setView("login");
+    replaceView("login");
   };
 
   if (loading) return <main className="page">載入中…</main>;
@@ -40,24 +41,24 @@ export default function App() {
 
   if (!me) {
     return view === "register" ? (
-      <RegisterPage onDone={() => void refresh()} goLogin={() => setView("login")} />
+      <RegisterPage onDone={() => void refresh()} goLogin={() => replaceView("login")} />
     ) : (
-      <LoginPage onDone={() => void refresh()} goRegister={() => setView("register")} />
+      <LoginPage onDone={() => void refresh()} goRegister={() => replaceView("register")} />
     );
   }
   if (view === "assess") {
     return (
-      <AssessmentFlow copyFromLatest={copyLatest} me={me} onProfileSaved={() => void refresh("assess")} goHome={() => void refresh("home")} />
+      <AssessmentFlow copyFromLatest={copyLatest} me={me} onProfileSaved={() => void refresh("assess")} goHome={() => navigate("home")} />
     );
   }
-  if (view === "history") return <HistoryPage goHome={() => setView("home")} />;
+  if (view === "history") return <HistoryPage goHome={() => navigate("home")} />;
   return view === "profile" ? (
-    <ProfilePage me={me} onSaved={() => void refresh("profile")} goHome={() => setView("home")} />
+    <ProfilePage me={me} onSaved={() => void refresh("profile")} goHome={() => navigate("home")} />
   ) : (
     <HomePage me={me} startAssessment={(copy) => {
         setCopyLatest(copy);
-        setView("assess");
+        navigate("assess");
       }}
-      goHistory={() => setView("history")} goProfile={() => setView("profile")} onLogout={() => void logout()} />
+      goHistory={() => navigate("history")} goProfile={() => navigate("profile")} onLogout={() => void logout()} />
   );
 }

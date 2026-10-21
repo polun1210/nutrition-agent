@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { request, type Me, type Profile } from "../api";
+import { useHistoryState } from "../history";
 import ProfileFields from "../ProfileFields";
 import PhotoProductForm from "./PhotoProductForm";
 import PhotoThumbs from "./PhotoThumbs";
@@ -46,9 +47,9 @@ type SupplementView =
 type Props = { copyFromLatest?: boolean; me: Me; onProfileSaved: () => void; goHome: () => void };
 
 export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSaved, goHome }: Props) {
-  const [step, setStep] = useState<StepKey>("profile");
+  const [step, setStep] = useHistoryState<StepKey>("step", "profile");
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [supplementView, setSupplementView] = useState<SupplementView>({ kind: "list" });
+  const [supplementView, setSupplementView] = useHistoryState<SupplementView>("supplement", { kind: "list" });
   const [options, setOptions] = useState<IngredientOption[]>([]);
   const [compounds, setCompounds] = useState<CompoundOption[]>([]);
   const [report, setReport] = useState<AssessmentCase | null>(null);
@@ -70,6 +71,13 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
       }
     })();
   }, []);
+
+  // 報告產生後評估已送出，按瀏覽器上一頁直接回首頁，不回到已送出的草稿
+  useEffect(() => {
+    if (!report) return;
+    window.addEventListener("popstate", goHome);
+    return () => window.removeEventListener("popstate", goHome);
+  }, [report, goHome]);
 
   const guarded = async (action: () => Promise<void>) => {
     setError(null);
@@ -134,6 +142,9 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
             <ProfileFields value={profile} onChange={setProfile} />
             <button type="submit" disabled={busy || !draft}>
               資料正確，下一步
+            </button>
+            <button type="button" className="secondary" onClick={goHome}>
+              回首頁
             </button>
           </form>
         </section>
@@ -225,6 +236,7 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
           busy={busy}
           onChange={(next) => void saveMedications(next)}
           onNext={() => setStep("supplements")}
+          onBack={() => setStep("profile")}
         />
       )}
       {step === "submit" && (

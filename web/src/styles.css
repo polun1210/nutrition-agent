@@ -67,6 +67,13 @@ button + button {
   margin-top: 0.75rem;
 }
 
+/* 按鈕下方的補充說明 */
+.hint {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
 [role="alert"] {
   color: #b00020;
 }

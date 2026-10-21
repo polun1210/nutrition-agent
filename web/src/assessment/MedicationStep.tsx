@@ -14,10 +14,11 @@ type Props = {
   busy: boolean;
   onChange: (medications: MedicationInput[]) => void;
   onNext: () => void;
+  onBack: () => void;
 };
 
 /** 用藥步驟：搜尋藥名 → 從候選加入，或自由輸入；也可以直接按「我沒有用藥」略過。 */
-export default function MedicationStep({ draftId, medications, busy, onChange, onNext }: Props) {
+export default function MedicationStep({ draftId, medications, busy, onChange, onNext, onBack }: Props) {
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<DrugCandidate[]>([]);
   const [searched, setSearched] = useState(false);
@@ -188,6 +189,9 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
       </ul>
       <button type="button" disabled={busy} onClick={onNext}>
         {medications.length === 0 ? "我沒有用藥" : "下一步"}
+      </button>
+      <button type="button" className="secondary" onClick={onBack}>
+        上一步
       </button>
     </section>
   );

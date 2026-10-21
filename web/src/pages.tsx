@@ -130,8 +130,9 @@ export function HomePage({
       {hasHistory && (
         <>
           <button type="button" className="secondary" onClick={() => startAssessment(true)} disabled={!me.is_adult}>
-            從上一次評估複製
+            沿用上次的藥和保健食品
           </button>
+          <p className="hint">帶入上次的內容，可以再新增或刪除</p>
           <button type="button" className="secondary" onClick={goHistory}>
             歷史報告
           </button>
