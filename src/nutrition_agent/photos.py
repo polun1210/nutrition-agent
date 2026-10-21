@@ -2,6 +2,9 @@
 
 object key 是「前綴/隨機 ID.副檔名」，不含任何使用者資訊。只用基本的 S3 操作，
 換成 AWS S3 或 R2 只需要改設定。
+
+讀寫走內部 endpoint；給瀏覽器的 presigned URL 用公開 endpoint 的 client 簽——
+SigV4 簽章綁 host，簽完再改 host 會 403。
 """
 
 import re
@@ -19,7 +22,6 @@ from nutrition_agent.config import Settings
 MAX_PHOTO_BYTES = 10 * 1024 * 1024
 PRODUCT_PREFIX = "product"
 _KEY_PATTERN = re.compile(r"product/[0-9a-f]{32}\.(jpg|png|webp)")
-_MISSING_CODES = {"NoSuchKey", "404"}  # get_object 回 NoSuchKey；HEAD 沒有 body，只有 "404"
 _DEFAULT_REGION = "us-east-1"  # 只有這個 region 建 bucket 不能帶 LocationConstraint
 
 # SeaweedFS 沒設網域，只認 path-style；連線失敗時少重試、早點放棄，請求才不會卡住。
@@ -79,19 +81,27 @@ def make_s3_client(endpoint: str, access_key: str, secret_key: str, region: str)
 
 
 class PhotoStore:
-    def __init__(self, client: BaseClient, bucket: str) -> None:
+    def __init__(
+        self, client: BaseClient, bucket: str, public_client: BaseClient, url_ttl_seconds: int
+    ) -> None:
         self._client = client
         self._bucket = bucket
+        self._public_client = public_client
+        self._url_ttl_seconds = url_ttl_seconds
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "PhotoStore":
-        client = make_s3_client(
-            settings.s3_internal_endpoint,
-            settings.s3_access_key,
-            settings.s3_secret_key,
-            settings.s3_region,
+        def client(endpoint: str) -> BaseClient:
+            return make_s3_client(
+                endpoint, settings.s3_access_key, settings.s3_secret_key, settings.s3_region
+            )
+
+        return cls(
+            client(settings.s3_internal_endpoint),
+            settings.s3_bucket,
+            client(settings.s3_public_endpoint),
+            settings.photo_url_ttl_seconds,
         )
-        return cls(client, settings.s3_bucket)
 
     def ensure_bucket(self) -> None:
         """bucket 不存在就建立；已存在（含同時啟動的競態）不算錯。"""
@@ -126,17 +136,16 @@ class PhotoStore:
             )
         return key
 
-    def read(self, key: str) -> bytes:
-        if not _KEY_PATTERN.fullmatch(key):  # 例如本機磁碟時代留下的舊檔名
+    def presigned_url(self, key: str) -> str:
+        """瀏覽器直接取圖用的短效 GET 網址；只在本機計算簽章，不連物件儲存。"""
+        if not _KEY_PATTERN.fullmatch(key):
             raise PhotoNotFound(key)
         with _storage_errors():
-            try:
-                response = self._client.get_object(Bucket=self._bucket, Key=key)
-            except ClientError as err:
-                if _error_code(err) in _MISSING_CODES:
-                    raise PhotoNotFound(key) from err
-                raise
-            return response["Body"].read()
+            return self._public_client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": self._bucket, "Key": key},
+                ExpiresIn=self._url_ttl_seconds,
+            )
 
     def delete(self, key: str) -> None:
         """S3 的刪除本來就冪等：物件不存在也算成功。"""

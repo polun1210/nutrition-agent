@@ -17,11 +17,14 @@ class Settings(BaseSettings):
     session_secret: str = ""
     session_https_only: bool = False
     # 照片物件儲存（S3 API）。預設對應 compose 的 SeaweedFS；換 AWS S3 或 R2 只改這幾項。
+    # 讀寫走 internal；presigned URL 用 public 簽，必須是瀏覽器實際連的網址（host 不同就 403）。
     s3_internal_endpoint: str = "http://127.0.0.1:8333"
+    s3_public_endpoint: str = "http://localhost:8333"
     s3_access_key: str = "nutrition"
     s3_secret_key: str = "nutrition-dev-secret"
     s3_bucket: str = "photos"
     s3_region: str = "us-east-1"
+    photo_url_ttl_seconds: int = 900
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_provider: str = ""

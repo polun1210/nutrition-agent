@@ -101,7 +101,9 @@ def main() -> None:
     ref = load_reference_data().model_copy(update={"rules": load_rule_set(FIXTURE_RULES)})
     os.environ["MOTO_S3_CUSTOM_ENDPOINTS"] = E2E_S3_ENDPOINT
     mock_aws().start()  # 不停止：行程結束就清掉，uvicorn 的執行緒都看得到
-    store = PhotoStore(make_s3_client(E2E_S3_ENDPOINT, "e2e", "e2e", "us-east-1"), "photos")
+    # 縮圖導向的網址瀏覽器連不到（moto 只在行程內），煙霧測試只看縮圖元素在不在。
+    client = make_s3_client(E2E_S3_ENDPOINT, "e2e", "e2e", "us-east-1")
+    store = PhotoStore(client, "photos", client, 900)
     app = create_app(gateway=RecordedVlmGateway(), photo_store=store)  # bucket 由 lifespan 建
     app.dependency_overrides[get_reference] = lambda: ref
     sample = load_sample_drug_names()

@@ -12,3 +12,17 @@
 - SeaweedFS 沒設任何金鑰時 S3 是匿名可讀寫，compose 一定要給 `AWS_ACCESS_KEY_ID`／`AWS_SECRET_ACCESS_KEY`；S3 與 filer 連接埠只綁 127.0.0.1，`mini` 模式附帶的 Admin UI 預設無密碼，所以用 `server -s3` 且不發佈其他連接埠。
 - 與 AWS／moto 的行為差異：admin 身分 PUT 到不存在的 bucket 會自動建 bucket、建立已存在的 bucket 回 409 `BucketAlreadyOwnedByYou`、HEAD 不存在的物件或 bucket 只回 `"404"`。程式不依賴這些差異：啟動時先 head 再建、容忍 409；「啟動建 bucket」的測試以 moto 為準。
 - `tests/` 用 moto 模擬 S3，不連 SeaweedFS；SeaweedFS 本身只在本機手動驗。
+
+## 取照片用 presigned URL 導向
+
+`GET /api/photos/{id}` 不再由 API 讀出圖檔轉送：API 只確認這張照片是登入者本人的（否則 404，不洩漏是否存在），然後回 302 導向一個短效（預設 900 秒，`PHOTO_URL_TTL_SECONDS`）的 presigned GET URL，瀏覽器直接向物件儲存拿圖。前端 `<img src="/api/photos/{id}">` 不用改；`<img>` 跟隨導向到別的 origin 不需要 CORS。presigned URL 只在本機計算簽章、不連物件儲存，所以這個端點不會因儲存故障而失敗；物件不在 bucket 時是瀏覽器拿到物件儲存的 404。
+
+endpoint 分成兩個設定：
+
+- `S3_INTERNAL_ENDPOINT`：API 讀寫（put、delete、head、create bucket）用，compose 裡是容器網路的 `http://seaweedfs:8333`。
+- `S3_PUBLIC_ENDPOINT`：只拿來簽 presigned URL，必須是瀏覽器實際連的網址，本機是 `http://localhost:8333`。
+
+不能用內部 endpoint 簽完再把 host 換掉：SigV4 presigned URL 的 `X-Amz-SignedHeaders=host`，簽章綁定 host:port，2026-10-21 對 SeaweedFS 4.48 實測改 host 後回 403 `SignatureDoesNotMatch`。同理，公開 endpoint 寫 `127.0.0.1` 而使用者用 `localhost` 連也會 403——簽什麼就要打什麼。
+
+- 導向回應帶 `Cache-Control: no-store`：快取時間若比 presigned 有效期長，瀏覽器會在網址過期後沿用舊導向拿到 403；每次都回 API 重新簽最簡單。
+- 測試用 moto 只能驗網址結構（host 是公開 endpoint、path-style、帶 SigV4 參數與有效秒數）；簽章真的有效、過期失效只在真 SeaweedFS 手動驗。

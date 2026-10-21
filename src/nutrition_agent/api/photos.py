@@ -6,7 +6,8 @@
 import logging
 
 import psycopg
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import RedirectResponse
 from psycopg.types.json import Jsonb
 
 from nutrition_agent.api.assessments import _editable_draft, get_reference
@@ -98,16 +99,18 @@ def get_photo(
     user: User = Depends(current_user),
     conn: psycopg.Connection = Depends(get_connection),
     store: PhotoStore = Depends(get_photo_store),
-) -> Response:
+) -> RedirectResponse:
+    """確認是本人的照片後，302 導向短效 presigned URL，讓瀏覽器直接向物件儲存取圖。"""
     row = conn.execute(
-        "SELECT stored_name, mime_type FROM product_photos WHERE id = %s AND user_id = %s",
+        "SELECT stored_name FROM product_photos WHERE id = %s AND user_id = %s",
         (photo_id, user.id),
     ).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="找不到這張照片")
     try:
         with photo_storage_errors():
-            data = store.read(row[0])
+            url = store.presigned_url(row[0])
     except PhotoNotFound as err:
         raise HTTPException(status_code=404, detail="找不到這張照片") from err
-    return Response(content=data, media_type=row[1], headers={"Cache-Control": "private, max-age=3600"})
+    # 導向不能被快取，否則網址過期後瀏覽器還會沿用舊的導向。
+    return RedirectResponse(url, status_code=302, headers={"Cache-Control": "no-store"})

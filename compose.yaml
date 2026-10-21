@@ -44,6 +44,8 @@ services:
     environment:
       DATABASE_URL: postgresql://nutrition:nutrition@db:5432/nutrition
       S3_INTERNAL_ENDPOINT: http://seaweedfs:8333
+      # presigned URL 用這個簽，必須是瀏覽器實際連的網址（簽章綁 host，不能寫 127.0.0.1）。
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:8333}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-nutrition}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-nutrition-dev-secret}
       # 本機開發堆疊；實際部署請改 production 並提供 SESSION_SECRET。

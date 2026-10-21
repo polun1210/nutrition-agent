@@ -3,6 +3,7 @@
 import json
 import re
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 from botocore.exceptions import EndpointConnectionError
@@ -10,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from nutrition_agent.api.app import create_app
 from nutrition_agent.photos import PhotoStore
-from tests.conftest import TEST_BUCKET, bucket_keys
+from tests.conftest import TEST_BUCKET, TEST_PHOTO_URL_TTL, TEST_PUBLIC_S3_ENDPOINT, bucket_keys
 from tests.test_assessments_api import supplement
 
 STORAGE_DOWN = "照片儲存服務暫時無法使用，請稍後再試"
@@ -99,11 +100,31 @@ def test_照片只有本人拿得到(login_as, make_client, gateway):
     other = login_as("b@example.com")
     photo_id = upload(owner, new_draft(owner), JPEG).json()["photos"][0]["photo_id"]
 
-    mine = owner.get(f"/api/photos/{photo_id}")
-    assert mine.status_code == 200
-    assert mine.content == JPEG and mine.headers["content-type"] == "image/jpeg"
-    assert other.get(f"/api/photos/{photo_id}").status_code == 404
+    assert owner.get(f"/api/photos/{photo_id}", follow_redirects=False).status_code == 302
+    assert other.get(f"/api/photos/{photo_id}", follow_redirects=False).status_code == 404
     assert make_client().get(f"/api/photos/{photo_id}").status_code == 401
+    assert owner.get("/api/photos/999999", follow_redirects=False).status_code == 404
+
+
+def test_取照片導向公開endpoint簽的短效網址(login_as, gateway, s3):
+    gateway.vision_replies = [p01_reply()]
+    client = login_as()
+    photo_id = upload(client, new_draft(client), JPEG).json()["photos"][0]["photo_id"]
+    [key] = bucket_keys(s3)
+
+    response = client.get(f"/api/photos/{photo_id}", follow_redirects=False)
+
+    assert response.status_code == 302
+    location = urlsplit(response.headers["location"])
+    # 簽章綁 host：一定要用瀏覽器連得到的公開 endpoint 簽，不能簽內部的再改 host。
+    assert f"{location.scheme}://{location.netloc}" == TEST_PUBLIC_S3_ENDPOINT
+    assert location.path == f"/{TEST_BUCKET}/{key}"
+    query = parse_qs(location.query)
+    assert query["X-Amz-Algorithm"] == ["AWS4-HMAC-SHA256"]
+    assert query["X-Amz-Expires"] == [str(TEST_PHOTO_URL_TTL)]
+    assert query["X-Amz-Signature"][0]
+    # 導向本身不能被快取：網址失效後瀏覽器要重新問 API。
+    assert "no-store" in response.headers["cache-control"]
 
 
 def test_不能把別人的草稿或照片拿來用(login_as, gateway):
@@ -162,30 +183,8 @@ def test_儲存服務故障時上傳回報稍後再試且不留下照片(login_a
     assert db.execute("SELECT count(*) FROM product_photos").fetchone()[0] == 0
 
 
-def test_儲存服務故障時取照片回報稍後再試(login_as, gateway, s3):
-    gateway.vision_replies = [p01_reply()]
-    client = login_as()
-    photo_id = upload(client, new_draft(client), JPEG).json()["photos"][0]["photo_id"]
-    fail_storage(s3, "GetObject")
-
-    response = client.get(f"/api/photos/{photo_id}")
-
-    assert response.status_code == 502
-    assert response.json()["detail"] == STORAGE_DOWN
-
-
-def test_bucket裡沒有物件時取照片回404(login_as, gateway, s3):
-    gateway.vision_replies = [p01_reply()]
-    client = login_as()
-    photo_id = upload(client, new_draft(client), JPEG).json()["photos"][0]["photo_id"]
-    [key] = bucket_keys(s3)
-    s3.delete_object(Bucket=TEST_BUCKET, Key=key)
-
-    assert client.get(f"/api/photos/{photo_id}").status_code == 404
-
-
 def test_API啟動時自動建立不存在的bucket(s3):
-    store = PhotoStore(s3, "fresh-bucket")
+    store = PhotoStore(s3, "fresh-bucket", s3, TEST_PHOTO_URL_TTL)
 
     with TestClient(create_app(photo_store=store)):
         pass

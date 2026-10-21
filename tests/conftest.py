@@ -26,6 +26,8 @@ TEST_DATABASE_URL = os.environ.get(
 )
 TEST_S3_ENDPOINT = "http://seaweedfs.test:8333"
 TEST_BUCKET = "photos"
+TEST_PUBLIC_S3_ENDPOINT = "http://localhost:8333"
+TEST_PHOTO_URL_TTL = 600
 
 
 def _recreate_database(url: str) -> None:
@@ -73,7 +75,8 @@ def s3(monkeypatch: pytest.MonkeyPatch) -> Iterator[BaseClient]:
 @pytest.fixture
 def photo_store(s3: BaseClient) -> PhotoStore:
     # TestClient 沒用 with 就不會跑 lifespan，bucket 由這裡自己建。
-    store = PhotoStore(s3, TEST_BUCKET)
+    public = make_s3_client(TEST_PUBLIC_S3_ENDPOINT, "test-key", "test-secret", "us-east-1")
+    store = PhotoStore(s3, TEST_BUCKET, public, TEST_PHOTO_URL_TTL)
     store.ensure_bucket()
     return store
 

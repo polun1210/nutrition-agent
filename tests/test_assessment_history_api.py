@@ -137,11 +137,9 @@ def test_copy_from_latest_carries_product_photos_the_user_can_still_read(login_a
     draft = client.post(COPY).json()
 
     [copied_id] = draft["products"][0]["photo_ids"]
-    photo = client.get(f"/api/photos/{copied_id}")
-    assert photo.status_code == 200
-    assert photo.content == JPEG
+    assert client.get(f"/api/photos/{copied_id}", follow_redirects=False).status_code == 302
     # 新草稿可以照原樣存檔（照片歸屬這份草稿），舊個案的照片也沒被動到
     saved = client.put(f"/api/assessments/drafts/{draft['id']}", json={"products": draft["products"]})
     assert saved.status_code == 200, saved.text
-    assert client.get(f"/api/photos/{photo_id}").content == JPEG
+    assert client.get(f"/api/photos/{photo_id}", follow_redirects=False).status_code == 302
     assert client.get(f"/api/assessments/{old_case}").json()["products"][0]["photo_ids"] == [photo_id]
