@@ -59,3 +59,20 @@ def test_遷移時既有的保健食品照片全部標記為過期(migration_db)
             "SELECT expired_at FROM product_photos WHERE stored_name = 'product/x.jpg'"
         ).fetchone()[0]
         assert fresh is None
+
+
+def test_遷移時既有的藥包照片不標記過期(migration_db):
+    url, config = migration_db
+    command.upgrade(config, "0008")
+    with psycopg.connect(url) as conn:
+        insert_legacy_photo(conn)
+        conn.execute(
+            "INSERT INTO medication_photos (user_id, draft_id, stored_name, mime_type, names) "
+            "SELECT user_id, draft_id, 'medication/x.jpg', 'image/jpeg', ARRAY['A'] "
+            "FROM product_photos"
+        )
+
+    command.upgrade(config, "head")
+
+    with psycopg.connect(url) as conn:
+        assert conn.execute("SELECT expired_at FROM medication_photos").fetchall() == [(None,)]
