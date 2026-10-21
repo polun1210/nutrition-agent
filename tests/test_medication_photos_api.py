@@ -4,6 +4,7 @@ import json
 import re
 
 import httpx
+import pytest
 
 from tests.conftest import TEST_BUCKET, bucket_keys
 from tests.test_photos_api import STORAGE_DOWN, fail_storage
@@ -147,3 +148,18 @@ def test_儲存服務故障回502且不留下照片(login_as, gateway, db, s3):
     assert response.json()["detail"] == STORAGE_DOWN
     assert bucket_keys(s3) == []
     assert photo_rows(db) == []
+
+
+def test_存檔之後的步驟失敗也不留下照片(login_as, gateway, s3, monkeypatch):
+    gateway.vision_replies = [pack("Amlodipine")]
+    client = login_as()
+
+    def broken(*_):
+        raise RuntimeError("對照失敗")
+
+    monkeypatch.setattr("nutrition_agent.api.medication_photos.resolve_medication", broken)
+
+    with pytest.raises(RuntimeError):
+        upload(client, new_draft(client), JPEG)
+
+    assert bucket_keys(s3) == []

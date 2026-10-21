@@ -1,20 +1,25 @@
-"""照片上傳端點共用：張數上限、檔案檢查、模型服務與照片儲存的錯誤對應。"""
+"""照片上傳端點共用：張數上限、檔案檢查、存照片與失敗回收、模型服務與照片儲存的錯誤對應。"""
 
 import logging
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
+from typing import TypeVar
 
 import httpx
 from fastapi import HTTPException, UploadFile
 
-from nutrition_agent.photos import MAX_PHOTO_BYTES, PhotoStorageError, sniff_image
+from nutrition_agent.photos import MAX_PHOTO_BYTES, PhotoStorageError, PhotoStore, sniff_image
 
 MAX_PHOTOS_PER_PRODUCT = 8
 
 log = logging.getLogger(__name__)
 
+Upload = tuple[bytes, str, str]  # (內容, MIME 類型, 副檔名)
+R = TypeVar("R")
+T = TypeVar("T")
 
-def read_upload(upload: UploadFile) -> tuple[bytes, str, str]:
+
+def read_upload(upload: UploadFile) -> Upload:
     """回傳 (內容, MIME 類型, 副檔名)；太大或不是支援的圖片格式就拒絕。"""
     data = upload.file.read(MAX_PHOTO_BYTES + 1)
     if len(data) > MAX_PHOTO_BYTES:
@@ -55,3 +60,38 @@ def photo_storage_errors() -> Iterator[None]:
         raise HTTPException(
             status_code=502, detail="照片儲存服務暫時無法使用，請稍後再試"
         ) from err
+
+
+@contextmanager
+def stored_photos(
+    store: PhotoStore,
+    prefix: str,
+    uploads: Sequence[Upload],
+    readings: Sequence[R],
+    write_row: Callable[[str, str, R], T],
+) -> Iterator[list[T]]:
+    """存入每張照片、以 write_row(key, mime, reading) 寫資料列，交出各列的回傳值。
+
+    存檔、寫列，以及 with 區塊內之後的任何步驟出錯，本次已存的物件都會刪掉，不留孤兒物件；
+    端點把交易結束前的所有步驟都放進 with 區塊。
+    """
+    keys: list[str] = []
+    try:
+        with photo_storage_errors():
+            for data, mime, ext in uploads:
+                keys.append(store.save(data, ext, mime, prefix=prefix))
+        yield [
+            write_row(key, mime, reading)
+            for key, (_, mime, _), reading in zip(keys, uploads, readings, strict=True)
+        ]
+    except BaseException:
+        _discard(store, keys)
+        raise
+
+
+def _discard(store: PhotoStore, keys: list[str]) -> None:
+    for key in keys:
+        try:
+            store.delete(key)
+        except PhotoStorageError:
+            log.exception("清掉未寫入資料庫的照片物件失敗：%s", key)

@@ -3,8 +3,6 @@
 照片與辨識結果都以 user.id 過濾；別人的草稿或照片一律 404，不洩漏是否存在。
 """
 
-import logging
-
 import psycopg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse
@@ -23,14 +21,15 @@ from nutrition_agent.api.uploads import (
     model_service_errors,
     photo_storage_errors,
     read_upload,
+    stored_photos,
 )
 from nutrition_agent.extraction import VlmReading, build_extraction, read_label
 from nutrition_agent.gateway import ModelGateway
-from nutrition_agent.photos import PhotoNotFound, PhotoStorageError, PhotoStore
+from nutrition_agent.photos import PRODUCT_PREFIX, PhotoNotFound, PhotoStore
 from nutrition_agent.reference import ReferenceData
 
 router = APIRouter(prefix="/api")
-log = logging.getLogger(__name__)
+
 
 def _existing_readings(
     conn: psycopg.Connection, user: User, draft_id: int, photo_ids: list[int]
@@ -67,30 +66,16 @@ def recognize_photos(
     with model_service_errors("VLM"):
         new_readings = [read_label(gateway, data, mime) for data, mime, _ in uploads]
 
-    keys: list[str] = []
-    try:
-        with photo_storage_errors():
-            for data, mime, ext in uploads:
-                keys.append(store.save(data, ext, mime))
-        for key, (_, mime, _), reading in zip(keys, uploads, new_readings, strict=True):
-            photo_id = conn.execute(
-                "INSERT INTO product_photos (user_id, draft_id, stored_name, mime_type, reading) "
-                "VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                (user.id, draft_id, key, mime, Jsonb(reading.model_dump(mode="json"))),
-            ).fetchone()[0]
-            readings.append((photo_id, reading))
-    except Exception:
-        _discard(store, keys)  # 中途失敗：本次已存的物件不留在 bucket
-        raise
-    return build_extraction(readings, ref.ingredients).model_dump(mode="json")
+    def write_row(key: str, mime: str, reading: VlmReading) -> int:
+        return conn.execute(
+            "INSERT INTO product_photos (user_id, draft_id, stored_name, mime_type, reading) "
+            "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+            (user.id, draft_id, key, mime, Jsonb(reading.model_dump(mode="json"))),
+        ).fetchone()[0]
 
-
-def _discard(store: PhotoStore, keys: list[str]) -> None:
-    for key in keys:
-        try:
-            store.delete(key)
-        except PhotoStorageError:
-            log.exception("清掉未寫入資料庫的照片物件失敗：%s", key)
+    with stored_photos(store, PRODUCT_PREFIX, uploads, new_readings, write_row) as photo_ids:
+        merged = [*readings, *zip(photo_ids, new_readings, strict=True)]
+        return build_extraction(merged, ref.ingredients).model_dump(mode="json")
 
 
 @router.get("/photos/{photo_id}")

@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
+import pytest
 from botocore.exceptions import EndpointConnectionError
 from fastapi.testclient import TestClient
 
@@ -181,6 +182,21 @@ def test_儲存服務故障時上傳回報稍後再試且不留下照片(login_a
     assert response.json()["detail"] == STORAGE_DOWN
     assert bucket_keys(s3) == []
     assert db.execute("SELECT count(*) FROM product_photos").fetchone()[0] == 0
+
+
+def test_存檔之後的步驟失敗也不留下照片(login_as, gateway, s3, monkeypatch):
+    gateway.vision_replies = [p01_reply()]
+    client = login_as()
+
+    def broken(*_):
+        raise RuntimeError("合併失敗")
+
+    monkeypatch.setattr("nutrition_agent.api.photos.build_extraction", broken)
+
+    with pytest.raises(RuntimeError):
+        upload(client, new_draft(client), JPEG)
+
+    assert bucket_keys(s3) == []
 
 
 def test_API啟動時自動建立不存在的bucket(s3):
