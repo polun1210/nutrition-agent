@@ -29,13 +29,15 @@
 
 ```
 cp .env.example .env        # 填入 OpenRouter 金鑰與模型 ID（不填也能跑骨架）
-docker compose up --build   # db（pgvector）+ api :8000 + web :5173，開 http://127.0.0.1:5173
+docker compose up --build   # db（pgvector）+ seaweedfs（S3 :8333）+ api :8000 + web :5173，開 http://127.0.0.1:5173
 ```
 
-只跑資料庫、其餘在本機：
+照片存在 SeaweedFS 的 bucket `photos`（API 啟動時自動建立），開 http://127.0.0.1:8888/buckets/photos/ 可以看到物件。
+
+只跑資料庫與物件儲存、其餘在本機：
 
 ```
-docker compose up -d db
+docker compose up -d db seaweedfs
 uv sync
 uv run alembic upgrade head                      # 套用 migration
 uv run uvicorn nutrition_agent.api.app:app --reload
