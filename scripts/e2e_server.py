@@ -24,7 +24,7 @@ from nutrition_agent.api.app import create_app
 from nutrition_agent.api.assessments import get_drug_names, get_reference
 from nutrition_agent.config import get_settings, to_sqlalchemy_url
 from nutrition_agent.extraction import medication_pack
-from nutrition_agent.photos import PhotoStore, make_s3_client
+from nutrition_agent.photos import PhotoStore
 from nutrition_agent.reference import load_reference_data, load_rule_set
 from nutrition_agent.reference.drug_names import load_sample_drug_names
 
@@ -102,8 +102,17 @@ def main() -> None:
     os.environ["MOTO_S3_CUSTOM_ENDPOINTS"] = E2E_S3_ENDPOINT
     mock_aws().start()  # 不停止：行程結束就清掉，uvicorn 的執行緒都看得到
     # 縮圖導向的網址瀏覽器連不到（moto 只在行程內），煙霧測試只看縮圖元素在不在。
-    client = make_s3_client(E2E_S3_ENDPOINT, "e2e", "e2e", "us-east-1")
-    store = PhotoStore(client, "photos", client, 900)
+    s3_settings = get_settings().model_copy(
+        update={
+            "s3_internal_endpoint": E2E_S3_ENDPOINT,
+            "s3_public_endpoint": E2E_S3_ENDPOINT,
+            "s3_access_key": "e2e",
+            "s3_secret_key": "e2e",
+            "s3_region": "us-east-1",
+            "s3_bucket": "photos",
+        }
+    )
+    store = PhotoStore.from_settings(s3_settings)
     app = create_app(gateway=RecordedVlmGateway(), photo_store=store)  # bucket 由 lifespan 建
     app.dependency_overrides[get_reference] = lambda: ref
     sample = load_sample_drug_names()

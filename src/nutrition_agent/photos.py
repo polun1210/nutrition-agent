@@ -80,13 +80,14 @@ def _error_code(err: ClientError) -> str:
     return str(err.response.get("Error", {}).get("Code", ""))
 
 
-def make_s3_client(endpoint: str, access_key: str, secret_key: str, region: str) -> BaseClient:
+def make_s3_client(settings: Settings, endpoint: str) -> BaseClient:
+    """金鑰與 region 取自設定；endpoint 另給，因為讀寫與簽 presigned URL 用不同的網址。"""
     return boto3.client(
         "s3",
         endpoint_url=endpoint,
-        region_name=region,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
+        region_name=settings.s3_region,
+        aws_access_key_id=settings.s3_access_key,
+        aws_secret_access_key=resolve_s3_secret_key(settings),
         config=_CLIENT_CONFIG,
     )
 
@@ -102,15 +103,10 @@ class PhotoStore:
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "PhotoStore":
-        secret_key = resolve_s3_secret_key(settings)
-
-        def client(endpoint: str) -> BaseClient:
-            return make_s3_client(endpoint, settings.s3_access_key, secret_key, settings.s3_region)
-
         return cls(
-            client(settings.s3_internal_endpoint),
+            make_s3_client(settings, settings.s3_internal_endpoint),
             settings.s3_bucket,
-            client(settings.s3_public_endpoint),
+            make_s3_client(settings, settings.s3_public_endpoint),
             settings.photo_url_ttl_seconds,
         )
 

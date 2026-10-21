@@ -15,7 +15,7 @@ from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
 from nutrition_agent.api.assessments import get_drug_names
-from nutrition_agent.config import to_sqlalchemy_url
+from nutrition_agent.config import Settings, to_sqlalchemy_url
 from nutrition_agent.photos import PhotoStore, make_s3_client
 from nutrition_agent.reference.drug_names import load_sample_drug_names
 from tests.fakes import FakeGateway
@@ -28,6 +28,9 @@ TEST_S3_ENDPOINT = "http://seaweedfs.test:8333"
 TEST_BUCKET = "photos"
 TEST_PUBLIC_S3_ENDPOINT = "http://localhost:8333"
 TEST_PHOTO_URL_TTL = 600
+TEST_S3_SETTINGS = Settings(
+    _env_file=None, s3_access_key="test-key", s3_secret_key="test-secret", s3_region="us-east-1"
+)
 
 
 def _recreate_database(url: str) -> None:
@@ -69,13 +72,13 @@ def s3(monkeypatch: pytest.MonkeyPatch) -> Iterator[BaseClient]:
     """moto 模擬的 S3：照真實組態走自訂 internal endpoint，不連外。"""
     monkeypatch.setenv("MOTO_S3_CUSTOM_ENDPOINTS", TEST_S3_ENDPOINT)
     with mock_aws():
-        yield make_s3_client(TEST_S3_ENDPOINT, "test-key", "test-secret", "us-east-1")
+        yield make_s3_client(TEST_S3_SETTINGS, TEST_S3_ENDPOINT)
 
 
 @pytest.fixture
 def photo_store(s3: BaseClient) -> PhotoStore:
     # TestClient 沒用 with 就不會跑 lifespan，bucket 由這裡自己建。
-    public = make_s3_client(TEST_PUBLIC_S3_ENDPOINT, "test-key", "test-secret", "us-east-1")
+    public = make_s3_client(TEST_S3_SETTINGS, TEST_PUBLIC_S3_ENDPOINT)
     store = PhotoStore(s3, TEST_BUCKET, public, TEST_PHOTO_URL_TTL)
     store.ensure_bucket()
     return store
