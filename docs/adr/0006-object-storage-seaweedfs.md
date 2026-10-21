@@ -26,3 +26,13 @@ endpoint 分成兩個設定：
 
 - 導向回應帶 `Cache-Control: no-store`：快取時間若比 presigned 有效期長，瀏覽器會在網址過期後沿用舊導向拿到 403；每次都回 API 重新簽最簡單。
 - 測試用 moto 只能驗網址結構（host 是公開 endpoint、path-style、帶 SigV4 參數與有效秒數）；簽章真的有效、過期失效只在真 SeaweedFS 手動驗。
+
+## 過期照片用程式清理，不用 bucket lifecycle
+
+照片保存 30 天（`PHOTO_RETENTION_DAYS`），由 `python -m nutrition_agent.photo_cleanup` 每天排程跑一次：刪物件，再把資料庫對應的列標記 `expired_at`（API 據此回 410）。不交給 S3 bucket lifecycle 規則自動到期，原因：
+
+- 到期要以資料庫為準：重新評估會複製照片列，多列共用同一個 object key，過期從該 key 最早一筆的建立時間起算。lifecycle 只看物件自己的建立時間，碰巧結果相同，但刪了之後資料庫不知道，列不會標記，API 只能在使用者打開照片時撞到物件儲存的 404。
+- 刪除與標記要成對：程式先刪物件再標記列，刪除失敗就不標記、下次重跑；已標記的列跳過、物件已不存在也算成功，所以可以安全重複執行。lifecycle 刪除是儲存端在背景自己做，程式沒有可靠的時機去標記資料庫。
+- 可攜與可測：lifecycle 在 SeaweedFS、AWS S3、R2 之間支援程度不一（SeaweedFS 這部分沒實測過），換儲存就得重設、重驗；程式清理只用基本的 delete_object，在 `tests/` 可以用真的測試 DB＋moto 驗證，並支援 `--dry-run` 先看會刪多少。
+
+代價是要另外排程（README 有 cron 與 Windows 工作排程器範例）；忘了排程，照片就不會過期。
