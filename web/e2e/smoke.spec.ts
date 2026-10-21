@@ -130,7 +130,9 @@ test("評估中按瀏覽器上一頁回到前一個步驟，每一步都有返�
 });
 
 // 後端以錄製的 VLM 回應（evals/vlm/recorded/vlm/p01-img01.json）取代真模型，照片內容不影響結果。
+// 照片取圖改回 410（已超過保存期限）：縮圖換成替代文字，清單與報告照常顯示。
 test("用一張照片新增保健食品：辨識 → 整瓶確認一次 → 送出", async ({ page }) => {
+  await page.route("**/api/photos/*", (route) => route.fulfill({ status: 410 }));
   await registerAndOpenMedications(page);
   await page.getByRole("button", { name: "我沒有用藥" }).click(); // 直接進保健食品
   await page.getByRole("button", { name: "新增一項" }).click();
@@ -158,14 +160,15 @@ test("用一張照片新增保健食品：辨識 → 整瓶確認一次 → 送�
   await review.getByRole("button", { name: "內容都核對過了，加入這項保健食品" }).click();
 
   await expect(page.getByRole("button", { name: "刪除 挺立 葡萄糖胺強力錠" })).toBeVisible();
-  await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/)).toBeVisible();
+  const thumb = page.getByRole("img", { name: /挺立 葡萄糖胺強力錠 的標示照片/ });
+  await expect(thumb).toHaveText("照片已超過保存期限");
 
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
 
   await expect(page.getByRole("heading", { name: "上限比對" })).toBeVisible();
   await expect(page.getByText(/鈣：.*4.8%/)).toBeVisible(); // 每份（3 錠）含鈣 360 mg，每次 1 錠 = 120 mg
-  await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/)).toBeVisible();
+  await expect(thumb).toHaveText("照片已超過保存期限");
   // 校對頁隱藏的範圍外成分仍保存，報告照實揭露
   await expect(page.getByText(/維生素 ?B1」：不在本系統評估範圍/)).toBeVisible();
 });

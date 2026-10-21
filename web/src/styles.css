@@ -133,6 +133,19 @@ label.estimated input {
   border: 1px solid #999;
 }
 
+.thumb-missing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0.125rem;
+  font-size: 0.625rem;
+  line-height: 1.2;
+  text-align: center;
+  color: #555;
+  background: #f3f3f3;
+}
+
 /* 系統認不出的名稱：可能是營養素的其他寫法，提醒使用者看一下 */
 .ingredient-row[data-unknown="true"] {
   background: #fff4e5;
