@@ -270,7 +270,7 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
         />
       </label>
       <label>
-        每次幾個劑型單位
+        每次幾{doseUnit}
         <input
           type="number"
           required

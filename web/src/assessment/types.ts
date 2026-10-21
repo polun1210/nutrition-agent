@@ -52,6 +52,7 @@ export type Extraction = {
     readable: boolean;
     ingredient_code: string | null;
     scope_status: ScopeStatus;
+    nutrition_fact: boolean;
     photo_id: number;
   }[];
   photos: { photo_id: number; readable: boolean; hint: string | null }[];

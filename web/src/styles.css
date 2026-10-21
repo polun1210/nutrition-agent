@@ -133,8 +133,9 @@ label.estimated input {
   border: 1px solid #999;
 }
 
-.ingredient-row[data-confirmed="true"] {
-  background: #eef7ee;
+/* 系統認不出的名稱：可能是營養素的其他寫法，提醒使用者看一下 */
+.ingredient-row[data-unknown="true"] {
+  background: #fff4e5;
 }
 
 .explanations { margin-top: 1rem; }

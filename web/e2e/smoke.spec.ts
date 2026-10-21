@@ -130,7 +130,7 @@ test("評估中按瀏覽器上一頁回到前一個步驟，每一步都有返�
 });
 
 // 後端以錄製的 VLM 回應（evals/vlm/recorded/vlm/p01-img01.json）取代真模型，照片內容不影響結果。
-test("用一張照片新增保健食品：辨識 → 逐列確認 → 送出", async ({ page }) => {
+test("用一張照片新增保健食品：辨識 → 整瓶確認一次 → 送出", async ({ page }) => {
   await registerAndOpenMedications(page);
   await page.getByRole("button", { name: "我沒有用藥" }).click(); // 直接進保健食品
   await page.getByRole("button", { name: "新增一項" }).click();
@@ -146,13 +146,16 @@ test("用一張照片新增保健食品：辨識 → 逐列確認 → 送出", a
   const review = page.getByRole("form", { name: "校對辨識結果" });
   await expect(review.getByLabel("產品名稱")).toHaveValue("挺立 葡萄糖胺強力錠");
 
-  // 沒有逐列確認不能加入
-  await review.getByRole("button", { name: "加入這項保健食品（照片）" }).click();
-  await expect(page.getByRole("alert")).toContainText("每一列都要按「確認」");
+  // 範圍外成分（維生素B1）不在校對頁出現；無法確定的列保留讓使用者改（#22）
+  await expect(review.getByText("包裝上寫：維生素B1", { exact: true })).toHaveCount(0);
+  await expect(review.getByText("包裝上寫：豬軟骨素硫酸鈉")).toBeVisible();
+  // 不用逐列確認，每一列仍可修改
+  await expect(review.getByRole("button", { name: "確認這一列" })).toHaveCount(0);
+  await expect(review.getByLabel("含量").first()).toBeEditable();
+  // 服用量跟著劑型
+  await expect(review.getByLabel("每次幾錠")).toBeVisible();
 
-  const confirm = review.getByRole("button", { name: "確認這一列" });
-  while ((await confirm.count()) > 0) await confirm.first().click();
-  await review.getByRole("button", { name: "加入這項保健食品（照片）" }).click();
+  await review.getByRole("button", { name: "內容都核對過了，加入這項保健食品" }).click();
 
   await expect(page.getByRole("button", { name: "刪除 挺立 葡萄糖胺強力錠" })).toBeVisible();
   await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/)).toBeVisible();
@@ -163,6 +166,8 @@ test("用一張照片新增保健食品：辨識 → 逐列確認 → 送出", a
   await expect(page.getByRole("heading", { name: "上限比對" })).toBeVisible();
   await expect(page.getByText(/鈣：.*4.8%/)).toBeVisible(); // 每份（3 錠）含鈣 360 mg，每次 1 錠 = 120 mg
   await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/)).toBeVisible();
+  // 校對頁隱藏的範圍外成分仍保存，報告照實揭露
+  await expect(page.getByText(/維生素 ?B1」：不在本系統評估範圍/)).toBeVisible();
 });
 
 // 後端以假回應：規則用夾具的審定規則（metformin × 維生素 B12），解釋引用一筆種進資料庫的證據段落。

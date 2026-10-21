@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from nutrition_agent.extraction.normalize import (
     ScopeStatus,
     classify,
+    is_nutrition_fact,
     normalize_dose_unit,
     normalize_unit,
 )
@@ -24,6 +25,7 @@ class ExtractedRow(Frozen):
     readable: bool
     ingredient_code: str | None  # None = 目錄查不到
     scope_status: ScopeStatus
+    nutrition_fact: bool  # 熱量、蛋白質這類營養標示欄位，校對頁不顯示
     photo_id: int
 
 
@@ -52,6 +54,7 @@ def _row(photo_id: int, raw, catalog: IngredientCatalog) -> ExtractedRow:
         readable=readable,
         ingredient_code=code,
         scope_status=status,
+        nutrition_fact=code is None and is_nutrition_fact(raw.raw_name),
         photo_id=photo_id,
     )
 

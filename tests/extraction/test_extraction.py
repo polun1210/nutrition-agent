@@ -173,3 +173,23 @@ def test_read_label把照片送給模型並解析回覆():
 
     assert reading.product_name == "挺立 葡萄糖胺強力錠"
     assert gateway.calls[0][0] == "vision"
+
+
+
+def test_營養標示固定欄位標記出來_成分列不受影響(catalog):
+    reply = json.dumps({
+        "readable": True,
+        "product_name": "紅麴膠囊",
+        "rows": [
+            {"raw_name": "熱量", "section": "nutrition_table", "amount": 5, "unit": "kcal", "readable": True},
+            {"raw_name": "鈉", "section": "nutrition_table", "amount": 1, "unit": "mg", "readable": True},
+            {"raw_name": "紅麴", "section": "nutrition_table", "amount": 500, "unit": "mg", "readable": True},
+            {"raw_name": "乳糖", "section": "ingredient_list", "amount": None, "unit": None, "readable": True},
+        ],
+    }, ensure_ascii=False)
+    rows = rows_by_name(build_extraction([(1, parse_reading(reply))], catalog))
+
+    assert rows["熱量"].nutrition_fact
+    assert rows["鈉"].nutrition_fact
+    assert not rows["紅麴"].nutrition_fact
+    assert not rows["乳糖"].nutrition_fact

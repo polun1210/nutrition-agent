@@ -16,6 +16,13 @@ _UNIT_ALIASES = {
     "微克dfe": "ug_dfe", "kcal": "kcal", "大卡": "kcal",
 }  # fmt: skip
 DOSE_UNITS = ("粒", "錠", "包", "匙", "毫升")
+# 營養標示的固定欄位：不是成分，校對頁不顯示（#22）。只比對完整名稱，「乳糖」「硫酸月桂酯鈉」不算
+_NUTRITION_FACTS = {
+    "熱量", "能量", "蛋白質", "脂肪", "總脂肪", "飽和脂肪", "飽和脂肪酸", "反式脂肪", "反式脂肪酸",
+    "碳水化合物", "總碳水化合物", "糖", "總糖", "糖類", "添加糖", "鈉", "膳食纖維",
+    "calories", "energy", "protein", "fat", "totalfat", "saturatedfat", "transfat",
+    "carbohydrate", "carbohydrates", "totalcarbohydrate", "sugar", "sugars", "sodium", "dietaryfiber",
+}  # fmt: skip
 _OPEN, _CLOSE = "(（", ")）"
 
 
@@ -55,6 +62,11 @@ def _split_top_level(raw_name: str) -> tuple[str, list[str]]:
 def _name_candidates(raw_name: str) -> list[str]:
     without_parens, inner = _split_top_level(raw_name)
     return [raw_name, without_parens, *inner]
+
+
+def is_nutrition_fact(raw_name: str) -> bool:
+    without_parens, _ = _split_top_level(raw_name)
+    return normalize_name(without_parens) in _NUTRITION_FACTS
 
 
 def classify(raw_name: str, catalog: IngredientCatalog) -> tuple[str | None, ScopeStatus]:

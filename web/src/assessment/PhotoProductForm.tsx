@@ -18,7 +18,6 @@ type Row = {
   code: string;
   amount: string;
   unit: string;
-  confirmed: boolean;
 };
 
 type Review = {
@@ -26,35 +25,43 @@ type Review = {
   perServing: string;
   doseUnit: string;
   rows: Row[];
+  /** 範圍外成分：校對頁不顯示，照樣加入產品，報告列為「本系統未評估」。 */
+  outOfScope: Product["ingredients"];
   otherIngredients: string[];
   photos: Extraction["photos"];
 };
 
+type ExtractedRow = Extraction["rows"][number];
+
 const UNKNOWN = "unknown";
 
-/** 成分欄上沒有含量的列只是列出配料，不進入評估，也不用逐列確認。 */
-const isReviewRow = (r: Extraction["rows"][number]) => r.section !== "ingredient_list" || r.amount !== null;
+/** 成分欄上沒有含量的列只是列出配料，不進入評估。 */
+const isListedOnly = (r: ExtractedRow) => r.section === "ingredient_list" && r.amount === null;
 
 function toReview(result: Extraction): Review {
-  const rows = result.rows.filter(isReviewRow);
+  // 熱量、蛋白質這類營養標示欄位不是成分，直接不顯示（#22）
+  const rows = result.rows.filter((r) => !r.nutrition_fact && !isListedOnly(r));
+  const outOfScope = rows.filter((r) => r.scope_status === "out_of_scope");
   return {
     name: result.product_name ?? "",
     perServing: result.units_per_serving?.toString() ?? "",
     doseUnit: result.dose_unit ?? "",
-    rows: rows.map((r, key) => ({
-      key,
-      rawName: r.raw_name,
-      code: r.ingredient_code ?? UNKNOWN,
-      amount: r.amount?.toString() ?? "",
-      unit: r.unit ?? "mg",
-      confirmed: false,
-    })),
-    otherIngredients: result.rows.filter((r) => !isReviewRow(r)).map((r) => r.raw_name),
+    rows: rows
+      .filter((r) => r.scope_status !== "out_of_scope")
+      .map((r, key) => ({
+        key,
+        rawName: r.raw_name,
+        code: r.ingredient_code ?? UNKNOWN,
+        amount: r.amount?.toString() ?? "",
+        unit: r.unit ?? "mg",
+      })),
+    outOfScope: outOfScope.map((r) => ({ ingredient_code: r.ingredient_code ?? UNKNOWN, amount: r.amount ?? 0, unit: r.unit ?? "mg" })),
+    otherIngredients: result.rows.filter((r) => !r.nutrition_fact && isListedOnly(r)).map((r) => r.raw_name),
     photos: result.photos,
   };
 }
 
-/** 用照片新增一項保健食品：上傳 → 辨識中 → 校對（逐列鎖定確認）→ 加入。 */
+/** 用照片新增一項保健食品：上傳 → 辨識中 → 校對（整瓶看過確認一次）→ 加入。 */
 export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [keptIds, setKeptIds] = useState<number[]>([]); // 已辨識且讀得到、重傳時沿用的照片
@@ -87,15 +94,6 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
   const patchRow = (key: number, patch: Partial<Row>) =>
     review && setReview({ ...review, rows: review.rows.map((r) => (r.key === key ? { ...r, ...patch } : r)) });
 
-  const confirmRow = (row: Row) => {
-    if (!row.confirmed && (row.amount === "" || Number(row.amount) < 0)) {
-      setError(`「${row.rawName || "新增的列"}」還沒有含量，請填寫後再確認，或刪除這一列`);
-      return;
-    }
-    setError(null);
-    patchRow(row.key, { confirmed: !row.confirmed });
-  };
-
   const addRow = () =>
     review &&
     setReview({
@@ -108,7 +106,6 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
           code: options[0]?.code ?? UNKNOWN,
           amount: "",
           unit: options[0]?.unit ?? "mg",
-          confirmed: false,
         },
       ],
     });
@@ -124,12 +121,16 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
     if (!review) return;
     if (!review.name.trim()) return setError("請填寫產品名稱（只用來顯示）");
     if (!review.perServing || !review.doseUnit) return setError("請填寫每份量與劑型單位");
-    if (review.rows.some((r) => !r.confirmed)) return setError("每一列都要按「確認」，或刪除這一列");
+    const missing = review.rows.find((r) => r.amount === "" || Number(r.amount) < 0);
+    if (missing) return setError(`「${missing.rawName || "新增的列"}」還沒有含量，請填寫，或刪除這一列`);
     onAdd({
       name: review.name.trim(),
       dose_unit: review.doseUnit as Product["dose_unit"],
       units_per_serving: Number(review.perServing),
-      ingredients: review.rows.map((r) => ({ ingredient_code: r.code, amount: Number(r.amount), unit: r.unit })),
+      ingredients: [
+        ...review.rows.map((r) => ({ ingredient_code: r.code, amount: Number(r.amount), unit: r.unit })),
+        ...review.outOfScope,
+      ],
       intake: { frequency: "daily", times_per_day: Number(timesPerDay), units_per_time: Number(perTime) },
       photo_ids: review.photos.map((p) => p.photo_id),
     });
@@ -163,7 +164,7 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
             add();
           }}
         >
-          <p>以下是照片上讀到的內容，請對照包裝逐列確認。沒有確認的列不會進入評估。</p>
+          <p>以下是照片上讀到的營養素，請對照包裝看過一遍，有錯就直接修改，最後按下方按鈕確認。</p>
           <PhotoThumbs name={review.name || "這項產品"} photoIds={review.photos.map((p) => p.photo_id)} />
           <label>
             產品名稱
@@ -197,14 +198,14 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
           <fieldset>
             <legend>辨識到的成分</legend>
             {review.rows.map((r) => (
-              <div key={r.key} className="ingredient-row" data-confirmed={r.confirmed}>
+              <div key={r.key} className="ingredient-row" data-unknown={r.code === UNKNOWN}>
                 {r.rawName && <p>包裝上寫：{r.rawName}</p>}
+                {r.code === UNKNOWN && <p className="undetermined">系統認不出這個名稱。如果它是營養素，請從選單改選；不是的話可以刪除。</p>}
                 <label>
                   成分
                   <select
                     aria-label="成分"
                     value={r.code}
-                    disabled={r.confirmed}
                     onChange={(e) => patchRow(r.key, { code: e.target.value })}
                   >
                     {options.map((o) => (
@@ -221,14 +222,13 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
                     type="number"
                     min="0"
                     step="any"
-                    disabled={r.confirmed}
                     value={r.amount}
                     onChange={(e) => patchRow(r.key, { amount: e.target.value })}
                   />
                 </label>
                 <label>
                   單位
-                  <select aria-label="單位" value={r.unit} disabled={r.confirmed} onChange={(e) => patchRow(r.key, { unit: e.target.value })}>
+                  <select aria-label="單位" value={r.unit} onChange={(e) => patchRow(r.key, { unit: e.target.value })}>
                     {(ROW_UNITS as readonly string[]).includes(r.unit) ? null : <option value={r.unit}>{r.unit}</option>}
                     {ROW_UNITS.map((u) => (
                       <option key={u} value={u}>
@@ -237,9 +237,6 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
                     ))}
                   </select>
                 </label>
-                <button type="button" onClick={() => confirmRow(r)}>
-                  {r.confirmed ? "已確認（點一下可修改）" : "確認這一列"}
-                </button>
                 <button
                   type="button"
                   className="secondary"
@@ -265,10 +262,10 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
             <input type="number" required min="1" max="24" step="1" value={timesPerDay} onChange={(e) => setTimesPerDay(e.target.value)} />
           </label>
           <label>
-            每次幾個劑型單位
+            每次幾{review.doseUnit || "個"}
             <input type="number" required min="0.01" step="any" value={perTime} onChange={(e) => setPerTime(e.target.value)} />
           </label>
-          <button type="submit">加入這項保健食品（照片）</button>
+          <button type="submit">內容都核對過了，加入這項保健食品</button>
           <button type="button" className="secondary" onClick={reset}>
             放棄這次辨識
           </button>
