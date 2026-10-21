@@ -63,7 +63,7 @@ def test_submit_freezes_a_case_with_age_versions_and_report(login_as):
     assert case["profile"]["sex"] == "female"
     assert case["products"][0]["name"] == "鈣片"
     assert set(case["reference_versions"]) >= {"manifest", "dris", "ingredients", "rules"}
-    assert [s["key"] for s in case["report"]["sections"]][:2] == ["profile", "interaction"]
+    assert [s["key"] for s in case["report"]["sections"]][:2] == ["interaction", "ul_comparison"]
 
 
 def test_report_shows_percent_of_ul_rendered_by_template(login_as):
@@ -227,7 +227,7 @@ def test_assessment_endpoints_require_login(client):
     assert client.get("/api/assessments/1").status_code == 401
 
 
-def test_report_has_four_sections_with_fixed_disclosures_and_no_interaction_claim(login_as):
+def test_report_has_five_sections_with_fixed_disclosures_and_no_interaction_claim(login_as):
     client = login_as(conditions=["hypertension"])
     _, response = submit(client, supplement())
 
@@ -235,7 +235,7 @@ def test_report_has_four_sections_with_fixed_disclosures_and_no_interaction_clai
     text = report_text(client, case["id"])
 
     assert [s["title"] for s in case["report"]["sections"]] == [
-        "你的資料", "交互作用", "上限比對", "評估範圍與揭露",
+        "交互作用", "上限比對", "本系統未評估的成分", "你的資料", "評估範圍與揭露",
     ]
     assert "健康族群" in text and "孕期" in text and "DPP-4 抑制劑" in text
     assert "沒有交互作用" not in text
