@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     s3_bucket: str = "photos"
     s3_region: str = "us-east-1"
     photo_url_ttl_seconds: int = 900
+    # 照片在物件儲存保留的天數；過期清理指令的預設值。
+    photo_retention_days: int = 30
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_provider: str = ""
