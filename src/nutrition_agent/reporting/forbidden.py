@@ -27,8 +27,11 @@ FORBIDDEN_TERMS = (
 # 只遮掉這個句型裡的「建議服用」四個字，句子其餘部分照常檢查。
 _ADVICE_TO_TAKERS = re.compile(r"建議服用(?=[^，。；、,.;!?！？\s]{0,15}?(?:的人|者))")
 
+# 「高劑量菸鹼酸可能升高血糖」是轉述證據；「調整劑量」「建議劑量」才是劑量指示，照常擋。
+_HIGH_DOSE = re.compile(r"[高大]劑量")
+
 
 def find_forbidden_terms(text: str) -> list[str]:
     """回傳 text 裡出現的禁用詞（依 FORBIDDEN_TERMS 順序）；空 list = 通過。"""
-    checked = _ADVICE_TO_TAKERS.sub("｜", text)
+    checked = _HIGH_DOSE.sub("｜", _ADVICE_TO_TAKERS.sub("｜", text))
     return [term for term in FORBIDDEN_TERMS if term in checked]

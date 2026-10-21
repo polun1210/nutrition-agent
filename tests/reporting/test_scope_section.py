@@ -149,3 +149,23 @@ def test_advice_to_people_taking_a_drug_is_not_an_instruction_to_take_it():
         assert find_forbidden_terms(text) == [], text
     for text in still_forbidden:
         assert find_forbidden_terms(text) == ["建議服用"], text
+
+
+def test_describing_high_doses_from_evidence_is_not_dose_advice():
+    """「高劑量菸鹼酸可能升高血糖」是在轉述證據，不是給劑量建議。"""
+    allowed = [
+        "高劑量的菸鹼酸可能提高血糖。",
+        "較高劑量的菸鹼酸可能干擾糖尿病藥物的效果。",
+        "服用大劑量菸鹼酸補充劑的人應監測血糖。",
+    ]
+    still_forbidden = [
+        "可能需要調整藥物劑量。",
+        "請依建議劑量服用。",
+        "在推薦劑量下不會顯著影響。",
+        "高劑量菸鹼酸可能升高血糖，可能需要調整劑量。",
+    ]
+
+    for text in allowed:
+        assert find_forbidden_terms(text) == [], text
+    for text in still_forbidden:
+        assert find_forbidden_terms(text) == ["劑量"], text
