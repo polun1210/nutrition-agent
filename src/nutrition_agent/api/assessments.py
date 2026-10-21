@@ -113,13 +113,15 @@ def _copy_photos(
 ) -> list[dict]:
     """複製產品時，照片也複製一份歸屬新草稿（共用同一個檔案），並改寫產品的照片編號。
 
-    照片只能掛在上傳它的草稿上，所以不能直接沿用舊編號。
+    照片只能掛在上傳它的草稿上，所以不能直接沿用舊編號。過期狀態跟著複製：
+    共用的物件已過期，複製出來的那份也是過期。
     """
     mapping: dict[int, int] = {}
     for old_id in dict.fromkeys(pid for p in products for pid in p.get("photo_ids", [])):
         copied = conn.execute(
-            "INSERT INTO product_photos (user_id, draft_id, stored_name, mime_type, reading) "
-            "SELECT user_id, %s, stored_name, mime_type, reading FROM product_photos "
+            "INSERT INTO product_photos "
+            "(user_id, draft_id, stored_name, mime_type, reading, expired_at) "
+            "SELECT user_id, %s, stored_name, mime_type, reading, expired_at FROM product_photos "
             "WHERE id = %s AND user_id = %s RETURNING id",
             (draft_id, old_id, user.id),
         ).fetchone()

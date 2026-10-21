@@ -4,7 +4,8 @@
 """
 
 import psycopg
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import RedirectResponse
 from psycopg.types.json import Jsonb
 
 from nutrition_agent.api.assessments import _editable_draft, get_reference
@@ -15,13 +16,20 @@ from nutrition_agent.api.deps import (
     get_gateway,
     get_photo_store,
 )
-from nutrition_agent.api.uploads import check_photo_count, model_service_errors, read_upload
+from nutrition_agent.api.uploads import (
+    check_photo_count,
+    model_service_errors,
+    photo_storage_errors,
+    read_upload,
+    stored_photos,
+)
 from nutrition_agent.extraction import VlmReading, build_extraction, read_label
 from nutrition_agent.gateway import ModelGateway
-from nutrition_agent.photos import PhotoStore
+from nutrition_agent.photos import PRODUCT_PREFIX, PhotoNotFound, PhotoStore
 from nutrition_agent.reference import ReferenceData
 
 router = APIRouter(prefix="/api")
+
 
 def _existing_readings(
     conn: psycopg.Connection, user: User, draft_id: int, photo_ids: list[int]
@@ -58,15 +66,16 @@ def recognize_photos(
     with model_service_errors("VLM"):
         new_readings = [read_label(gateway, data, mime) for data, mime, _ in uploads]
 
-    for (data, mime, ext), reading in zip(uploads, new_readings, strict=True):
-        stored_name = store.save(data, ext)
-        photo_id = conn.execute(
+    def write_row(key: str, mime: str, reading: VlmReading) -> int:
+        return conn.execute(
             "INSERT INTO product_photos (user_id, draft_id, stored_name, mime_type, reading) "
             "VALUES (%s, %s, %s, %s, %s) RETURNING id",
-            (user.id, draft_id, stored_name, mime, Jsonb(reading.model_dump(mode="json"))),
+            (user.id, draft_id, key, mime, Jsonb(reading.model_dump(mode="json"))),
         ).fetchone()[0]
-        readings.append((photo_id, reading))
-    return build_extraction(readings, ref.ingredients).model_dump(mode="json")
+
+    with stored_photos(store, PRODUCT_PREFIX, uploads, new_readings, write_row) as photo_ids:
+        merged = [*readings, *zip(photo_ids, new_readings, strict=True)]
+        return build_extraction(merged, ref.ingredients).model_dump(mode="json")
 
 
 @router.get("/photos/{photo_id}")
@@ -75,15 +84,20 @@ def get_photo(
     user: User = Depends(current_user),
     conn: psycopg.Connection = Depends(get_connection),
     store: PhotoStore = Depends(get_photo_store),
-) -> Response:
+) -> RedirectResponse:
+    """確認是本人的照片後，302 導向短效 presigned URL，讓瀏覽器直接向物件儲存取圖。"""
     row = conn.execute(
-        "SELECT stored_name, mime_type FROM product_photos WHERE id = %s AND user_id = %s",
+        "SELECT stored_name, expired_at FROM product_photos WHERE id = %s AND user_id = %s",
         (photo_id, user.id),
     ).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="找不到這張照片")
+    if row[1] is not None:  # 先確認是本人的照片才回 410，別人的照片不洩漏存在與否
+        raise HTTPException(status_code=410, detail="照片已超過保存期限")
     try:
-        data = store.read(row[0])
-    except FileNotFoundError as err:
+        with photo_storage_errors():
+            url = store.presigned_url(row[0])
+    except PhotoNotFound as err:
         raise HTTPException(status_code=404, detail="找不到這張照片") from err
-    return Response(content=data, media_type=row[1], headers={"Cache-Control": "private, max-age=3600"})
+    # 導向不能被快取，否則網址過期後瀏覽器還會沿用舊的導向。
+    return RedirectResponse(url, status_code=302, headers={"Cache-Control": "no-store"})

@@ -1,6 +1,7 @@
 """FastAPI 進入點：create_app 可注入連線與模型閘道，測試用假實作。"""
 
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
+from contextlib import asynccontextmanager
 
 import psycopg
 from fastapi import Depends, FastAPI
@@ -25,7 +26,14 @@ def create_app(
     photo_store: PhotoStore | None = None,
 ) -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="nutrition-agent")
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        # 啟動時才連物件儲存（import 模組不連線）；bucket 不存在就建立。
+        (photo_store or get_photo_store()).ensure_bucket()
+        yield
+
+    app = FastAPI(title="nutrition-agent", lifespan=lifespan)
     app.add_middleware(
         SessionMiddleware,
         secret_key=resolve_session_secret(settings),

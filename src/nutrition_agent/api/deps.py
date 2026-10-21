@@ -6,7 +6,7 @@ create_app 會在測試時用 dependency_overrides 換掉 get_connection / get_g
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from pathlib import Path
+from functools import lru_cache
 
 import psycopg
 from fastapi import Depends, HTTPException, Request
@@ -29,8 +29,10 @@ def get_gateway() -> ModelGateway:
     return OpenRouterGateway.from_settings(get_settings())
 
 
+@lru_cache
 def get_photo_store() -> PhotoStore:
-    return PhotoStore(Path(get_settings().photo_dir))
+    # boto3 client 建立成本高且執行緒安全，整個行程共用一個。
+    return PhotoStore.from_settings(get_settings())
 
 
 @dataclass(frozen=True)

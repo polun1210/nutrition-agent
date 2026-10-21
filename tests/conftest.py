@@ -2,20 +2,22 @@
 
 import os
 from collections.abc import Callable, Iterator
-from pathlib import Path
 
 import psycopg
 import pytest
 from alembic import command
 from alembic.config import Config
+from botocore.client import BaseClient
+from botocore.exceptions import EndpointConnectionError
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from moto import mock_aws
 from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
 from nutrition_agent.api.assessments import get_drug_names
-from nutrition_agent.config import to_sqlalchemy_url
-from nutrition_agent.photos import PhotoStore
+from nutrition_agent.config import Settings, to_sqlalchemy_url
+from nutrition_agent.photos import PhotoStore, make_s3_client
 from nutrition_agent.reference.drug_names import load_sample_drug_names
 from tests.fakes import FakeGateway
 
@@ -23,6 +25,19 @@ TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql://nutrition:nutrition@127.0.0.1:55432/nutrition_test",
 )
+TEST_S3_ENDPOINT = "http://seaweedfs.test:8333"
+TEST_BUCKET = "photos"
+TEST_PUBLIC_S3_ENDPOINT = "http://localhost:8333"
+TEST_PHOTO_URL_TTL = 600
+# 不重試：模擬儲存故障的測試不必等重試的退避時間。
+TEST_S3_SETTINGS = Settings(
+    _env_file=None,
+    s3_access_key="test-key",
+    s3_secret_key="test-secret",
+    s3_region="us-east-1",
+    s3_max_attempts=1,
+)
+STORAGE_DOWN = "照片儲存服務暫時無法使用，請稍後再試"
 
 
 def _recreate_database(url: str) -> None:
@@ -60,10 +75,42 @@ def gateway() -> FakeGateway:
 
 
 @pytest.fixture
-def app(db: psycopg.Connection, gateway: FakeGateway, tmp_path: Path) -> FastAPI:
-    app = create_app(
-        connection_provider=lambda: db, gateway=gateway, photo_store=PhotoStore(tmp_path / "photos")
-    )
+def s3(monkeypatch: pytest.MonkeyPatch) -> Iterator[BaseClient]:
+    """moto 模擬的 S3：照真實組態走自訂 internal endpoint，不連外。"""
+    monkeypatch.setenv("MOTO_S3_CUSTOM_ENDPOINTS", TEST_S3_ENDPOINT)
+    with mock_aws():
+        yield make_s3_client(TEST_S3_SETTINGS, TEST_S3_ENDPOINT)
+
+
+@pytest.fixture
+def photo_store(s3: BaseClient) -> PhotoStore:
+    # TestClient 沒用 with 就不會跑 lifespan，bucket 由這裡自己建。
+    public = make_s3_client(TEST_S3_SETTINGS, TEST_PUBLIC_S3_ENDPOINT)
+    store = PhotoStore(s3, TEST_BUCKET, public, TEST_PHOTO_URL_TTL)
+    store.ensure_bucket()
+    return store
+
+
+def bucket_keys(s3: BaseClient) -> list[str]:
+    listing = s3.list_objects_v2(Bucket=TEST_BUCKET)
+    return [item["Key"] for item in listing.get("Contents", [])]
+
+
+def fail_storage(s3: BaseClient, operation: str, after: int = 0) -> None:
+    """讓物件儲存的某個操作在成功 after 次之後連不上（走真實的 botocore 例外路徑）。"""
+    calls = []
+
+    def boom(request, **_):
+        calls.append(request)
+        if len(calls) > after:
+            raise EndpointConnectionError(endpoint_url=request.url)
+
+    s3.meta.events.register(f"before-send.s3.{operation}", boom)
+
+
+@pytest.fixture
+def app(db: psycopg.Connection, gateway: FakeGateway, photo_store: PhotoStore) -> FastAPI:
+    app = create_app(connection_provider=lambda: db, gateway=gateway, photo_store=photo_store)
     # 藥名用 repo 內的夾具，測試結果不受完整匯出檔（drug_names.csv）影響。
     sample = load_sample_drug_names()
     app.dependency_overrides[get_drug_names] = lambda: sample
