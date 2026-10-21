@@ -1,4 +1,4 @@
-"""保健食品照片存在 S3 相容的物件儲存（本機是 SeaweedFS）；歸屬與存取檢查由 API 負責。
+"""保健食品與藥包照片存在 S3 相容的物件儲存（本機是 SeaweedFS）；歸屬與存取檢查由 API 負責。
 
 object key 是「前綴/隨機 ID.副檔名」，不含任何使用者資訊。只用基本的 S3 操作，
 換成 AWS S3 或 R2 只需要改設定。
@@ -18,7 +18,8 @@ from nutrition_agent.config import Settings
 
 MAX_PHOTO_BYTES = 10 * 1024 * 1024
 PRODUCT_PREFIX = "product"
-_KEY_PATTERN = re.compile(r"product/[0-9a-f]{32}\.(jpg|png|webp)")
+MEDICATION_PREFIX = "medication"
+_KEY_PATTERN = re.compile(r"(product|medication)/[0-9a-f]{32}\.(jpg|png|webp)")
 _MISSING_CODES = {"NoSuchKey", "404"}  # get_object 回 NoSuchKey；HEAD 沒有 body，只有 "404"
 _DEFAULT_REGION = "us-east-1"  # 只有這個 region 建 bucket 不能帶 LocationConstraint
 
@@ -117,9 +118,11 @@ class PhotoStore:
             "CreateBucketConfiguration": {"LocationConstraint": region},
         }
 
-    def save(self, data: bytes, ext: str, content_type: str) -> str:
-        """存入並回傳 object key。"""
-        key = f"{PRODUCT_PREFIX}/{uuid.uuid4().hex}{ext}"
+    def save(
+        self, data: bytes, ext: str, content_type: str, prefix: str = PRODUCT_PREFIX
+    ) -> str:
+        """存入並回傳 object key；prefix 區分保健食品與藥包照片。"""
+        key = f"{prefix}/{uuid.uuid4().hex}{ext}"
         with _storage_errors():
             self._client.put_object(
                 Bucket=self._bucket, Key=key, Body=data, ContentType=content_type
