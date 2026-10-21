@@ -219,3 +219,12 @@ def test_CLI中途刪除失敗時已處理的標記保留並以非零狀態結�
     with psycopg.connect(database_url) as other:
         assert expired_at(other, done) == NOW
         assert expired_at(other, failed) is None
+
+
+def test_格式不符的key算刪除失敗且不標記(db, draft, photo_store, s3):
+    photo_id = product_photo(db, draft, "../outside.jpg", NOW - timedelta(days=30))
+
+    result = expire_photos(db, photo_store, NOW, retention_days=30)
+
+    assert (result.deleted_objects, result.failed_objects) == (0, 1)
+    assert expired_at(db, photo_id) is None

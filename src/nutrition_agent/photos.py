@@ -22,7 +22,6 @@ from nutrition_agent.config import Settings
 MAX_PHOTO_BYTES = 10 * 1024 * 1024
 PRODUCT_PREFIX = "product"
 MEDICATION_PREFIX = "medication"
-_KEY_PATTERN = re.compile(r"(product|medication)/[0-9a-f]{32}\.(jpg|png|webp)")
 _DEFAULT_REGION = "us-east-1"  # 只有這個 region 建 bucket 不能帶 LocationConstraint
 
 # SeaweedFS 沒設網域，只認 path-style；連線失敗時少重試、早點放棄，請求才不會卡住。
@@ -34,19 +33,30 @@ _CLIENT_CONFIG = Config(
     read_timeout=10,
 )
 
+# 支援的圖片格式：((位移, 魔術位元組), ...) 全部符合才算，加上 MIME 與副檔名。
 _SIGNATURES = (
-    (b"\xff\xd8\xff", "image/jpeg", ".jpg"),
-    (b"\x89PNG\r\n\x1a\n", "image/png", ".png"),
+    (((0, b"\xff\xd8\xff"),), "image/jpeg", ".jpg"),
+    (((0, b"\x89PNG\r\n\x1a\n"),), "image/png", ".png"),
+    (((0, b"RIFF"), (8, b"WEBP")), "image/webp", ".webp"),
+)
+
+
+def _alternatives(options: list[str]) -> str:
+    return "|".join(re.escape(option) for option in options)
+
+
+# save() 產生的 key：「前綴/32 位十六進位.副檔名」，前綴與副檔名都由上面的常數推導。
+_KEY_PATTERN = re.compile(
+    rf"({_alternatives([PRODUCT_PREFIX, MEDICATION_PREFIX])})/[0-9a-f]{{32}}"
+    rf"({_alternatives([ext for *_, ext in _SIGNATURES])})"
 )
 
 
 def sniff_image(data: bytes) -> tuple[str, str] | None:
     """依檔案內容（不信任上傳的檔名或 Content-Type）回傳 (mime, 副檔名)；不支援的格式回 None。"""
-    for magic, mime, ext in _SIGNATURES:
-        if data.startswith(magic):
+    for parts, mime, ext in _SIGNATURES:
+        if all(data[offset : offset + len(magic)] == magic for offset, magic in parts):
             return mime, ext
-    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "image/webp", ".webp"
     return None
 
 
@@ -151,8 +161,8 @@ class PhotoStore:
             )
 
     def delete(self, key: str) -> None:
-        """S3 的刪除本來就冪等：物件不存在也算成功。"""
+        """S3 的刪除本來就冪等：物件不存在也算成功；key 不是本模組產生的格式就拋 ValueError。"""
         if not _KEY_PATTERN.fullmatch(key):
-            return
+            raise ValueError(f"不是照片的 object key：{key!r}")
         with _storage_errors():
             self._client.delete_object(Bucket=self._bucket, Key=key)

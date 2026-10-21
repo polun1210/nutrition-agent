@@ -60,7 +60,7 @@ def expire_photos(
     for key, _ in due:
         try:
             store.delete(key)  # 先刪物件再標記：刪除失敗時列不標記，下次重跑
-        except PhotoStorageError:
+        except (PhotoStorageError, ValueError):  # ValueError：資料庫裡的 key 格式不符
             log.exception("刪除過期照片物件失敗：%s", key)
             failed += 1
             continue
