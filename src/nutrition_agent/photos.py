@@ -24,11 +24,10 @@ PRODUCT_PREFIX = "product"
 MEDICATION_PREFIX = "medication"
 _DEFAULT_REGION = "us-east-1"  # 只有這個 region 建 bucket 不能帶 LocationConstraint
 
-# SeaweedFS 沒設網域，只認 path-style；連線失敗時少重試、早點放棄，請求才不會卡住。
+# SeaweedFS 沒設網域，只認 path-style；逾時設短，連不上時請求才不會卡住。
 _CLIENT_CONFIG = Config(
     signature_version="s3v4",
     s3={"addressing_style": "path"},
-    retries={"max_attempts": 2, "mode": "standard"},
     connect_timeout=3,
     read_timeout=10,
 )
@@ -88,7 +87,9 @@ def make_s3_client(settings: Settings, endpoint: str) -> BaseClient:
         region_name=settings.s3_region,
         aws_access_key_id=settings.s3_access_key,
         aws_secret_access_key=resolve_s3_secret_key(settings),
-        config=_CLIENT_CONFIG,
+        config=_CLIENT_CONFIG.merge(
+            Config(retries={"max_attempts": settings.s3_max_attempts, "mode": "standard"})
+        ),
     )
 
 

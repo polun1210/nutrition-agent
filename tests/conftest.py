@@ -8,6 +8,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from botocore.client import BaseClient
+from botocore.exceptions import EndpointConnectionError
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from moto import mock_aws
@@ -28,9 +29,15 @@ TEST_S3_ENDPOINT = "http://seaweedfs.test:8333"
 TEST_BUCKET = "photos"
 TEST_PUBLIC_S3_ENDPOINT = "http://localhost:8333"
 TEST_PHOTO_URL_TTL = 600
+# 不重試：模擬儲存故障的測試不必等重試的退避時間。
 TEST_S3_SETTINGS = Settings(
-    _env_file=None, s3_access_key="test-key", s3_secret_key="test-secret", s3_region="us-east-1"
+    _env_file=None,
+    s3_access_key="test-key",
+    s3_secret_key="test-secret",
+    s3_region="us-east-1",
+    s3_max_attempts=1,
 )
+STORAGE_DOWN = "照片儲存服務暫時無法使用，請稍後再試"
 
 
 def _recreate_database(url: str) -> None:
@@ -87,6 +94,18 @@ def photo_store(s3: BaseClient) -> PhotoStore:
 def bucket_keys(s3: BaseClient) -> list[str]:
     listing = s3.list_objects_v2(Bucket=TEST_BUCKET)
     return [item["Key"] for item in listing.get("Contents", [])]
+
+
+def fail_storage(s3: BaseClient, operation: str, after: int = 0) -> None:
+    """讓物件儲存的某個操作在成功 after 次之後連不上（走真實的 botocore 例外路徑）。"""
+    calls = []
+
+    def boom(request, **_):
+        calls.append(request)
+        if len(calls) > after:
+            raise EndpointConnectionError(endpoint_url=request.url)
+
+    s3.meta.events.register(f"before-send.s3.{operation}", boom)
 
 
 @pytest.fixture

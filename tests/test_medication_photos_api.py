@@ -6,8 +6,7 @@ import re
 import httpx
 import pytest
 
-from tests.conftest import TEST_BUCKET, bucket_keys
-from tests.test_photos_api import STORAGE_DOWN, fail_storage
+from tests.conftest import STORAGE_DOWN, TEST_BUCKET, bucket_keys, fail_storage
 from tests.test_medications_api import profile_text, save
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32

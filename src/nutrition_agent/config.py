@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     s3_bucket: str = "photos"
     s3_region: str = "us-east-1"
     photo_url_ttl_seconds: int = 900
+    # 每個 S3 請求最多嘗試幾次（含第一次）；連不上時早點放棄，請求才不會卡住。
+    s3_max_attempts: int = 2
     # 照片在物件儲存保留的天數；過期清理指令的預設值。
     photo_retention_days: int = 30
     openrouter_api_key: str = ""

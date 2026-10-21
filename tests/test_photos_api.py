@@ -7,15 +7,19 @@ from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
-from botocore.exceptions import EndpointConnectionError
 from fastapi.testclient import TestClient
 
 from nutrition_agent.api.app import create_app
 from nutrition_agent.photos import PhotoStore
-from tests.conftest import TEST_BUCKET, TEST_PHOTO_URL_TTL, TEST_PUBLIC_S3_ENDPOINT, bucket_keys
+from tests.conftest import (
+    STORAGE_DOWN,
+    TEST_BUCKET,
+    TEST_PHOTO_URL_TTL,
+    TEST_PUBLIC_S3_ENDPOINT,
+    bucket_keys,
+    fail_storage,
+)
 from tests.test_assessments_api import supplement
-
-STORAGE_DOWN = "照片儲存服務暫時無法使用，請稍後再試"
 
 RECORDED = Path(__file__).resolve().parents[1] / "evals" / "vlm" / "recorded" / "vlm"
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
@@ -159,18 +163,6 @@ def test_模型服務故障時回報稍後再試且不留下照片(login_as, gat
     assert bucket_keys(s3) == []
 
 
-def fail_storage(s3, operation: str, after: int = 0) -> None:
-    """讓物件儲存的某個操作在成功 after 次之後連不上（走真實的 botocore 例外路徑）。"""
-    calls = []
-
-    def boom(request, **_):
-        calls.append(request)
-        if len(calls) > after:
-            raise EndpointConnectionError(endpoint_url=request.url)
-
-    s3.meta.events.register(f"before-send.s3.{operation}", boom)
-
-
 def test_儲存服務故障時上傳回報稍後再試且不留下照片(login_as, gateway, db, s3):
     gateway.vision_replies = [p01_reply(), BACK]
     client = login_as()
@@ -245,7 +237,7 @@ def test_產品不能掛別人的照片(login_as, gateway):
 
 
 def expire_photo(db, photo_id: int) -> None:
-    """模擬保存期限已過（清理工作之後由 #29 提供）。"""
+    """模擬保存期限已過（實際由過期清理指令 photo_cleanup 標記）。"""
     db.execute("UPDATE product_photos SET expired_at = now() WHERE id = %s", (photo_id,))
 
 

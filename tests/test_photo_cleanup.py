@@ -8,8 +8,7 @@ import pytest
 
 from nutrition_agent.config import get_settings
 from nutrition_agent.photo_cleanup import expire_photos, run
-from tests.conftest import bucket_keys
-from tests.test_photos_api import fail_storage
+from tests.conftest import bucket_keys, fail_storage
 
 NOW = datetime(2026, 10, 21, 3, 0, tzinfo=UTC)
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
