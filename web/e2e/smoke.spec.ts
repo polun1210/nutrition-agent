@@ -62,21 +62,31 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await page.getByRole("button", { name: "送出評估" }).click();
 
   await expect(page.getByRole("heading", { name: "上限比對" })).toBeVisible();
-  // 兩罐峰值加總 1000 mg → 上限 2500 mg 的 40%
-  await expect(page.getByText(/你服用當日來自補充劑的攝取量已達上限的 40%/)).toBeVisible();
+  // 兩罐峰值加總 1000 mg → 上限 2500 mg 的 40%，以表格呈現（#23）
+  const calcium = page.getByRole("table").locator("tbody").filter({ hasText: "鈣" });
+  await expect(calcium).toContainText("1000 mg");
+  await expect(calcium).toContainText("2500 mg");
+  await expect(calcium).toContainText("40%");
+  await expect(calcium).toContainText("非每天服用");
   await expect(page.getByText("已超過上限")).toHaveCount(0);
-  // 4 段固定順序；沒有審定規則時交互作用段落不寫成「沒有交互作用」；完整揭露
+  // 段落順序：重點在前，細節收合；沒有未評估成分時不顯示該段
   await expect(page.locator("section[data-section] h2")).toHaveText([
-    "你的資料",
     "交互作用",
     "上限比對",
+    "你的資料",
     "評估範圍與揭露",
+    "參考資料來源",
   ]);
   await expect(page.getByText("沒有交互作用")).toHaveCount(0);
   await expect(page.getByText(/未命中已審定的規則/)).toBeVisible();
+  // 評估範圍與揭露預設收合，點開後分類成字卡
+  await expect(page.getByText(/DPP-4 抑制劑/)).toBeHidden();
+  await page.getByText("評估範圍與揭露").click();
+  await expect(page.getByRole("heading", { name: "計算方式的限制" })).toBeVisible();
   await expect(page.getByText(/DPP-4 抑制劑/)).toBeVisible();
   await expect(page.getByText(/同一天服用/)).toBeVisible();
   await expect(page.getByRole("button", { name: "列印報告" })).toBeVisible();
+  await page.getByText("你的資料").click();
   await expect(page.getByText(/用藥 Amlodipine：在評估範圍內.*氨氯地平/)).toBeVisible();
   await page.getByRole("button", { name: "回首頁" }).click();
 
@@ -92,14 +102,15 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await expect(page.getByRole("button", { name: "刪除 隔天吃的鈣片" })).toHaveCount(0);
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
-  await expect(page.getByText(/佔上限 2500 mg 的 20%/)).toBeVisible();
+  await expect(page.getByRole("table").locator("tbody").filter({ hasText: "鈣" })).toContainText("20%");
   await page.getByRole("button", { name: "回首頁" }).click();
 
   // 歷史報告：兩筆，點開舊的那筆仍是 40%，且顯示參考資料版本
   await page.getByRole("button", { name: "歷史報告" }).click();
   await expect(page.getByRole("button", { name: /的評估（/ })).toHaveCount(2);
   await page.getByRole("button", { name: /的評估（2 項保健食品/ }).click();
-  await expect(page.getByText(/已達上限的 40%/)).toBeVisible();
+  await expect(page.getByRole("table").locator("tbody").filter({ hasText: "鈣" })).toContainText("40%");
+  await page.getByText("參考資料來源").click();
   await expect(page.getByTestId("reference-versions")).toContainText("dris");
 
   // 瀏覽器上一頁：報告 → 歷史列表 → 首頁，不會離開 app（#21）
@@ -158,14 +169,15 @@ test("用一張照片新增保健食品：辨識 → 整瓶確認一次 → 送�
   await review.getByRole("button", { name: "內容都核對過了，加入這項保健食品" }).click();
 
   await expect(page.getByRole("button", { name: "刪除 挺立 葡萄糖胺強力錠" })).toBeVisible();
-  await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/)).toBeVisible();
+  await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/).first()).toBeVisible();
 
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
 
   await expect(page.getByRole("heading", { name: "上限比對" })).toBeVisible();
-  await expect(page.getByText(/鈣：.*4.8%/)).toBeVisible(); // 每份（3 錠）含鈣 360 mg，每次 1 錠 = 120 mg
-  await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/)).toBeVisible();
+  // 每份（3 錠）含鈣 360 mg，每次 1 錠 = 120 mg
+  await expect(page.getByRole("table").locator("tbody").filter({ hasText: "鈣" })).toContainText("4.8%");
+  await expect(page.getByAltText(/挺立 葡萄糖胺強力錠 的標示照片/).first()).toBeVisible();
   // 校對頁隱藏的範圍外成分仍保存，報告照實揭露
   await expect(page.getByText(/維生素 ?B1」：不在本系統評估範圍/)).toBeVisible();
 });
@@ -189,6 +201,12 @@ test("交互作用的白話解釋附腳註，點開看到原文與來源", async
   await expect(page.getByRole("button", { name: "刪除 B12 錠" })).toBeVisible();
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
+
+  // 以藥為主角：先講重點，後面才是白話說明（#23）
+  const card = page.getByTestId("interaction-card");
+  await expect(card.getByRole("heading", { name: /^你吃的：/ })).toContainText("你吃的：Metformin");
+  await expect(card).toContainText("與你補充的「維生素 B12」有交互作用");
+  await expect(card).toContainText("維生素 B12（來自 B12 錠）");
 
   const explanations = page.getByTestId("explanations");
   await expect(explanations).toContainText("這個藥可能影響維生素 B12 的吸收。");

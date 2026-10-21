@@ -2,10 +2,13 @@
 
 數值、百分比、揭露事項全部在這裡由模板渲染，不經過 LLM。
 報告永遠不寫「安全」「未發現問題」，也不給劑量建議。
-後續的票在 `render_report` 加新段落（交互作用、完整揭露）；每段是 `Section(key, title, lines)`。
+每段是 `Section(key, title, lines)`；lines 是整段的純文字，另外附前端排版用的結構化欄位
+（drug_groups、table、notes、groups，#23）。舊報告沒有這些欄位，前端退回逐行呈現。
 """
 
 from __future__ import annotations
+
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -110,6 +113,42 @@ class Card(BaseModel):
     reasons: list[str]
     advice: list[str]
     values: list[CardValue]
+    supplemented: bool = True  # False = 沒有補充，是藥影響體內的這項營養素
+    products: list[str] = []  # 含這個成分的保健食品
+
+
+class DrugGroup(BaseModel):
+    """以藥為主角的交互作用：一個藥對到哪些成分的卡片（以 ingredient_code 對應 cards）。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    drug: str
+    drug_ingredients: list[str]  # 命中的有效成分英文名
+    ingredient_codes: list[str]
+
+
+class UlRow(BaseModel):
+    """上限比對表格的一列，數值都已由模板格式化。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    nutrient: str
+    intake: str
+    ul: str
+    percent: str | None  # None = 無已知上限攝取量
+    exceeded: bool
+    products: list[str]
+    note: str
+
+
+class Group(BaseModel):
+    """一張字卡：同一類的揭露事項。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    title: str
+    tone: Literal["neutral", "warning"]
+    lines: list[str]
 
 
 class Section(BaseModel):
@@ -119,6 +158,10 @@ class Section(BaseModel):
     title: str
     lines: list[str]
     cards: list[Card] = []
+    drug_groups: list[DrugGroup] = []
+    table: list[UlRow] = []
+    notes: list[str] = []  # 表格以外的補充說明
+    groups: list[Group] = []
 
 
 class Report(BaseModel):
@@ -138,29 +181,45 @@ def render_report(
     footnotes: list[Footnote] | None = None,
 ) -> Report:
     names = _Names(ref)
+    not_evaluated = _not_evaluated_groups(assessment, names)
+    scope = _scope_groups(assessment, ref)
+    ul_notes = _ul_notes(assessment, ref, names)
     return Report(
         explanations=explanations or [],
         footnotes=footnotes or [],
         sections=[
-            Section(key="profile", title="你的資料", lines=_profile_lines(case, names, ref)),
             Section(
                 key="interaction",
                 title="交互作用",
                 lines=_interaction_lines(case, assessment, names),
-                cards=[_card(f, names) for f in assessment.interactions],
+                cards=[_card(f, names, case) for f in assessment.interactions],
+                drug_groups=_drug_groups(assessment, ref),
             ),
             Section(
                 key="ul_comparison",
                 title="上限比對",
-                lines=_ul_lines(assessment, ref, names),
+                lines=_ul_lines(assessment, ul_notes, names),
+                table=[_ul_row(c, names, case) for c in assessment.ul_comparisons],
+                notes=ul_notes,
             ),
             Section(
-                key="scope",
-                title="評估範圍與揭露",
-                lines=_scope_lines(assessment, names, ref),
+                key="not_evaluated",
+                title="本系統未評估的成分",
+                lines=_flatten(not_evaluated),
+                groups=not_evaluated,
             ),
+            Section(key="profile", title="你的資料", lines=_profile_lines(case, names, ref)),
+            Section(key="scope", title="評估範圍與揭露", lines=_flatten(scope), groups=scope),
         ]
     )
+
+
+def _flatten(groups: list[Group]) -> list[str]:
+    return [line for g in groups for line in g.lines]
+
+
+def _products_with(case: AssessmentCase, code: str) -> list[str]:
+    return [p.name for p in case.products if any(i.ingredient_code == code for i in p.ingredients)]
 
 
 class _Names:
@@ -236,20 +295,43 @@ def _product_line(product: Product, names: _Names, ref: ReferenceData) -> str:
     )
 
 
-def _ul_lines(assessment: Assessment, ref: ReferenceData, names: _Names) -> list[str]:
-    lines = [_comparison_line(c, names) for c in assessment.ul_comparisons]
-    lines.extend(
+def _ul_notes(assessment: Assessment, ref: ReferenceData, names: _Names) -> list[str]:
+    notes = [
         f"{s.product_name} 的{names(s.nutrient_code)}：依化合物「{_compound_name(ref, s.compound_code)}」"
         f"重量推估元素量（{ESTIMATE_NOTE}）"
         for s in assessment.nutrient_sources
         if s.source is SourceKind.ESTIMATED
-    )
-    lines.extend(
+    ]
+    notes.extend(
         f"{names(code)}：無法判定元素量（標示單位無法換算，或只標化合物而無法推估），"
         "未計入上限比對"
         for code in assessment.undetermined_nutrients
     )
+    return notes
+
+
+def _ul_lines(assessment: Assessment, notes: list[str], names: _Names) -> list[str]:
+    lines = [_comparison_line(c, names) for c in assessment.ul_comparisons] + notes
     return lines or ["你的保健食品沒有可進行上限比對的目標營養素"]
+
+
+def _ul_row(c: UlComparison, names: _Names, case: AssessmentCase) -> UlRow:
+    notes = []
+    if c.non_daily:
+        notes.append(f"非每天服用：數值是服用當日的量，平均每日 {_num(c.average_intake)} {c.unit}")
+    if c.ul is not None:
+        notes.append(UL_SCOPE_TEXT[c.ul_scope] + UL_EXTRA_NOTE.get(c.nutrient_code, ""))
+    if c.estimated:
+        notes.append(ESTIMATE_NOTE)
+    return UlRow(
+        nutrient=names(c.nutrient_code),
+        intake=f"{_num(c.intake)} {c.unit}",
+        ul=f"{_num(c.ul)} {c.unit}" if c.ul is not None else "無已知上限攝取量",
+        percent=f"{_num(c.ul_percent)}%" if c.ul_percent is not None else None,
+        exceeded=c.exceeded,
+        products=_products_with(case, c.nutrient_code),
+        note="；".join(notes),
+    )
 
 
 def _comparison_line(c: UlComparison, names: _Names) -> str:
@@ -285,7 +367,7 @@ def _interaction_lines(
     return [NO_HIT_TEXT if assessment.approved_rule_count else NO_RULES_TEXT]
 
 
-def _card(f: InteractionFinding, names: _Names) -> Card:
+def _card(f: InteractionFinding, names: _Names, case: AssessmentCase | None = None) -> Card:
     return Card(
         ingredient=names(f.ingredient_code),
         ingredient_code=f.ingredient_code,
@@ -293,7 +375,27 @@ def _card(f: InteractionFinding, names: _Names) -> Card:
         reasons=list(f.reasons_zh),
         advice=[_advice_text(f, a) for a in f.advice],
         values=_card_values(f),
+        supplemented=f.supplemented,
+        products=_products_with(case, f.ingredient_code) if case else [],
     )
+
+
+def _drug_groups(assessment: Assessment, ref: ReferenceData) -> list[DrugGroup]:
+    """依使用者輸入的藥名分組，順序照卡片裡第一次出現的順序。"""
+    english = {i.code: i.name_en for i in ref.drugs.ingredients}
+    groups: dict[str, tuple[list[str], list[str]]] = {}
+    for f in assessment.interactions:
+        for d in f.triggering_drugs:
+            ingredients, codes = groups.setdefault(d.raw_name, ([], []))
+            name = english.get(d.ingredient_code, d.ingredient_code)
+            if name not in ingredients:
+                ingredients.append(name)
+            if f.ingredient_code not in codes:
+                codes.append(f.ingredient_code)
+    return [
+        DrugGroup(drug=drug, drug_ingredients=ingredients, ingredient_codes=codes)
+        for drug, (ingredients, codes) in groups.items()
+    ]
 
 
 def _card_lines(f: InteractionFinding, names: _Names) -> list[str]:
@@ -333,22 +435,44 @@ def _card_values(f: InteractionFinding) -> list[CardValue]:
     ]
 
 
-def _scope_lines(assessment: Assessment, names: _Names, ref: ReferenceData) -> list[str]:
-    lines = [
+def _not_evaluated_groups(assessment: Assessment, names: _Names) -> list[Group]:
+    neutral = [
         f"{i.product_name} 含「{names(i.ingredient_code)}」：不在本系統評估範圍，已如實保留"
         for i in assessment.out_of_scope_ingredients
     ]
-    lines.extend(
+    warning = [
         f"注意：{i.product_name} 有無法確認的成分：系統無法確認它是什麼，"
         "可能是範圍內成分的其他寫法，建議諮詢藥師"
         for i in assessment.unconfirmed_ingredients
-    )
-    for code in assessment.disclosures:
-        if code == SCOPE_COVERAGE:
-            lines.extend(_coverage_lines(ref))
-        else:
-            lines.append(DISCLOSURE_TEXT[code])
-    return lines
+    ]
+    groups = [
+        Group(title="不在本系統評估範圍", tone="neutral", lines=neutral),
+        Group(title="無法確認的成分", tone="warning", lines=warning),
+    ]
+    return [g for g in groups if g.lines]
+
+
+# 揭露事項分成字卡：特別提醒（警示）→ 計算方式的限制 → 本系統涵蓋範圍
+_REMINDERS = {ANTACID_REMINDER}
+
+
+def _scope_groups(assessment: Assessment, ref: ReferenceData) -> list[Group]:
+    codes = [c for c in assessment.disclosures if c != SCOPE_COVERAGE]
+    groups = [
+        Group(
+            title="特別提醒",
+            tone="warning",
+            lines=[DISCLOSURE_TEXT[c] for c in codes if c in _REMINDERS],
+        ),
+        Group(
+            title="計算方式的限制",
+            tone="neutral",
+            lines=[DISCLOSURE_TEXT[c] for c in codes if c not in _REMINDERS],
+        ),
+    ]
+    if SCOPE_COVERAGE in assessment.disclosures:
+        groups.append(Group(title="本系統涵蓋範圍", tone="neutral", lines=_coverage_lines(ref)))
+    return [g for g in groups if g.lines]
 
 
 def _coverage_lines(ref: ReferenceData) -> list[str]:

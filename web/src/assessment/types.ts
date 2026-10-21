@@ -115,13 +115,34 @@ export type InteractionCard = {
   reasons: string[];
   advice: string[];
   values: { label: string; text: string }[];
+  /** 以下為 #23 新增；舊報告沒有這些欄位。 */
+  supplemented?: boolean;
+  products?: string[];
 };
+
+export type DrugGroup = { drug: string; drug_ingredients: string[]; ingredient_codes: string[] };
+
+export type UlRow = {
+  nutrient: string;
+  intake: string;
+  ul: string;
+  percent: string | null;
+  exceeded: boolean;
+  products: string[];
+  note: string;
+};
+
+export type ReportGroup = { title: string; tone: "neutral" | "warning"; lines: string[] };
 
 export type ReportSection = {
   key: string;
   title: string;
   lines: string[];
   cards?: InteractionCard[];
+  drug_groups?: DrugGroup[];
+  table?: UlRow[];
+  notes?: string[];
+  groups?: ReportGroup[];
 };
 
 export type ExplainedSentence = { text: string; evidence_ids: string[]; footnotes: number[] };

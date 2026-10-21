@@ -29,13 +29,14 @@ def full_text(report):
     return "\n".join(parts)
 
 
-def test_report_has_exactly_four_sections_in_fixed_order(ref):
+def test_report_sections_in_reading_order(ref):
     report = render(make_case(product("鈣", [line("calcium", 500)])), ref)
 
     assert [s.title for s in report.sections] == [
-        "你的資料",
         "交互作用",
         "上限比對",
+        "本系統未評估的成分",
+        "你的資料",
         "評估範圍與揭露",
     ]
 
@@ -92,7 +93,7 @@ def test_out_of_scope_neutral_and_unconfirmed_warning(ref):
         product("神秘粉", [line("unknown", 5)]),
     )
 
-    text = section_text(case, ref, "scope")
+    text = section_text(case, ref, "not_evaluated")
 
     assert "輔酶 Q10" in text and "不在本系統評估範圍" in text
     assert "無法確認" in text and "藥師" in text

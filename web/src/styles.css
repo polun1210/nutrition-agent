@@ -165,11 +165,13 @@ label.estimated input {
 
 .interaction-card dl div {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  column-gap: 0.5rem;
 }
 
 .interaction-card dt {
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .interaction-card dd {
@@ -178,6 +180,116 @@ label.estimated input {
 
 .card-advice {
   font-weight: bold;
+}
+
+/* 以藥為主角的卡片：上半部重點，下半部各成分的說明 */
+.card-summary {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 0.25rem 0;
+}
+
+.card-points {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+
+.card-points li {
+  margin: 0.25rem 0;
+}
+
+.card-details {
+  border-top: 1px solid #ccc;
+  margin-top: 0.75rem;
+}
+
+.nutrient-detail h4 {
+  margin: 0.75rem 0 0.25rem;
+}
+
+/* 上限比對表格：手機寬度下欄位縮小，備註另起一列 */
+.ul-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.ul-table th,
+.ul-table td {
+  padding: 0.4rem 0.3rem;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.ul-table thead th {
+  border-bottom: 2px solid #333;
+  font-size: 0.85rem;
+}
+
+.ul-table tbody {
+  border-bottom: 1px solid #ccc;
+  break-inside: avoid;
+}
+
+.ul-table th small {
+  display: block;
+  font-weight: normal;
+  color: #555;
+}
+
+.ul-table tbody[data-exceeded="true"] {
+  background: #fdecea;
+}
+
+.ul-table td strong {
+  display: block;
+  color: #b00020;
+}
+
+.ul-note td {
+  padding-top: 0;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+/* 字卡：同一類的揭露事項 */
+.group-card {
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+  break-inside: avoid;
+}
+
+.group-card h3 {
+  margin: 0.25rem 0;
+  font-size: 1rem;
+}
+
+.group-card ul {
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+
+.group-card[data-tone="warning"] {
+  border-color: #b8860b;
+  background: #fff4e5;
+}
+
+/* 預設收合的段落：整列標題都能點 */
+.collapsible summary {
+  cursor: pointer;
+  list-style-position: outside;
+  margin-left: 1rem;
+}
+
+.collapsible summary h2 {
+  display: inline;
+}
+
+.references {
+  padding-left: 1.5rem;
 }
 
 @media print {
@@ -196,7 +308,8 @@ label.estimated input {
     padding: 0;
   }
 
-  section {
-    break-inside: avoid;
+  .collapsible summary {
+    list-style: none;
+    margin-left: 0;
   }
 }
