@@ -17,7 +17,7 @@ from botocore.client import BaseClient
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
-from nutrition_agent.config import Settings
+from nutrition_agent.config import Settings, resolve_s3_secret_key
 
 MAX_PHOTO_BYTES = 10 * 1024 * 1024
 PRODUCT_PREFIX = "product"
@@ -102,10 +102,10 @@ class PhotoStore:
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "PhotoStore":
+        secret_key = resolve_s3_secret_key(settings)
+
         def client(endpoint: str) -> BaseClient:
-            return make_s3_client(
-                endpoint, settings.s3_access_key, settings.s3_secret_key, settings.s3_region
-            )
+            return make_s3_client(endpoint, settings.s3_access_key, secret_key, settings.s3_region)
 
         return cls(
             client(settings.s3_internal_endpoint),

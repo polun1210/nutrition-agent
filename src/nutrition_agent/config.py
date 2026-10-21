@@ -5,6 +5,7 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEV_SESSION_SECRET = "dev-only-insecure-session-secret"
+DEV_S3_SECRET_KEY = "nutrition-dev-secret"  # 與 compose 的 SeaweedFS 預設金鑰相同
 
 
 class Settings(BaseSettings):
@@ -21,7 +22,8 @@ class Settings(BaseSettings):
     s3_internal_endpoint: str = "http://127.0.0.1:8333"
     s3_public_endpoint: str = "http://localhost:8333"
     s3_access_key: str = "nutrition"
-    s3_secret_key: str = "nutrition-dev-secret"
+    # 正式環境（APP_ENV 不是 development）仍用開發預設金鑰會拒絕啟動。
+    s3_secret_key: str = DEV_S3_SECRET_KEY
     s3_bucket: str = "photos"
     s3_region: str = "us-east-1"
     photo_url_ttl_seconds: int = 900
@@ -52,3 +54,10 @@ def resolve_session_secret(settings: Settings) -> str:
     if settings.app_env != "development":
         raise RuntimeError("正式環境必須設定 SESSION_SECRET（本機開發請設 APP_ENV=development）")
     return DEV_SESSION_SECRET
+
+
+def resolve_s3_secret_key(settings: Settings) -> str:
+    """建立 S3 client 時取得金鑰；正式環境仍是開發預設值就拒絕啟動。"""
+    if settings.app_env != "development" and settings.s3_secret_key == DEV_S3_SECRET_KEY:
+        raise RuntimeError("正式環境必須設定 S3_SECRET_KEY（本機開發請設 APP_ENV=development）")
+    return settings.s3_secret_key
