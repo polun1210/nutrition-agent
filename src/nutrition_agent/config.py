@@ -16,8 +16,12 @@ class Settings(BaseSettings):
     # 簽 session cookie 用；正式環境務必以環境變數提供並開啟 https_only。
     session_secret: str = ""
     session_https_only: bool = False
-    # 保健食品照片存放的本機資料夾（compose 以 volume 掛載）。
-    photo_dir: str = "data/photos"
+    # 照片物件儲存（S3 API）。預設對應 compose 的 SeaweedFS；換 AWS S3 或 R2 只改這幾項。
+    s3_internal_endpoint: str = "http://127.0.0.1:8333"
+    s3_access_key: str = "nutrition"
+    s3_secret_key: str = "nutrition-dev-secret"
+    s3_bucket: str = "photos"
+    s3_region: str = "us-east-1"
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_provider: str = ""

@@ -2,20 +2,21 @@
 
 import os
 from collections.abc import Callable, Iterator
-from pathlib import Path
 
 import psycopg
 import pytest
 from alembic import command
 from alembic.config import Config
+from botocore.client import BaseClient
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from moto import mock_aws
 from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
 from nutrition_agent.api.assessments import get_drug_names
 from nutrition_agent.config import to_sqlalchemy_url
-from nutrition_agent.photos import PhotoStore
+from nutrition_agent.photos import PhotoStore, make_s3_client
 from nutrition_agent.reference.drug_names import load_sample_drug_names
 from tests.fakes import FakeGateway
 
@@ -23,6 +24,8 @@ TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql://nutrition:nutrition@127.0.0.1:55432/nutrition_test",
 )
+TEST_S3_ENDPOINT = "http://seaweedfs.test:8333"
+TEST_BUCKET = "photos"
 
 
 def _recreate_database(url: str) -> None:
@@ -60,10 +63,29 @@ def gateway() -> FakeGateway:
 
 
 @pytest.fixture
-def app(db: psycopg.Connection, gateway: FakeGateway, tmp_path: Path) -> FastAPI:
-    app = create_app(
-        connection_provider=lambda: db, gateway=gateway, photo_store=PhotoStore(tmp_path / "photos")
-    )
+def s3(monkeypatch: pytest.MonkeyPatch) -> Iterator[BaseClient]:
+    """moto 模擬的 S3：照真實組態走自訂 internal endpoint，不連外。"""
+    monkeypatch.setenv("MOTO_S3_CUSTOM_ENDPOINTS", TEST_S3_ENDPOINT)
+    with mock_aws():
+        yield make_s3_client(TEST_S3_ENDPOINT, "test-key", "test-secret", "us-east-1")
+
+
+@pytest.fixture
+def photo_store(s3: BaseClient) -> PhotoStore:
+    # TestClient 沒用 with 就不會跑 lifespan，bucket 由這裡自己建。
+    store = PhotoStore(s3, TEST_BUCKET)
+    store.ensure_bucket()
+    return store
+
+
+def bucket_keys(s3: BaseClient) -> list[str]:
+    listing = s3.list_objects_v2(Bucket=TEST_BUCKET)
+    return [item["Key"] for item in listing.get("Contents", [])]
+
+
+@pytest.fixture
+def app(db: psycopg.Connection, gateway: FakeGateway, photo_store: PhotoStore) -> FastAPI:
+    app = create_app(connection_provider=lambda: db, gateway=gateway, photo_store=photo_store)
     # 藥名用 repo 內的夾具，測試結果不受完整匯出檔（drug_names.csv）影響。
     sample = load_sample_drug_names()
     app.dependency_overrides[get_drug_names] = lambda: sample

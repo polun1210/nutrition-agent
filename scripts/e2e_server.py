@@ -9,7 +9,6 @@ import json
 import os
 import re
 import sys
-import tempfile
 from pathlib import Path
 
 os.environ.setdefault("APP_ENV", "development")  # 須在 import app 之前
@@ -18,13 +17,14 @@ import psycopg
 import uvicorn
 from alembic import command
 from alembic.config import Config
+from moto import mock_aws
 from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
 from nutrition_agent.api.assessments import get_drug_names, get_reference
 from nutrition_agent.config import get_settings, to_sqlalchemy_url
 from nutrition_agent.extraction import medication_pack
-from nutrition_agent.photos import PhotoStore
+from nutrition_agent.photos import PhotoStore, make_s3_client
 from nutrition_agent.reference import load_reference_data, load_rule_set
 from nutrition_agent.reference.drug_names import load_sample_drug_names
 
@@ -58,6 +58,8 @@ class RecordedVlmGateway:
         return [[0.0] * 4 for _ in texts]
 
 DEFAULT_URL = "postgresql://nutrition:nutrition@127.0.0.1:55432/nutrition_e2e"
+# 煙霧測試不需要真的 SeaweedFS：照片物件存在 moto 的記憶體 S3。
+E2E_S3_ENDPOINT = "http://seaweedfs.e2e:8333"
 
 
 def check_database_name(url: str) -> str:
@@ -97,10 +99,10 @@ def main() -> None:
             (EVIDENCE_ID, ["vitamin_b12", "metformin"], EVIDENCE_TEXT),
         )
     ref = load_reference_data().model_copy(update={"rules": load_rule_set(FIXTURE_RULES)})
-    app = create_app(
-        gateway=RecordedVlmGateway(),
-        photo_store=PhotoStore(Path(tempfile.mkdtemp(prefix="nutrition-e2e-photos-"))),
-    )
+    os.environ["MOTO_S3_CUSTOM_ENDPOINTS"] = E2E_S3_ENDPOINT
+    mock_aws().start()  # 不停止：行程結束就清掉，uvicorn 的執行緒都看得到
+    store = PhotoStore(make_s3_client(E2E_S3_ENDPOINT, "e2e", "e2e", "us-east-1"), "photos")
+    app = create_app(gateway=RecordedVlmGateway(), photo_store=store)  # bucket 由 lifespan 建
     app.dependency_overrides[get_reference] = lambda: ref
     sample = load_sample_drug_names()
     app.dependency_overrides[get_drug_names] = lambda: sample

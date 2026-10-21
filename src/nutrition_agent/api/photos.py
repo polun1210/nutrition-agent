@@ -3,6 +3,8 @@
 照片與辨識結果都以 user.id 過濾；別人的草稿或照片一律 404，不洩漏是否存在。
 """
 
+import logging
+
 import psycopg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from psycopg.types.json import Jsonb
@@ -15,13 +17,19 @@ from nutrition_agent.api.deps import (
     get_gateway,
     get_photo_store,
 )
-from nutrition_agent.api.uploads import check_photo_count, model_service_errors, read_upload
+from nutrition_agent.api.uploads import (
+    check_photo_count,
+    model_service_errors,
+    photo_storage_errors,
+    read_upload,
+)
 from nutrition_agent.extraction import VlmReading, build_extraction, read_label
 from nutrition_agent.gateway import ModelGateway
-from nutrition_agent.photos import PhotoStore
+from nutrition_agent.photos import PhotoNotFound, PhotoStorageError, PhotoStore
 from nutrition_agent.reference import ReferenceData
 
 router = APIRouter(prefix="/api")
+log = logging.getLogger(__name__)
 
 def _existing_readings(
     conn: psycopg.Connection, user: User, draft_id: int, photo_ids: list[int]
@@ -58,15 +66,30 @@ def recognize_photos(
     with model_service_errors("VLM"):
         new_readings = [read_label(gateway, data, mime) for data, mime, _ in uploads]
 
-    for (data, mime, ext), reading in zip(uploads, new_readings, strict=True):
-        stored_name = store.save(data, ext)
-        photo_id = conn.execute(
-            "INSERT INTO product_photos (user_id, draft_id, stored_name, mime_type, reading) "
-            "VALUES (%s, %s, %s, %s, %s) RETURNING id",
-            (user.id, draft_id, stored_name, mime, Jsonb(reading.model_dump(mode="json"))),
-        ).fetchone()[0]
-        readings.append((photo_id, reading))
+    keys: list[str] = []
+    try:
+        with photo_storage_errors():
+            for data, mime, ext in uploads:
+                keys.append(store.save(data, ext, mime))
+        for key, (_, mime, _), reading in zip(keys, uploads, new_readings, strict=True):
+            photo_id = conn.execute(
+                "INSERT INTO product_photos (user_id, draft_id, stored_name, mime_type, reading) "
+                "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (user.id, draft_id, key, mime, Jsonb(reading.model_dump(mode="json"))),
+            ).fetchone()[0]
+            readings.append((photo_id, reading))
+    except Exception:
+        _discard(store, keys)  # 中途失敗：本次已存的物件不留在 bucket
+        raise
     return build_extraction(readings, ref.ingredients).model_dump(mode="json")
+
+
+def _discard(store: PhotoStore, keys: list[str]) -> None:
+    for key in keys:
+        try:
+            store.delete(key)
+        except PhotoStorageError:
+            log.exception("清掉未寫入資料庫的照片物件失敗：%s", key)
 
 
 @router.get("/photos/{photo_id}")
@@ -83,7 +106,8 @@ def get_photo(
     if row is None:
         raise HTTPException(status_code=404, detail="找不到這張照片")
     try:
-        data = store.read(row[0])
-    except FileNotFoundError as err:
+        with photo_storage_errors():
+            data = store.read(row[0])
+    except PhotoNotFound as err:
         raise HTTPException(status_code=404, detail="找不到這張照片") from err
     return Response(content=data, media_type=row[1], headers={"Cache-Control": "private, max-age=3600"})

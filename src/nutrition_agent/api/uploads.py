@@ -1,4 +1,4 @@
-"""照片上傳端點共用：張數上限、檔案檢查、模型服務錯誤對應。"""
+"""照片上傳端點共用：張數上限、檔案檢查、模型服務與照片儲存的錯誤對應。"""
 
 import logging
 from collections.abc import Iterator
@@ -7,7 +7,7 @@ from contextlib import contextmanager
 import httpx
 from fastapi import HTTPException, UploadFile
 
-from nutrition_agent.photos import MAX_PHOTO_BYTES, sniff_image
+from nutrition_agent.photos import MAX_PHOTO_BYTES, PhotoStorageError, sniff_image
 
 MAX_PHOTOS_PER_PRODUCT = 8
 
@@ -43,3 +43,15 @@ def model_service_errors(what: str) -> Iterator[None]:
     except httpx.HTTPError as err:
         log.exception("%s 呼叫失敗", what)
         raise HTTPException(status_code=502, detail="辨識服務暫時無法使用，請稍後再試") from err
+
+
+@contextmanager
+def photo_storage_errors() -> Iterator[None]:
+    """照片物件儲存故障一律對外回 502，細節只進 log。"""
+    try:
+        yield
+    except PhotoStorageError as err:
+        log.exception("照片物件儲存操作失敗")
+        raise HTTPException(
+            status_code=502, detail="照片儲存服務暫時無法使用，請稍後再試"
+        ) from err

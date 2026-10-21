@@ -1,11 +1,19 @@
 """保健食品照片：上傳 → 辨識（假模型閘道）→ 預填；照片只有本人拿得到。"""
 
 import json
+import re
 from pathlib import Path
 
 import httpx
+from botocore.exceptions import EndpointConnectionError
+from fastapi.testclient import TestClient
 
+from nutrition_agent.api.app import create_app
+from nutrition_agent.photos import PhotoStore
+from tests.conftest import TEST_BUCKET, bucket_keys
 from tests.test_assessments_api import supplement
+
+STORAGE_DOWN = "照片儲存服務暫時無法使用，請稍後再試"
 
 RECORDED = Path(__file__).resolve().parents[1] / "evals" / "vlm" / "recorded" / "vlm"
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
@@ -73,6 +81,18 @@ def test_已辨識過的照片用編號補進來不會重新辨識(login_as, gat
     assert {r["raw_name"] for r in second["rows"]} == {"鎂"}
 
 
+def test_上傳後照片存進bucket且key不含使用者資訊(login_as, gateway, s3):
+    gateway.vision_replies = [p01_reply()]
+    client = login_as("someone@example.com")
+
+    assert upload(client, new_draft(client), JPEG).status_code == 200
+
+    [key] = bucket_keys(s3)
+    assert re.fullmatch(r"product/[0-9a-f]{32}\.jpg", key)
+    stored = s3.get_object(Bucket=TEST_BUCKET, Key=key)
+    assert stored["Body"].read() == JPEG and stored["ContentType"] == "image/jpeg"
+
+
 def test_照片只有本人拿得到(login_as, make_client, gateway):
     gateway.vision_replies = [p01_reply()]
     owner = login_as("a@example.com")
@@ -106,7 +126,7 @@ def test_只收圖片檔(login_as, gateway):
     assert gateway.calls == []
 
 
-def test_模型服務故障時回報稍後再試且不留下照片(login_as, gateway, db):
+def test_模型服務故障時回報稍後再試且不留下照片(login_as, gateway, db, s3):
     gateway.vision_replies = [httpx.ConnectError("boom")]
     client = login_as()
 
@@ -114,6 +134,63 @@ def test_模型服務故障時回報稍後再試且不留下照片(login_as, gat
 
     assert response.status_code == 502
     assert db.execute("SELECT count(*) FROM product_photos").fetchone()[0] == 0
+    assert bucket_keys(s3) == []
+
+
+def fail_storage(s3, operation: str, after: int = 0) -> None:
+    """讓物件儲存的某個操作在成功 after 次之後連不上（走真實的 botocore 例外路徑）。"""
+    calls = []
+
+    def boom(request, **_):
+        calls.append(request)
+        if len(calls) > after:
+            raise EndpointConnectionError(endpoint_url=request.url)
+
+    s3.meta.events.register(f"before-send.s3.{operation}", boom)
+
+
+def test_儲存服務故障時上傳回報稍後再試且不留下照片(login_as, gateway, db, s3):
+    gateway.vision_replies = [p01_reply(), BACK]
+    client = login_as()
+    fail_storage(s3, "PutObject", after=1)  # 第一張存進去、第二張失敗
+
+    response = upload(client, new_draft(client), JPEG, PNG)
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == STORAGE_DOWN
+    assert bucket_keys(s3) == []
+    assert db.execute("SELECT count(*) FROM product_photos").fetchone()[0] == 0
+
+
+def test_儲存服務故障時取照片回報稍後再試(login_as, gateway, s3):
+    gateway.vision_replies = [p01_reply()]
+    client = login_as()
+    photo_id = upload(client, new_draft(client), JPEG).json()["photos"][0]["photo_id"]
+    fail_storage(s3, "GetObject")
+
+    response = client.get(f"/api/photos/{photo_id}")
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == STORAGE_DOWN
+
+
+def test_bucket裡沒有物件時取照片回404(login_as, gateway, s3):
+    gateway.vision_replies = [p01_reply()]
+    client = login_as()
+    photo_id = upload(client, new_draft(client), JPEG).json()["photos"][0]["photo_id"]
+    [key] = bucket_keys(s3)
+    s3.delete_object(Bucket=TEST_BUCKET, Key=key)
+
+    assert client.get(f"/api/photos/{photo_id}").status_code == 404
+
+
+def test_API啟動時自動建立不存在的bucket(s3):
+    store = PhotoStore(s3, "fresh-bucket")
+
+    with TestClient(create_app(photo_store=store)):
+        pass
+
+    assert s3.head_bucket(Bucket="fresh-bucket")["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 
 def test_已送出的草稿不能再上傳(login_as, gateway):
