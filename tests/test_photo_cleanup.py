@@ -1,5 +1,6 @@
 """過期照片清理（Seam：清理函式＋CLI，真的測試 DB＋moto）：只刪物件，資料列與辨識結果保留。"""
 
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
 import psycopg
@@ -8,6 +9,7 @@ import pytest
 from nutrition_agent.config import get_settings
 from nutrition_agent.photo_cleanup import expire_photos, run
 from tests.conftest import bucket_keys
+from tests.test_photos_api import fail_storage
 
 NOW = datetime(2026, 10, 21, 3, 0, tzinfo=UTC)
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
@@ -171,3 +173,48 @@ def test_CLI執行後印出刪除物件數與標記列數(db, draft, photo_store
 
     assert "刪除物件 1 個，標記 1 列" in capsys.readouterr().out
     assert bucket_keys(s3) == []
+
+
+@pytest.fixture
+def committed(database_url: str) -> Iterator[psycopg.Connection]:
+    """autocommit 連線（同 CLI）：寫入會真的 commit，用另一條連線才看得出哪些標記留下來。"""
+    with psycopg.connect(database_url, autocommit=True) as conn:
+        user_id = conn.execute(
+            "INSERT INTO users (email, password_hash, birth_year, birth_month, sex, conditions) "
+            "VALUES ('committed@example.com', 'x', 1950, 6, 'female', ARRAY['hypertension']) "
+            "RETURNING id"
+        ).fetchone()[0]
+        try:
+            yield conn
+        finally:
+            conn.execute("DELETE FROM product_photos WHERE user_id = %s", (user_id,))
+            conn.execute("DELETE FROM assessment_drafts WHERE user_id = %s", (user_id,))
+            conn.execute("DELETE FROM users WHERE id = %s", (user_id,))
+
+
+def committed_draft(conn: psycopg.Connection) -> tuple[int, int]:
+    user_id = conn.execute(
+        "SELECT id FROM users WHERE email = 'committed@example.com'"
+    ).fetchone()[0]
+    draft_id = conn.execute(
+        "INSERT INTO assessment_drafts (user_id) VALUES (%s) RETURNING id", (user_id,)
+    ).fetchone()[0]
+    return user_id, draft_id
+
+
+def test_CLI中途刪除失敗時已處理的標記保留並以非零狀態結束(
+    committed, database_url, photo_store, s3, capsys
+):
+    draft = committed_draft(committed)
+    keys = sorted(photo_store.save(JPEG, ".jpg", "image/jpeg") for _ in range(2))
+    done, failed = (product_photo(committed, draft, key, NOW - timedelta(days=8)) for key in keys)
+    fail_storage(s3, "DeleteObject", after=1)  # 依 key 排序處理：第一個刪掉、第二個失敗
+
+    status = run(["--days", "7"], committed, photo_store, NOW)
+
+    assert status != 0
+    assert "失敗 1 個" in capsys.readouterr().err
+    assert bucket_keys(s3) == [keys[1]]
+    with psycopg.connect(database_url) as other:
+        assert expired_at(other, done) == NOW
+        assert expired_at(other, failed) is None
