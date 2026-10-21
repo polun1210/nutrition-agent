@@ -137,19 +137,20 @@ def test_保健食品與藥包照片都會處理(db, draft, photo_store, s3):
     assert expired_at(db, fresh_id, "medication_photos") is None
 
 
-def test_保存天數預設取自設定(db, draft, photo_store, monkeypatch):
+def test_CLI沒給天數時保存天數取自設定(db, draft, photo_store, s3, monkeypatch, capsys):
     monkeypatch.setenv("PHOTO_RETENTION_DAYS", "7")
     get_settings.cache_clear()
     try:
         key = photo_store.save(JPEG, ".jpg", "image/jpeg")
         product_photo(db, draft, key, NOW - timedelta(days=8))
 
-        result = expire_photos(db, photo_store, NOW)
+        run([], db, photo_store, NOW)
     finally:
         monkeypatch.delenv("PHOTO_RETENTION_DAYS")
         get_settings.cache_clear()
 
-    assert result.deleted_objects == 1
+    assert "刪除物件 1 個" in capsys.readouterr().out
+    assert bucket_keys(s3) == []
 
 
 def test_CLI_dry_run以自訂天數印出數量且不改任何東西(db, draft, photo_store, s3, capsys):

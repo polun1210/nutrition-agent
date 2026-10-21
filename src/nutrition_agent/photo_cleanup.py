@@ -47,13 +47,11 @@ def expire_photos(
     conn: psycopg.Connection,
     store: PhotoStore,
     now: datetime,
-    retention_days: int | None = None,
+    retention_days: int,
     *,
     dry_run: bool = False,
 ) -> CleanupResult:
     """刪除滿保存天數的照片物件並標記資料列；dry_run 只計算會處理的數量，不改任何東西。"""
-    if retention_days is None:
-        retention_days = get_settings().photo_retention_days
     cutoff = now - timedelta(days=retention_days)
     due = conn.execute(_DUE_KEYS, (cutoff,)).fetchall()
     if dry_run:
@@ -94,7 +92,8 @@ def run(argv: list[str], conn: psycopg.Connection, store: PhotoStore, now: datet
     args = parser.parse_args(argv)
     if args.days is not None and args.days < 0:
         parser.error("--days 不可為負數")
-    result = expire_photos(conn, store, now, args.days, dry_run=args.dry_run)
+    days = get_settings().photo_retention_days if args.days is None else args.days
+    result = expire_photos(conn, store, now, days, dry_run=args.dry_run)
     prefix = "[dry-run] 將" if args.dry_run else "已"
     print(f"{prefix}刪除物件 {result.deleted_objects} 個，標記 {result.marked_rows} 列")
     if result.failed_objects:
