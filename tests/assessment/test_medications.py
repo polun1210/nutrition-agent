@@ -12,7 +12,10 @@ ENTRIES = [
     ("CRESTOR 10MG FILM-COATED TABLETS", "en", ("rosuvastatin",), ()),
     ("冠脂妥膜衣錠5毫克", "zh", ("rosuvastatin",), ()),
     ("脈優錠5毫克", "zh", ("amlodipine",), ()),
-    ("脈優立膜衣錠5/10毫克", "zh", ("amlodipine", "atorvastatin"), ()),
+    ("脂脈優5毫克/10毫克", "zh", ("amlodipine", "atorvastatin"), ()),
+    ("舒脈優膜衣錠 20/5/12.5毫克", "zh", ("amlodipine",), ("olmesartan medoxomil",)),
+    ("Exforge film-coated tablet 5/80mg", "en", ("amlodipine", "valsartan"), ()),
+    ("Exforge HCT Film Coated Tablets 5/160/12.5 mg", "en", ("amlodipine", "hydrochlorothiazide", "valsartan"), ()),
     ("NORVASC TABLETS 5MG", "en", ("amlodipine",), ()),
     ("金舒胃得腸溶膜衣錠20毫克", "zh", ("pantoprazole",), ()),
     ("Gisowed Gastro-Resistant Tablets 20 mg", "en", ("pantoprazole",), ()),
@@ -22,6 +25,8 @@ ENTRIES = [
     ("Metformin", "en", ("metformin",), ()),
     ("Metformin Hydrochloride and Glimepiride Tablets", "en", ("metformin",), ("glimepiride",)),
     ("B Complex Tablets", "en", (), ("thiamine",)),
+    ('SWELLIN TABLET "C.M."', "en", ("aluminum_hydroxide",), ()),
+    ('"C.M." VIT. ANTI-COLD CAPSULES', "en", ("acetaminophen",), ()),
 ]
 
 
@@ -65,9 +70,22 @@ def test_逐字相符優先於部分比對(table, catalog):
     assert medication.out_of_scope_names == []
 
 
-def test_候選成分組合不只一種時無法確認(table, catalog):
-    # 「脈優」同時是單方與 amlodipine＋atorvastatin 複方的品名一部分，交給使用者從搜尋選
-    assert resolve_medication("脈優", table, catalog).scope_status == "unconfirmed"
+def test_開頭符合的品名優先於只是包含(table, catalog):
+    # 「脈優」也出現在「脂脈優」「舒脈優」複方中間，但只有「脈優錠」是以它開頭（#20）
+    medication = resolve_medication("脈優", table, catalog)
+
+    assert medication.scope_status == "in_scope"
+    assert codes(medication) == ["amlodipine"]
+
+
+def test_開頭符合的候選成分組合不只一種時無法確認(table, catalog):
+    # 「Exforge」開頭的有單方與加 HCT 的複方，交給使用者從搜尋選
+    assert resolve_medication("Exforge", table, catalog).scope_status == "unconfirmed"
+
+
+def test_開頭都對不到才用包含比對(table, catalog):
+    assert codes(resolve_medication("Exforge HCT", table, catalog)) == ["amlodipine", "hydrochlorothiazide", "valsartan"]
+    assert codes(resolve_medication("舒脈", table, catalog)) == ["amlodipine"]
 
 
 def test_中英文商品名寫在一起時拆開各自對照(table, catalog):
@@ -75,6 +93,12 @@ def test_中英文商品名寫在一起時拆開各自對照(table, catalog):
 
     assert medication.scope_status == "in_scope"
     assert codes(medication) == ["pantoprazole"]
+
+
+@pytest.mark.parametrize("name", ['舒胃因錠 Swellin Tablet "C.M."', '舒胃因錠 Swellin “C.M.”'])
+def test_拆開時略過引號裡的廠商簡稱(table, catalog, name):
+    # TFDA 品名用引號標廠商，「"C.M."」不是藥名，不該拿去對照（#20）
+    assert codes(resolve_medication(name, table, catalog)) == ["aluminum_hydroxide"]
 
 
 def test_拆開後對到不同成分時無法確認(table, catalog):

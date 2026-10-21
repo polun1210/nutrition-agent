@@ -86,6 +86,11 @@ class DrugNameTable(BaseModel):
         key = normalize_name(name)
         return [e for n, e in self.normalized if key in n] if key else []
 
+    def starting_with(self, name: str) -> list[DrugNameEntry]:
+        """品名以這段文字開頭的所有品名。"""
+        key = normalize_name(name)
+        return [e for n, e in self.normalized if n.startswith(key)] if key else []
+
 
 def write_drug_names(table: DrugNameTable, path: Path) -> None:
     buffer = io.StringIO(newline="")

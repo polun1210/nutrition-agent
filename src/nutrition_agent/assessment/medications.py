@@ -8,11 +8,15 @@ TFDA 品名帶劑量與劑型（「Crestor 5mg Film-Coated Tablets」），照�
 
 from __future__ import annotations
 
+import re
+
 from nutrition_agent.assessment.models import Frozen, Medication, MedicationIngredient, ScopeStatus
 from nutrition_agent.reference.drug_names import DrugNameEntry, DrugNameTable, normalize_name
 from nutrition_agent.reference.drugs import DrugCatalog
 
 MAX_CANDIDATES = 20
+# TFDA 品名用引號標廠商簡稱（例如 "C.M."），拆開對照時不算藥名
+QUOTED = re.compile(r'"[^"]*"|“[^”]*”|「[^」]*」')
 MIN_PARTIAL_LENGTH = 2  # 正規化後少於兩個字不做部分比對，避免單一字母或單字誤配
 MAX_BRAND_NAMES = 6
 
@@ -79,12 +83,13 @@ def _match(name: str, table: DrugNameTable) -> list[DrugNameEntry] | None:
         return [entry]
     if len(normalize_name(name)) < MIN_PARTIAL_LENGTH:
         return None
-    return _same_ingredients(table.containing(name))
+    # 開頭符合的優先：「脈優」不該被「脂脈優」「舒脈優」這類複方拖成無法確認（#20）
+    return _same_ingredients(table.starting_with(name) or table.containing(name))
 
 
 def _match_parts(raw_name: str, table: DrugNameTable) -> list[DrugNameEntry] | None:
     """「金舒胃得 Gisowed」這類中英文寫在一起的藥名：拆開各自對照，對到的部分成分都相同才採用。"""
-    parts = raw_name.split()
+    parts = QUOTED.sub(" ", raw_name).split()
     if len(parts) < 2:
         return None
     matched = [found for part in parts if (found := _match(part, table))]
