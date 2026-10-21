@@ -102,11 +102,13 @@ def get_photo(
 ) -> RedirectResponse:
     """確認是本人的照片後，302 導向短效 presigned URL，讓瀏覽器直接向物件儲存取圖。"""
     row = conn.execute(
-        "SELECT stored_name FROM product_photos WHERE id = %s AND user_id = %s",
+        "SELECT stored_name, expired_at FROM product_photos WHERE id = %s AND user_id = %s",
         (photo_id, user.id),
     ).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="找不到這張照片")
+    if row[1] is not None:  # 先確認是本人的照片才回 410，別人的照片不洩漏存在與否
+        raise HTTPException(status_code=410, detail="照片已超過保存期限")
     try:
         with photo_storage_errors():
             url = store.presigned_url(row[0])

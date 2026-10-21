@@ -2,7 +2,7 @@
 
 from tests.test_assessments_api import supplement
 from tests.test_medications_api import med
-from tests.test_photos_api import JPEG, p01_reply, upload
+from tests.test_photos_api import JPEG, expire_photo, p01_reply, upload
 
 LIST = "/api/assessments"
 
@@ -143,3 +143,39 @@ def test_copy_from_latest_carries_product_photos_the_user_can_still_read(login_a
     assert saved.status_code == 200, saved.text
     assert client.get(f"/api/photos/{photo_id}", follow_redirects=False).status_code == 302
     assert client.get(f"/api/assessments/{old_case}").json()["products"][0]["photo_ids"] == [photo_id]
+
+
+def submit_with_photo(client) -> tuple[int, int]:
+    """送出一份附一張照片的個案，回傳（個案編號、照片編號）。"""
+    draft_url = f"/api/assessments/drafts/{client.post('/api/assessments/drafts').json()['id']}"
+    photo_id = upload(client, draft_url, JPEG).json()["photos"][0]["photo_id"]
+    product = {**supplement("鈣片"), "photo_ids": [photo_id]}
+    assert client.put(draft_url, json={"products": [product]}).status_code == 200
+    return client.post(f"{draft_url}/submit").json()["id"], photo_id
+
+
+def test_copying_an_expired_photo_keeps_it_expired(login_as, gateway, db):
+    gateway.vision_replies = [p01_reply()]
+    client = login_as()
+    _, photo_id = submit_with_photo(client)
+    expire_photo(db, photo_id)
+
+    draft = client.post(COPY).json()
+
+    [copied_id] = draft["products"][0]["photo_ids"]
+    assert client.get(f"/api/photos/{copied_id}", follow_redirects=False).status_code == 410
+
+
+def test_expired_photos_do_not_affect_case_report_or_history(login_as, gateway, db):
+    gateway.vision_replies = [p01_reply()]
+    client = login_as()
+    case_id, photo_id = submit_with_photo(client)
+    before = client.get(f"/api/assessments/{case_id}").json()
+
+    expire_photo(db, photo_id)
+
+    case = client.get(f"/api/assessments/{case_id}")
+    assert case.status_code == 200
+    assert case.json() == before  # 個案與報告內容不因照片過期而改變
+    assert case.json()["products"][0]["photo_ids"] == [photo_id]
+    assert [i["id"] for i in client.get(LIST).json()] == [case_id]

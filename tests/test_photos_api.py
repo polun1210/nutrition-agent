@@ -226,3 +226,21 @@ def test_產品不能掛別人的照片(login_as, gateway):
     )
 
     assert response.status_code == 422
+
+
+def expire_photo(db, photo_id: int) -> None:
+    """模擬保存期限已過（清理工作之後由 #29 提供）。"""
+    db.execute("UPDATE product_photos SET expired_at = now() WHERE id = %s", (photo_id,))
+
+
+def test_過期的照片本人拿到410別人仍是404(login_as, gateway, db):
+    gateway.vision_replies = [p01_reply()]
+    owner = login_as("a@example.com")
+    other = login_as("b@example.com")
+    photo_id = upload(owner, new_draft(owner), JPEG).json()["photos"][0]["photo_id"]
+
+    expire_photo(db, photo_id)
+
+    assert owner.get(f"/api/photos/{photo_id}", follow_redirects=False).status_code == 410
+    assert other.get(f"/api/photos/{photo_id}", follow_redirects=False).status_code == 404
+
