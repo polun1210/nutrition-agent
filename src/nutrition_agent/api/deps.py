@@ -28,7 +28,9 @@ def get_connection() -> Iterator[psycopg.Connection]:
         yield conn  # 離開 with 時自動 commit
 
 
+@lru_cache
 def get_gateway() -> ModelGateway:
+    # httpx.Client 帶連線池且執行緒安全，整個行程共用一個，不必每個請求新建。
     return OpenRouterGateway.from_settings(get_settings())
 
 

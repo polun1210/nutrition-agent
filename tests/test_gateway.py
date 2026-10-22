@@ -108,3 +108,10 @@ def test_gives_up_after_max_attempts():
     with pytest.raises(httpx.HTTPStatusError):
         _gateway(handler, sleep=lambda _: None).complete("q")
     assert len(calls) == MAX_ATTEMPTS
+
+
+def test_api_的模型閘道整個程序共用一個實例():
+    from nutrition_agent.api.deps import get_gateway
+
+    # 每個請求新建一個沒關閉的 HTTP client 會漏連線；共用的 httpx.Client 可跨執行緒使用。
+    assert get_gateway() is get_gateway()
