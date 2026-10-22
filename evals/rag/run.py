@@ -7,6 +7,13 @@ src/nutrition_agent/retrieval/evaluation.py。
   uv run python -m nutrition_agent.retrieval.ingest）：
       uv run python evals/rag/run.py --live [--limit 8]
   --live 逐筆輸出：預期段落找到幾個、解釋是否通過輸出檢查（或退回模板）、預期重點涵蓋幾個。
+
+cases_neutral.json（--cases 指定）是中立題組，用來比較不同檢索做法，出題規則：
+  - 題目來源：NIH ODS HP 的 Interactions with Medications 小節與 NCCIH 頁面中，
+    藥物在用藥目錄裡的組合；不看規則有沒有審定、不看哪種檢索做法找得到。
+  - 預期段落只用進 git 的 sources/，任何人都能重現。
+  - 問句寫法輪流用：台灣商品名（原廠名，須在 TFDA 許可證資料中）、中文學名加英文、
+    只寫英文、只寫藥物類別或用途；不用任何一版的俗名表。--live 只吃代碼，不讀問句。
 """
 
 import argparse
