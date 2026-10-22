@@ -23,7 +23,7 @@ TFDA 仿單（`raw/`）刻意留在維護者本機，不隨 repo 分享，所以
 
 ## raw/ 的來源
 
-組員整理於 Google 雲端硬碟 `AIPE04 期末專題/仿單PDF/`：
+開發者在舊專案時期整理於 Google 雲端硬碟 `AIPE04 期末專題/仿單PDF/`：
 
 - `output/<疾病>/<成分>/<許可證字號>_<日期>.md`：仿單 PDF 轉出的 Markdown
 - `TFDA/資料集/`：TFDA 開放資料（藥品許可證、處方成分、仿單索引）
@@ -36,7 +36,7 @@ TFDA 仿單（`raw/`）刻意留在維護者本機，不隨 repo 分享，所以
 - 同一成分的學名藥重複嚴重（Acetaminophen 1,358 份），ingest 時每個成分只留代表仿單。
 - Markdown 約 98% 是 base64 圖片，切塊前要移除。
 - 2026-10-19 補齊高血壓（9 種）、第二型糖尿病（4 種）、高血脂其餘 4 種：每個成分只放一份原廠或代表性仿單（ingest 本來就只取一份）。
-  高血壓與糖尿病用組員的爬蟲精簡包（`tfda_pdf_downloader.py --license …`）下載，高血脂沿用 Drive 上 `TFDA/PDF/高血脂/` 已有的 PDF；
+  高血壓與糖尿病用舊專案的爬蟲精簡包（`tfda_pdf_downloader.py --license …`）下載，高血脂沿用 Drive 上 `TFDA/PDF/高血脂/` 已有的 PDF；
   都以 MinerU 4.0.12 `mineru-kit parse --tier standard` 轉檔（見 Drive `PDF轉MD指令.md`）。
   檔名帶 `_01`、`_02` 序號的仿單不符合 `<許可證字號>_<日期>.md`，ingest 不會讀到；insulin 只放了蘭德仕（衛署菌疫輸字第000728號）。
 - MinerU 會把上下標轉成 LaTeX，例如「vitamin B12」變成 `vitamin $\mathtt { B _ { 1 2 } }$`，直接搜「B12」會找不到；約 90 份有這種殘留。
