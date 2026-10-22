@@ -1,6 +1,6 @@
 """評估流程（Seam A：HTTP API）：草稿逐步儲存 → 送出成不可變個案 → 報告。"""
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 
 def supplement(name="鈣片", lines=None, **intake):
@@ -170,6 +170,21 @@ def test_under_19_on_assessment_day_cannot_submit(login_as):
 
     assert response.status_code == 403
     assert "19" in response.json()["detail"]
+
+
+def test_評估日期與年齡依台北日期計算(login_as, app):
+    from nutrition_agent.api.deps import get_now
+
+    # 台北 2026-06-01 01:30，UTC 還是 5/31：依 UTC 日期算會差一天、還沒滿 19 歲。
+    app.dependency_overrides[get_now] = lambda: datetime(2026, 5, 31, 17, 30, tzinfo=UTC)
+    client = login_as("teen@example.com", birth_year=2007, birth_month=6)
+
+    _, response = submit(client, supplement())
+
+    assert response.status_code == 201, response.text
+    case = client.get(f"/api/assessments/{response.json()['id']}").json()
+    assert case["assessed_on"] == "2026-06-01"
+    assert case["age"] == 19
 
 
 def test_cannot_submit_without_any_product(login_as):
