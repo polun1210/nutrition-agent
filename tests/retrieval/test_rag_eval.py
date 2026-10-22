@@ -5,6 +5,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
+from nutrition_agent.reference import RuleStatus, load_reference_data
 from nutrition_agent.retrieval.evaluation import (
     ExpectedEvidence,
     load_cases,
@@ -24,6 +25,25 @@ def test_shipped_cases_load_and_their_expected_text_exists_in_the_corpus():
     assert len(cases) >= 3
     for case in cases:
         assert validate_against_corpus(case, ROOT / "knowledge") == [], case.id
+
+
+def test_每條審定或草稿規則在非保留題中至少有一題():
+    # 草稿也先備題，開發者審定後馬上可以評估；保留題（holdout-）不拿來對規則
+    reference = load_reference_data()
+    cases = [c for c in load_cases(CASES) if not c.id.startswith("holdout-")]
+
+    def covered(rule) -> bool:
+        return any(
+            case.ingredient_code == rule.ingredient_code
+            and any(
+                rule.condition_code in (code, reference.drugs.class_of(code))
+                for code in case.drug_ingredient_codes
+            )
+            for case in cases
+        )
+
+    live = [r for r in reference.rules.rules if r.status is not RuleStatus.RETIRED]
+    assert [r.id for r in live if not covered(r)] == []
 
 
 def test_validation_reports_missing_expected_text(tmp_path):
