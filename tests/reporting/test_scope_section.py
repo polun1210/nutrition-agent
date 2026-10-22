@@ -33,6 +33,7 @@ def test_report_sections_in_reading_order(ref):
     report = render(make_case(product("鈣", [line("calcium", 500)])), ref)
 
     assert [s.title for s in report.sections] == [
+        "摘要",
         "交互作用",
         "上限比對",
         "本系統未評估的成分",
