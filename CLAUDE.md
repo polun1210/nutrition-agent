@@ -4,7 +4,7 @@
 
 - 詞彙以 `GLOSSARY.md` 為準；決策紀錄在 `docs/adr/`。
 - `docs/legacy/` 是舊組內專案的文件，只當參考：引用前先確認新 repo 有沒有對應的 ADR。
-- 判定（超標、命中規則、嚴重度）由 `assessment/` 的確定性程式產生；`reporting/` 的 LLM 只解釋已產生的判定，每句附引用來源。
+- 判定（上限比對、命中的交互作用規則）由 `assessment/` 的確定性程式產生（ADR-0001）；`reporting/` 的 LLM 只解釋已產生的判定，每句附引用來源。
 - `tests/` 不打外部 API；打真模型的評估放 `evals/`。
 - 語料處理見 `knowledge/README.md`。
 
