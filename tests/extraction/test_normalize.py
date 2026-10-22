@@ -7,13 +7,19 @@ from nutrition_agent.reference import load_reference_data
 
 
 @pytest.fixture(scope="module")
-def catalog():
-    return load_reference_data().ingredients
+def ref():
+    return load_reference_data()
 
 
-def test_巢狀括號裡的成分不會蓋過外層成分(catalog):
+@pytest.fixture(scope="module")
+def classify_name(ref):
+    """查表結果的 (成分代碼, 範圍狀態)。"""
+    return lambda raw: classify(raw, ref.ingredients, ref.compounds)[:2]
+
+
+def test_巢狀括號裡的成分不會蓋過外層成分(classify_name):
     raw = "葉黃素(明膠、蔗糖、葉黃素、生育醇(維生素E)(抗氧化劑)、L-抗壞血酸鈉(抗氧化劑))"
-    assert classify(raw, catalog) == ("lutein", "out_of_scope")
+    assert classify_name(raw) == ("lutein", "out_of_scope")
 
 
 @pytest.mark.parametrize(
@@ -25,8 +31,8 @@ def test_巢狀括號裡的成分不會蓋過外層成分(catalog):
         ("膽鈣化醇（維生素D3）", "vitamin_d"),
     ],
 )
-def test_外層括號裡的名稱仍可對到成分(catalog, raw, code):
-    assert classify(raw, catalog)[0] == code
+def test_外層括號裡的名稱仍可對到成分(classify_name, raw, code):
+    assert classify_name(raw)[0] == code
 
 
 @pytest.mark.parametrize(
@@ -41,9 +47,9 @@ def test_外層括號裡的名稱仍可對到成分(catalog, raw, code):
         ("Concentrated fish Omega-3 triglycerides", "omega_3"),
     ],
 )
-def test_允許成分的實際標示寫法(catalog, raw, code):
+def test_允許成分的實際標示寫法(classify_name, raw, code):
     # 2026-10-20 實拍標示（evals/vlm/gold p01、p07、p08、p23、p26、p27）出現、原本對不到的寫法
-    assert classify(raw, catalog) == (code, "in_scope")
+    assert classify_name(raw) == (code, "in_scope")
 
 
 @pytest.mark.parametrize(

@@ -63,7 +63,8 @@ def main(argv: list[str] | None = None) -> int:
 
         gateway = OpenRouterGateway.from_settings(get_settings())
 
-    catalog = load_reference_data().ingredients
+    ref = load_reference_data()
+    catalog = ref.ingredients
     report, skipped = EvalReport(), []
     for gold_path in sorted(args.gold.glob("p*.json")):
         gold = json.loads(gold_path.read_text(encoding="utf-8"))
@@ -76,7 +77,8 @@ def main(argv: list[str] | None = None) -> int:
         if reading is None:
             skipped.append(image_id)
             continue
-        score_product(gold, build_extraction([(0, reading)], catalog), report, catalog)
+        extraction = build_extraction([(0, reading)], catalog, ref.compounds)
+        score_product(gold, extraction, report, catalog)
 
     if args.json:
         print(json.dumps(report.summary(), ensure_ascii=False, indent=2))

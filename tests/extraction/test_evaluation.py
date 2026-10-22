@@ -14,6 +14,7 @@ from nutrition_agent.reference import load_reference_data
 ROOT = Path(__file__).resolve().parents[2]
 GOLD = json.loads((ROOT / "evals/vlm/gold/p01.json").read_text(encoding="utf-8"))
 RECORDED = (ROOT / "evals/vlm/recorded/vlm/p01-img01.json").read_text(encoding="utf-8")
+COMPOUNDS = load_reference_data().compounds
 
 
 @pytest.fixture(scope="module")
@@ -23,7 +24,8 @@ def catalog():
 
 def score(reply: str, catalog) -> EvalReport:
     report = EvalReport()
-    score_product(GOLD, build_extraction([(1, parse_reading(reply))], catalog), report, catalog)
+    extraction = build_extraction([(1, parse_reading(reply))], catalog, COMPOUNDS)
+    score_product(GOLD, extraction, report, catalog)
     return report
 
 
