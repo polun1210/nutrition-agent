@@ -7,10 +7,9 @@ import httpx
 import pytest
 
 from tests.conftest import STORAGE_DOWN, TEST_BUCKET, bucket_keys, fail_storage
+from tests.images import JPEG, PNG
 from tests.test_medications_api import profile_text, save
 
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 
 
 def pack(*names, readable=True):
@@ -126,14 +125,14 @@ def test_上傳後照片存進bucket且資料表記下讀出的藥名(login_as, 
     rows = photo_rows(db)
     assert [(r[1], r[3], r[4]) for r in rows] == [
         (draft_id, "image/jpeg", ["Amlodipine", "Zantac"]),
-        (draft_id, "image/png", []),
+        (draft_id, "image/jpeg", []),
     ]
     keys = [r[2] for r in rows]
     assert sorted(bucket_keys(s3)) == sorted(keys)
     assert re.fullmatch(r"medication/[0-9a-f]{32}\.jpg", keys[0])
-    assert re.fullmatch(r"medication/[0-9a-f]{32}\.png", keys[1])
+    assert re.fullmatch(r"medication/[0-9a-f]{32}\.jpg", keys[1])
     stored = s3.get_object(Bucket=TEST_BUCKET, Key=keys[0])
-    assert stored["Body"].read() == JPEG and stored["ContentType"] == "image/jpeg"
+    assert stored["Body"].read() == gateway.images[0][0] and stored["ContentType"] == "image/jpeg"
 
 
 def test_儲存服務故障回502且不留下照片(login_as, gateway, db, s3):

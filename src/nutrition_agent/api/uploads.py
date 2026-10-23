@@ -8,6 +8,12 @@ from typing import TypeVar
 import httpx
 from fastapi import HTTPException, UploadFile
 
+from nutrition_agent.photo_normalization import (
+    NORMALIZED_EXT,
+    NORMALIZED_MIME,
+    UnreadablePhoto,
+    normalize_photo,
+)
 from nutrition_agent.photos import MAX_PHOTO_BYTES, PhotoStorageError, PhotoStore, sniff_image
 
 MAX_PHOTOS_PER_PRODUCT = 8
@@ -20,14 +26,23 @@ T = TypeVar("T")
 
 
 def read_upload(upload: UploadFile) -> Upload:
-    """回傳 (內容, MIME 類型, 副檔名)；太大或不是支援的圖片格式就拒絕。"""
+    """回傳正規化後的 (內容, MIME 類型, 副檔名)；太大或不是支援的圖片格式就拒絕。
+
+    大小與魔術位元組是第一道關卡，通過後才解碼正規化；辨識與存檔都用正規化後的版本。
+    """
     data = upload.file.read(MAX_PHOTO_BYTES + 1)
     if len(data) > MAX_PHOTO_BYTES:
         raise HTTPException(status_code=413, detail="照片太大，請壓縮到 10 MB 以下再上傳")
-    kind = sniff_image(data)
-    if kind is None:
+    if sniff_image(data) is None:
         raise HTTPException(status_code=422, detail="只能上傳 JPEG、PNG 或 WebP 照片")
-    return data, kind[0], kind[1]
+    try:
+        normalized = normalize_photo(data)
+    except UnreadablePhoto as err:
+        log.warning("照片解不開：%s", err)
+        raise HTTPException(
+            status_code=422, detail="這張照片打不開，請重拍或換一張再上傳"
+        ) from err
+    return normalized, NORMALIZED_MIME, NORMALIZED_EXT
 
 
 def check_photo_count(count: int, limit_prefix: str) -> None:
