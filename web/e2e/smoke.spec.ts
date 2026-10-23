@@ -1,6 +1,10 @@
+import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
 // 煙霧測試：註冊 → 搜尋並加入一個藥 → 新增保健食品 → 送出 → 看到上限 %。之後有 UI 的票在這裡延伸。
+
+// 真實的小 JPEG：後端會解碼並正規化，湊出來的魔術位元組過不了。
+const PHOTO = fileURLToPath(new URL("./fixtures/photo.jpg", import.meta.url));
 
 /** 註冊並走到「用藥」步驟。 */
 async function registerAndOpenMedications(page: Page) {
@@ -149,11 +153,7 @@ test("用一張照片新增保健食品：辨識 → 整瓶確認一次 → 送�
   await page.getByRole("button", { name: "新增一項" }).click();
   await page.getByRole("button", { name: "用照片新增" }).click();
 
-  await page.getByLabel("標示照片").setInputFiles({
-    name: "label.jpg",
-    mimeType: "image/jpeg",
-    buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]),
-  });
+  await page.getByLabel("標示照片").setInputFiles(PHOTO);
   await page.getByRole("button", { name: "開始辨識" }).click();
 
   const review = page.getByRole("form", { name: "校對辨識結果" });
@@ -224,11 +224,7 @@ test("交互作用的白話解釋附腳註，點開看到原文與來源", async
 test("拍一張藥包加入藥：辨識 → 顯示範圍狀態 → 用搜尋修改", async ({ page }) => {
   await registerAndOpenMedications(page);
 
-  await page.getByLabel("藥包照片").setInputFiles({
-    name: "pack.jpg",
-    mimeType: "image/jpeg",
-    buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]),
-  });
+  await page.getByLabel("藥包照片").setInputFiles(PHOTO);
   await page.getByRole("button", { name: "讀取藥名" }).click();
 
   await expect(page.getByRole("button", { name: "刪除 Amlodipine" })).toBeVisible();
