@@ -1,7 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-// 只標化合物重量：校對頁出現「推估」底色欄位，可覆寫；報告註明推估值。
-test("化合物重量推估元素量，可覆寫，報告註明系統推估", async ({ page }) => {
+async function registerAndStartAssessment(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "還沒有帳號？註冊" }).click();
   await page.getByLabel("Email").fill(`est-${Date.now()}@example.com`);
@@ -14,6 +13,11 @@ test("化合物重量推估元素量，可覆寫，報告註明系統推估", as
   await page.getByRole("button", { name: "開始評估" }).click();
   await page.getByRole("button", { name: "資料正確，下一步" }).click();
   await page.getByRole("button", { name: "我沒有用藥" }).click();
+}
+
+// 只標化合物重量：校對頁出現「推估」底色欄位，可覆寫；報告註明推估值。
+test("化合物重量推估元素量，可覆寫，報告註明系統推估", async ({ page }) => {
+  await registerAndStartAssessment(page);
 
   await page.getByRole("button", { name: "新增一項" }).click();
   await page.getByRole("button", { name: "手動輸入" }).click();
@@ -49,5 +53,46 @@ test("化合物重量推估元素量，可覆寫，報告註明系統推估", as
 
   const table = page.getByRole("table");
   await expect(table).toContainText("210.8 mg");
+  await expect(table).toContainText("此數值為系統推估，非標示值");
+});
+
+// 假 VLM 對 123x45 的 JPEG 回「碳酸鈣 1250 mg」（scripts/e2e_server.py）：照片路徑出現化合物列與推估元素量。
+test("照片辨識出化合物，校對頁顯示推估元素量，可覆寫與還原，並可選服用頻率", async ({ page }) => {
+  await registerAndStartAssessment(page);
+  await page.getByRole("button", { name: "新增一項" }).click();
+  await page.getByRole("button", { name: "用照片新增" }).click();
+
+  // 只含 SOF 區段的最小 JPEG 檔頭：高 45、寬 123
+  const header = [0xff, 0xd8, 0xff, 0xc0, 0, 17, 8, 0, 45, 0, 123, 3, 1, 0x11, 0, 2, 0x11, 0];
+  await page.getByLabel("標示照片").setInputFiles({
+    name: "calcium.jpg",
+    mimeType: "image/jpeg",
+    buffer: Buffer.from(header),
+  });
+  await page.getByRole("button", { name: "開始辨識" }).click();
+
+  const review = page.getByRole("form", { name: "校對辨識結果" });
+  await expect(review.getByLabel("成分", { exact: true })).toHaveValue("calcium");
+  await expect(review.getByLabel("化合物", { exact: true })).toHaveValue("calcium_carbonate");
+  await expect(review.getByLabel("化合物重量")).toHaveValue("1250");
+  const estimate = review.getByLabel("元素量");
+  await expect(estimate).toHaveValue("500.5");
+  await expect(review.getByText("：推估")).toBeVisible();
+
+  await estimate.fill("480");
+  await expect(review.getByText("：使用者提供")).toBeVisible();
+  await review.getByRole("button", { name: "還原系統推估" }).click();
+  await expect(estimate).toHaveValue("500.5");
+
+  // 服用頻率不再寫死每天
+  await review.getByLabel("服用頻率").selectOption("weekly_days");
+  await review.getByLabel("每週服用幾天").fill("2");
+
+  await review.getByRole("button", { name: "內容都核對過了，加入這項保健食品" }).click();
+  await page.getByRole("button", { name: "下一步" }).click();
+  await page.getByRole("button", { name: "送出評估" }).click();
+
+  const table = page.getByRole("table");
+  await expect(table).toContainText("500.5 mg");
   await expect(table).toContainText("此數值為系統推估，非標示值");
 });
