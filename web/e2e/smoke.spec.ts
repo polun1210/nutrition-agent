@@ -140,6 +140,43 @@ test("評估中按瀏覽器上一頁回到前一個步驟，每一步都有返�
   await expect(page.getByRole("heading", { name: "確認個人資料" })).toBeVisible();
 });
 
+test("評估中途重新整理，回首頁接續草稿，已加入的保健食品還在", async ({ page }) => {
+  await registerAndOpenMedications(page);
+  await page.getByRole("button", { name: "我沒有用藥" }).click();
+  await addManually(page);
+  const form = page.getByRole("form", { name: "新增保健食品" });
+  await form.getByLabel("產品名稱").fill("填到一半的鈣片");
+  await form.getByLabel("成分", { exact: true }).selectOption({ label: "鈣" });
+  await form.getByLabel("含量").fill("500");
+  await form.getByRole("button", { name: "加入這項保健食品" }).click();
+  await expect(page.getByRole("button", { name: "刪除 填到一半的鈣片" })).toBeVisible();
+
+  await page.reload();
+
+  // 首頁：「繼續」排在「開始評估」上方，附草稿摘要
+  await expect(page.getByRole("heading", { name: "補對了嗎？" })).toBeVisible();
+  await expect(page.getByRole("button").first()).toHaveText("繼續上次未完成的評估");
+  await expect(page.getByText(/1 項保健食品、0 項用藥，最後修改/)).toBeVisible();
+  await page.getByRole("button", { name: "繼續上次未完成的評估" }).click();
+
+  // 從確認個人資料開始，往下走時已填的內容都在
+  await expect(page.getByRole("heading", { name: "確認個人資料" })).toBeVisible();
+  await page.getByRole("button", { name: "資料正確，下一步" }).click();
+  await page.getByRole("button", { name: "我沒有用藥" }).click();
+  await expect(page.getByRole("button", { name: "刪除 填到一半的鈣片" })).toBeVisible();
+
+  // 開始新的評估不會刪掉舊草稿：回首頁仍可接續
+  await page.getByRole("button", { name: "上一步" }).click();
+  await page.getByRole("button", { name: "上一步" }).click();
+  await page.getByRole("button", { name: "回首頁" }).click();
+  await page.getByRole("button", { name: "開始評估" }).click();
+  await page.getByRole("button", { name: "資料正確，下一步" }).click();
+  await page.getByRole("button", { name: "我沒有用藥" }).click();
+  await expect(page.getByText("尚未加入任何保健食品")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(/1 項保健食品、0 項用藥，最後修改/)).toBeVisible();
+});
+
 // 後端以錄製的 VLM 回應（evals/vlm/recorded/vlm/p01-img01.json）取代真模型，照片內容不影響結果。
 // 照片取圖改回 410（已超過保存期限）：縮圖換成替代文字，清單與報告照常顯示。
 test("用一張照片新增保健食品：辨識 → 整瓶確認一次 → 送出", async ({ page }) => {
