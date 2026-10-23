@@ -67,6 +67,68 @@ def test_成分欄沒有含量的目標營養素不計範圍與代碼評分(cata
     assert report.fields["scope_status"].total == base.fields["scope_status"].total + 1
 
 
+def test_每份量劑型單位與範圍內列都讀對時產品全對(catalog):
+    report = score(RECORDED, catalog)
+
+    assert report.fields["product_exact"].correct == 1
+    assert report.fields["product_exact"].total == 1
+
+
+def misread(**fields) -> str:
+    """把錄製回應的頂層欄位換成讀錯的值。"""
+    return json.dumps({**json.loads(RECORDED), **fields})
+
+
+def test_每份量讀錯時產品不算全對(catalog):
+    report = score(misread(serving_size=1), catalog)  # 每份 3 錠 → 1 錠
+
+    assert report.fields["product_exact"].correct == 0
+    assert report.summary()["amount"] == 1.0  # 列層級的含量正確率看不出來
+
+
+def test_劑型單位讀錯時產品不算全對(catalog):
+    report = score(misread(dose_unit="粒"), catalog)  # 錠 → 粒
+
+    assert report.fields["product_exact"].correct == 0
+
+
+def test_範圍內一列含量讀錯時產品不算全對(catalog):
+    reading = json.loads(RECORDED)
+    reading["rows"][6]["amount"] = 36  # 鈣 360 → 36
+
+    report = score(json.dumps(reading), catalog)
+
+    assert report.fields["product_exact"].correct == 0
+
+
+def test_範圍內一列單位讀錯時產品不算全對(catalog):
+    reading = json.loads(RECORDED)
+    reading["rows"][6]["unit"] = "g"  # 鈣 360 mg → 360 g
+
+    report = score(json.dumps(reading), catalog)
+
+    assert report.fields["product_exact"].correct == 0
+
+
+def test_範圍外的列讀錯不影響產品全對(catalog):
+    reading = json.loads(RECORDED)
+    reading["rows"][0]["amount"] = 30  # 維生素B1 不是目標營養素，金標準沒有標準代碼
+
+    report = score(json.dumps(reading), catalog)
+
+    assert report.summary()["amount"] < 1.0
+    assert report.fields["product_exact"].correct == 1
+
+
+def test_範圍內一列名稱讀錯時產品不算全對(catalog):
+    reading = json.loads(RECORDED)
+    reading["rows"][6]["raw_name"] = "鎂"  # 鈣 → 鎂，金標準的鈣這列等於沒讀到
+
+    report = score(json.dumps(reading), catalog)
+
+    assert report.fields["product_exact"].correct == 0
+
+
 def test_整張讀不到時列召回為零(catalog):
     summary = score(json.dumps({"readable": False}), catalog).summary()
 
@@ -84,4 +146,6 @@ def test_命令列重播錄製回應並印出各欄位正確率():
         check=True,
     )
 
-    assert json.loads(result.stdout)["amount"] == 1.0
+    summary = json.loads(result.stdout)
+    assert summary["amount"] == 1.0
+    assert summary["product_exact"] == 1.0
