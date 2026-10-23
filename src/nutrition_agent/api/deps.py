@@ -1,4 +1,4 @@
-"""共用的 FastAPI 依賴：資料庫連線與登入者。
+"""共用的 FastAPI 依賴：資料庫連線、登入者、今天的日期。
 
 create_app 會在測試時用 dependency_overrides 換掉 get_connection / get_gateway。
 受保護的路由一律 `user: User = Depends(current_user)`。
@@ -6,7 +6,9 @@ create_app 會在測試時用 dependency_overrides 換掉 get_connection / get_g
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from functools import lru_cache
+from zoneinfo import ZoneInfo
 
 import psycopg
 from fastapi import Depends, HTTPException, Request
@@ -18,6 +20,7 @@ from nutrition_agent.profile import Profile
 
 SESSION_KEY = "user_id"
 USER_COLUMNS = "id, email, birth_year, birth_month, sex, conditions"
+TAIPEI = ZoneInfo("Asia/Taipei")
 
 
 def get_connection() -> Iterator[psycopg.Connection]:
@@ -25,7 +28,9 @@ def get_connection() -> Iterator[psycopg.Connection]:
         yield conn  # 離開 with 時自動 commit
 
 
+@lru_cache
 def get_gateway() -> ModelGateway:
+    # httpx.Client 帶連線池且執行緒安全，整個行程共用一個，不必每個請求新建。
     return OpenRouterGateway.from_settings(get_settings())
 
 
@@ -33,6 +38,16 @@ def get_gateway() -> ModelGateway:
 def get_photo_store() -> PhotoStore:
     # boto3 client 建立成本高且執行緒安全，整個行程共用一個。
     return PhotoStore.from_settings(get_settings())
+
+
+def get_now() -> datetime:
+    """現在的時點；測試用 dependency_overrides 換成任意時點。"""
+    return datetime.now(UTC)
+
+
+def get_today(now: datetime = Depends(get_now)) -> date:
+    """今天一律是台北的日期（評估日期、年齡），不看伺服器時區。"""
+    return now.astimezone(TAIPEI).date()
 
 
 @dataclass(frozen=True)

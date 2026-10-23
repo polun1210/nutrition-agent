@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager
 
 import psycopg
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
 from nutrition_agent.api import assessments, auth, medication_photos, photos
@@ -57,13 +57,6 @@ def create_app(
     app.include_router(assessments.router)
     app.include_router(photos.router)
     app.include_router(medication_photos.router)
-
-    @app.post("/api/ping")
-    def ping(conn: psycopg.Connection = Depends(get_connection)) -> dict:
-        conn.execute("INSERT INTO ping DEFAULT VALUES")
-        row = conn.execute("SELECT count(*) FROM ping").fetchone()
-        return {"message": "pong", "count": row[0]}
-
     return app
 
 

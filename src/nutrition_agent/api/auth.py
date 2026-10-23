@@ -13,7 +13,7 @@ from pwdlib import PasswordHash
 from pydantic import BaseModel, EmailStr, Field
 
 from nutrition_agent.accounts import UnderageError, age_on, require_adult
-from nutrition_agent.api.deps import SESSION_KEY, User, current_user, get_connection
+from nutrition_agent.api.deps import SESSION_KEY, User, current_user, get_connection, get_today
 from nutrition_agent.profile import Profile
 
 _hasher = PasswordHash.recommended()
@@ -77,8 +77,7 @@ def logout(request: Request) -> Response:
 
 
 @router.get("/me")
-def me(user: User = Depends(current_user)) -> dict:
-    today = date.today()
+def me(user: User = Depends(current_user), today: date = Depends(get_today)) -> dict:
     profile = user.profile
     underage_message = None
     try:

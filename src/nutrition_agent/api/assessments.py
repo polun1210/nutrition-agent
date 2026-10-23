@@ -1,7 +1,7 @@
 """評估 API：草稿逐步儲存 → 送出成不可變的評估個案 → 報告。
 
 所有查詢都以 `user.id` 過濾；別人的草稿與個案一律回 404。
-送出時後端自己組快照（個人資料取當下最新值、年齡以今天計）並跑判定引擎與報告模板，
+送出時後端自己組快照（個人資料取當下最新值、年齡以台北的今天計）並跑判定引擎與報告模板，
 結果整份凍結進 assessment_cases。
 """
 
@@ -15,7 +15,7 @@ from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, StringConstraints
 
 from nutrition_agent.accounts import UnderageError, require_adult
-from nutrition_agent.api.deps import User, current_user, get_connection, get_gateway
+from nutrition_agent.api.deps import User, current_user, get_connection, get_gateway, get_today
 from nutrition_agent.assessment import (
     UNKNOWN_INGREDIENT,
     AssessmentCase,
@@ -335,12 +335,12 @@ def submit_draft(
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
     gateway: ModelGateway = Depends(get_gateway),
+    today: date = Depends(get_today),
 ) -> dict:
     row = _editable_draft(conn, draft_id, user)
     products = [Product.model_validate(p) for p in row[1]]
     if not products:
         raise HTTPException(status_code=422, detail="至少要有一項保健食品才能送出")
-    today = date.today()
     profile = user.profile
     try:
         age = require_adult(profile.birth_year, profile.birth_month, today)
