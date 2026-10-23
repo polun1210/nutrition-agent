@@ -72,9 +72,15 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await expect(calcium).toContainText("2500 mg");
   await expect(calcium).toContainText("40%");
   await expect(calcium).toContainText("非每天服用");
-  await expect(page.getByText("已超過上限")).toHaveCount(0);
-  // 段落順序：重點在前，細節收合；沒有未評估成分時不顯示該段
+  await expect(page.locator('[data-section="ul_comparison"]').getByText("已超過上限")).toHaveCount(0);
+  // 摘要卡在最上方：不用讀完整份就知道結論（#37）
+  const summary = page.getByTestId("report-summary");
+  await expect(summary).toContainText(/交互作用.*未命中已審定的規則.*這不表示兩者不會交互作用/);
+  await expect(summary).toContainText("沒有營養素已超過上限");
+  await expect(summary).not.toContainText("無法確認");
+  // 段落順序：摘要 → 重點 → 細節收合；沒有未評估成分時不顯示該段
   await expect(page.locator("section[data-section] h2")).toHaveText([
+    "摘要",
     "交互作用",
     "上限比對",
     "你的資料",
@@ -82,7 +88,7 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
     "參考資料來源",
   ]);
   await expect(page.getByText("沒有交互作用")).toHaveCount(0);
-  await expect(page.getByText(/未命中已審定的規則/)).toBeVisible();
+  await expect(page.locator('[data-section="interaction"]').getByText(/未命中已審定的規則/)).toBeVisible();
   // 評估範圍與揭露預設收合，點開後分類成字卡
   await expect(page.getByText(/DPP-4 抑制劑/)).toBeHidden();
   await page.getByText("評估範圍與揭露").click();
@@ -112,8 +118,17 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   // 歷史報告：兩筆，點開舊的那筆仍是 40%，且顯示參考資料版本
   await page.getByRole("button", { name: "歷史報告" }).click();
   await expect(page.getByRole("button", { name: /的評估（/ })).toHaveCount(2);
+  // 摘要卡上線前的舊報告沒有摘要段落：不顯示摘要卡，其餘照常（#37）
+  await page.route(/\/api\/assessments\/\d+$/, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    const sections = body.report.sections.filter((s: { key: string }) => s.key !== "summary");
+    await route.fulfill({ response, json: { ...body, report: { ...body.report, sections } } });
+  });
   await page.getByRole("button", { name: /的評估（2 項保健食品/ }).click();
   await expect(page.getByRole("table").locator("tbody").filter({ hasText: "鈣" })).toContainText("40%");
+  await expect(page.getByTestId("report-summary")).toHaveCount(0);
+  await expect(page.locator("section[data-section] h2").first()).toHaveText("交互作用");
   await page.getByText("參考資料來源").click();
   await expect(page.getByTestId("reference-versions")).toContainText("dris");
 
@@ -142,6 +157,43 @@ test("評估中按瀏覽器上一頁回到前一個步驟，每一步都有返�
   // 首頁再按上一頁仍留在 app 內
   await page.goBack();
   await expect(page.getByRole("heading", { name: "確認個人資料" })).toBeVisible();
+});
+
+test("評估中途重新整理，回首頁接續草稿，已加入的保健食品還在", async ({ page }) => {
+  await registerAndOpenMedications(page);
+  await page.getByRole("button", { name: "我沒有用藥" }).click();
+  await addManually(page);
+  const form = page.getByRole("form", { name: "新增保健食品" });
+  await form.getByLabel("產品名稱").fill("填到一半的鈣片");
+  await form.getByLabel("成分", { exact: true }).selectOption({ label: "鈣" });
+  await form.getByLabel("含量").fill("500");
+  await form.getByRole("button", { name: "加入這項保健食品" }).click();
+  await expect(page.getByRole("button", { name: "刪除 填到一半的鈣片" })).toBeVisible();
+
+  await page.reload();
+
+  // 首頁：「繼續」排在「開始評估」上方，附草稿摘要
+  await expect(page.getByRole("heading", { name: "補對了嗎？" })).toBeVisible();
+  await expect(page.getByRole("button").first()).toHaveText("繼續上次未完成的評估");
+  await expect(page.getByText(/1 項保健食品、0 項用藥，最後修改/)).toBeVisible();
+  await page.getByRole("button", { name: "繼續上次未完成的評估" }).click();
+
+  // 從確認個人資料開始，往下走時已填的內容都在
+  await expect(page.getByRole("heading", { name: "確認個人資料" })).toBeVisible();
+  await page.getByRole("button", { name: "資料正確，下一步" }).click();
+  await page.getByRole("button", { name: "我沒有用藥" }).click();
+  await expect(page.getByRole("button", { name: "刪除 填到一半的鈣片" })).toBeVisible();
+
+  // 開始新的評估不會刪掉舊草稿：回首頁仍可接續
+  await page.getByRole("button", { name: "上一步" }).click();
+  await page.getByRole("button", { name: "上一步" }).click();
+  await page.getByRole("button", { name: "回首頁" }).click();
+  await page.getByRole("button", { name: "開始評估" }).click();
+  await page.getByRole("button", { name: "資料正確，下一步" }).click();
+  await page.getByRole("button", { name: "我沒有用藥" }).click();
+  await expect(page.getByText("尚未加入任何保健食品")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(/1 項保健食品、0 項用藥，最後修改/)).toBeVisible();
 });
 
 // 後端以錄製的 VLM 回應（evals/vlm/recorded/vlm/p01-img01.json）取代真模型，照片內容不影響結果。
@@ -204,6 +256,10 @@ test("交互作用的白話解釋附腳註，點開看到原文與來源", async
   await expect(page.getByRole("button", { name: "刪除 B12 錠" })).toBeVisible();
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
+
+  await expect(page.getByTestId("report-summary")).toContainText(
+    "1 項交互作用提醒，建議與醫師或藥師討論：維生素 B12",
+  );
 
   // 以藥為主角：先講重點，後面才是白話說明（#23）
   const card = page.getByTestId("interaction-card");

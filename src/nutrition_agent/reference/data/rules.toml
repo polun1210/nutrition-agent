@@ -1,9 +1,11 @@
 # 交互作用規則（真實資料）。
 # 狀態：草稿（draft）、審定（approved）、退役（retired，不進入判定）。判定引擎只讀審定規則。
 # 審定只能由開發者手動標記，並同時填 approved_by；agent 只能草擬，不能審定。
-# 2026-10-19 人工審查：審定 10 條、退役 5 條，目前沒有草稿。
+# 2026-10-19 人工審查：審定 10 條、退役 5 條，當時沒有草稿。
 # 2026-10-20 人工審查：對照引文前後文補上省略的條件（PPI × 鎂的時間長度、PPI × 鐵只影響原本缺鐵者、
 #   高危險群），「制酸類藥物」改為「抑制胃酸分泌的藥物」，避免與含鈣／含鎂制酸劑混淆。
+# 2026-10-23 agent 草擬（#40）：新增 Statin × 紅麴 1 條草稿，等開發者審定（#46）。
+#   目前審定 10 條、退役 5 條、草稿 1 條。
 #
 # 明確排除（不草擬規則，2026-10-19 人工審查）：
 # - COX-2 選擇性抑制劑（celecoxib、etoricoxib）× 鐵：已取得的 Celecoxib、Etoricoxib 仿單只在 PRECISION 試驗提到
@@ -12,10 +14,11 @@
 # - COX-2 選擇性抑制劑 × 魚油 n-3／維生素 E（出血加成）：兩種仿單都沒有提到魚油、omega-3 或維生素 E，
 #   NIH ODS 維生素 E HP 版也沒有提到這一類藥。維生素 E 保留為目標營養素，只做超量檢查。
 # 每條規則的欄位與不變式見 src/nutrition_agent/reference/rules.py，出處引文會被完整性檢查逐字比對。
-# 出處只用 NIH ODS HealthProfessional 版（TFDA 仿單 raw 尚未取得，沒有引用）。
+# 審定與退役規則的出處只用 NIH ODS HealthProfessional 版（TFDA 仿單 raw 尚未取得，沒有引用）；
+# Statin × 紅麴草稿引用 NCCIH fact sheet。
 # 錯開時數：原文都沒有針對這些組合明載，所以全部不填。
 
-version = "2026.10.3"
+version = "2026.10.4"
 
 [[rule]]
 id = "metformin-vitamin-b12"
@@ -309,3 +312,33 @@ status = "retired"
 source_type = "nih_ods_hp"
 document = "sources/nih_ods/Niacin-HealthProfessional.md"
 quote = "People who take any antidiabetes medications should have their blood glucose levels monitored if they take high-dose nicotinic acid supplements concomitantly because they might require dose adjustments"
+
+[[rule]]
+id = "statin-red-yeast-rice"
+condition_type = "drug_class"
+condition_code = "statin"
+ingredient_code = "red_yeast_rice"
+interaction_type = "pharmacodynamic"
+requires_supplement_intake = true
+advice = "consult_before_combining"
+# 草稿（2026-10-23 agent 草擬，#40）：不進入判定；審定說明的文字由開發者審定時確認（#46）。
+# 構想參考舊專案 docs/legacy/rule-table.md:132（僅參考，判定依據是下列 NCCIH 引文）。
+# 引文只點名 lovastatin（不在用藥目錄），但第二、三句說紅麴產品可能有與 statin 類藥物相同的副作用
+# 與交互作用，所以條件寫成整個 Statin 類別。
+reason_zh = "紅麴可能含有與降血脂藥 lovastatin 結構相同的成分，與 Statin 類藥物併用，可能加重肌肉、肝臟或腎臟方面的副作用。"
+status = "draft"
+
+[[rule.citations]]
+source_type = "nccih"
+document = "sources/nccih/RedYeastRice-NCCIH.md"
+quote = "Monacolin K is structurally identical to the medicine lovastatin"
+
+[[rule.citations]]
+source_type = "nccih"
+document = "sources/nccih/RedYeastRice-NCCIH.md"
+quote = "Red yeast rice products that contain significant amounts of monacolin K can have the same potential side effects as statin drugs, including muscle, kidney, and liver damage"
+
+[[rule.citations]]
+source_type = "nccih"
+document = "sources/nccih/RedYeastRice-NCCIH.md"
+quote = "Red yeast rice products can have the same types of drug interactions as statin drugs and therefore may interfere with certain medicines or increase the chance for side effects"
