@@ -75,7 +75,7 @@ def recognize_photos(
 
     with stored_photos(store, PRODUCT_PREFIX, uploads, new_readings, write_row) as photo_ids:
         merged = [*readings, *zip(photo_ids, new_readings, strict=True)]
-        return build_extraction(merged, ref.ingredients).model_dump(mode="json")
+        return build_extraction(merged, ref.ingredients, ref.compounds).model_dump(mode="json")
 
 
 @router.get("/photos/{photo_id}")

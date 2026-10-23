@@ -3,6 +3,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from nutrition_agent.extraction.normalize import (
+    AmountBasis,
     ScopeStatus,
     classify,
     is_nutrition_fact,
@@ -10,7 +11,7 @@ from nutrition_agent.extraction.normalize import (
     normalize_unit,
 )
 from nutrition_agent.extraction.reading import UNREADABLE_HINT, Section, VlmReading
-from nutrition_agent.reference import IngredientCatalog
+from nutrition_agent.reference import CompoundCatalog, IngredientCatalog
 
 
 class Frozen(BaseModel):
@@ -23,8 +24,10 @@ class ExtractedRow(Frozen):
     amount: float | None
     unit: str | None
     readable: bool
-    ingredient_code: str | None  # None = 目錄查不到
+    ingredient_code: str | None  # None = 目錄查不到；化合物列為它所屬的目標營養素
     scope_status: ScopeStatus
+    basis: AmountBasis  # compound = amount 是化合物重量，元素量由系統推估
+    compound_code: str | None  # basis 為 compound 時的化合物
     nutrition_fact: bool  # 熱量、蛋白質這類營養標示欄位，校對頁不顯示
     photo_id: int
 
@@ -43,8 +46,10 @@ class ProductExtraction(Frozen):
     photos: list[PhotoStatus]
 
 
-def _row(photo_id: int, raw, catalog: IngredientCatalog) -> ExtractedRow:
-    code, status = classify(raw.raw_name, catalog)
+def _row(
+    photo_id: int, raw, catalog: IngredientCatalog, compounds: CompoundCatalog
+) -> ExtractedRow:
+    match = classify(raw.raw_name, catalog, compounds)
     readable = raw.readable
     return ExtractedRow(
         raw_name=raw.raw_name,
@@ -52,15 +57,19 @@ def _row(photo_id: int, raw, catalog: IngredientCatalog) -> ExtractedRow:
         amount=raw.amount if readable else None,
         unit=normalize_unit(raw.unit) if readable else None,
         readable=readable,
-        ingredient_code=code,
-        scope_status=status,
-        nutrition_fact=code is None and is_nutrition_fact(raw.raw_name),
+        ingredient_code=match.ingredient_code,
+        scope_status=match.scope_status,
+        basis=match.basis,
+        compound_code=match.compound_code,
+        nutrition_fact=match.ingredient_code is None and is_nutrition_fact(raw.raw_name),
         photo_id=photo_id,
     )
 
 
 def build_extraction(
-    readings: list[tuple[int, VlmReading]], catalog: IngredientCatalog
+    readings: list[tuple[int, VlmReading]],
+    catalog: IngredientCatalog,
+    compounds: CompoundCatalog,
 ) -> ProductExtraction:
     """readings 為 (照片編號, 該張的讀取結果)，依上傳順序；同一列重複只留第一次出現。"""
     name: str | None = None
@@ -75,7 +84,7 @@ def build_extraction(
         serving = serving or reading.serving_size
         dose_unit = dose_unit or normalize_dose_unit(reading.dose_unit)
         for raw in reading.rows:
-            row = _row(photo_id, raw, catalog)
+            row = _row(photo_id, raw, catalog, compounds)
             key = (row.raw_name, row.section, row.amount, row.unit)
             if key not in seen:
                 seen.add(key)
