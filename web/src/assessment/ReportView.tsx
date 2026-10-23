@@ -1,9 +1,12 @@
 import { useEffect, type ReactNode } from "react";
-import { DrugCard, GroupCards, LegacyCard, Lines, UlTable } from "./ReportParts";
+import { DrugCard, GroupCards, LegacyCard, Lines, SummaryCard, UlTable } from "./ReportParts";
 import type { AssessmentCase, ReportSection } from "./types";
 
-/** 由上到下：重點（交互作用、上限、未評估成分）→ 展開才看的細節（#23）。舊報告的段落一樣照這個順序排。 */
-const ORDER = ["interaction", "ul_comparison", "not_evaluated", "profile", "scope"];
+/**
+ * 由上到下：摘要（#37）→ 重點（交互作用、上限、未評估成分）→ 展開才看的細節（#23）。
+ * 舊報告的段落一樣照這個順序排；舊報告沒有摘要段落，就不顯示摘要卡。
+ */
+const ORDER = ["summary", "interaction", "ul_comparison", "not_evaluated", "profile", "scope"];
 const COLLAPSED = new Set(["profile", "scope"]);
 
 const rank = (s: ReportSection) => (ORDER.includes(s.key) ? ORDER.indexOf(s.key) : ORDER.length);
@@ -108,7 +111,9 @@ export default function ReportView({
     <main className="page">
       <h1>評估報告</h1>
       {sections.map((s) =>
-        COLLAPSED.has(s.key) ? (
+        s.key === "summary" ? (
+          <SummaryCard key={s.key} title={s.title} groups={s.groups ?? []} />
+        ) : COLLAPSED.has(s.key) ? (
           <Collapsible key={s.key} id={s.key} title={s.title}>
             <SectionBody section={s} report={report} />
           </Collapsible>

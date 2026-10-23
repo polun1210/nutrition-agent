@@ -266,6 +266,44 @@ label.estimated input {
   color: #555;
 }
 
+/* 摘要卡：報告最上方的結論，粗框與其他段落區隔；警示項目用左側色條加底色 */
+.summary-card {
+  border: 3px solid #0b5cad;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem 0.75rem;
+  margin-bottom: 1.5rem;
+  background: #eef5fc;
+  break-inside: avoid;
+}
+
+.summary-card h2 {
+  margin: 0.25rem 0 0.5rem;
+}
+
+.summary-card dl {
+  margin: 0;
+}
+
+.summary-card dl div {
+  border-left: 4px solid #999;
+  padding: 0.25rem 0.75rem;
+  margin: 0.5rem 0;
+  background: #fff;
+}
+
+.summary-card dl div[data-tone="warning"] {
+  border-left-color: #b8860b;
+  background: #fff4e5;
+}
+
+.summary-card dt {
+  font-weight: bold;
+}
+
+.summary-card dd {
+  margin: 0;
+}
+
 /* 字卡：同一類的揭露事項 */
 .group-card {
   border: 1px solid #ccc;
@@ -324,5 +362,12 @@ label.estimated input {
   .collapsible summary {
     list-style: none;
     margin-left: 0;
+  }
+
+  /* 摘要卡列印時保留粗框與警示底色，不靠瀏覽器的「列印背景」設定 */
+  .summary-card,
+  .summary-card dl div {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
