@@ -1,5 +1,7 @@
 # nutrition-agent
 
+[![CI](https://github.com/polun1210/nutrition-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/polun1210/nutrition-agent/actions/workflows/ci.yml)
+
 上傳保健食品標示與用藥，判斷多罐加總是否已超過上限、是否與用藥有交互作用，並產出附引用來源的報告。
 
 這是個人作品集專案：以自己的方式，從頭重新實作舊團隊專案「補對了嗎？」。
