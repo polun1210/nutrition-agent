@@ -22,8 +22,8 @@ def test_unreachable_database_fails_fast_with_hint_and_pure_tests_still_pass() -
             "-p",
             "no:cacheprovider",
             "-q",
-            "tests/test_smoke.py",  # 純函數測試，不用資料庫
-            "tests/test_ping.py::test_migration_enabled_pgvector",  # 用到資料庫
+            "tests/test_smoke.py::test_package_imports",  # 純函數測試，不用資料庫
+            "tests/test_migrations.py::test_遷移後已啟用_pgvector",  # 用到資料庫
         ],
         cwd=ROOT,
         env=env,
