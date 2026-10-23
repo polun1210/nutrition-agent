@@ -1,5 +1,24 @@
 import { useEffect, useState } from "react";
 import { request } from "../api";
+import type { IngredientLine } from "./types";
+
+/** 成分列草稿（手動與照片路徑共用）；basis 為 compound 時 amount 是化合物重量。 */
+export type LineFields = EstimateInput & { basis: "labeled" | "compound" };
+
+/** 草稿轉成送出的成分行；覆寫推估值時，化合物與化合物重量照舊保留，另存覆寫的元素量。 */
+export const toIngredientLine = (l: LineFields): IngredientLine => {
+  if (l.basis === "compound") {
+    return {
+      ingredient_code: l.code,
+      amount: Number(l.amount),
+      unit: l.unit,
+      basis: "compound",
+      compound_code: l.compound || null,
+      element_override_mg: l.override !== null && l.override !== "" ? Number(l.override) : null,
+    };
+  }
+  return { ingredient_code: l.code, amount: Number(l.amount), unit: l.unit };
+};
 
 /** 推估預覽需要的欄位；override 為使用者覆寫值（mg），null = 沿用系統推估。 */
 export type EstimateInput = {

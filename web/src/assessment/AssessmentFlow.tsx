@@ -202,7 +202,7 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
             </div>
           )}
           {supplementView.method === "photo" && (
-            <PhotoProductForm draftId={draft.id} options={options} onAdd={(p) => addProduct(p)} />
+            <PhotoProductForm draftId={draft.id} options={options} compounds={compounds} onAdd={(p) => addProduct(p)} />
           )}
           {supplementView.method === "manual" && (
             <ProductForm options={options} compounds={compounds} onAdd={(p) => addProduct(p)} />

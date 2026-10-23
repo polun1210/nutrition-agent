@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { EstimateField } from "./EstimateField";
+import { EstimateField, toIngredientLine } from "./EstimateField";
 import IntakeFields, { intakeDraftFrom, toIntake, type IntakeDraft } from "./IntakeFields";
 import {
   AMOUNT_UNITS,
@@ -65,21 +65,6 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
   const pickIngredient = (index: number, code: string) => {
     const option = options.find((o) => o.code === code);
     updateLine(index, { code, unit: option?.unit ?? "mg", basis: "labeled", compound: "", override: null });
-  };
-
-  // 覆寫推估值時，化合物與化合物重量照舊保留，另存覆寫的元素量，使用者之後可以還原系統推估。
-  const toIngredientLine = (l: LineDraft): IngredientLine => {
-    if (l.basis === "compound") {
-      return {
-        ingredient_code: l.code,
-        amount: Number(l.amount),
-        unit: l.unit,
-        basis: "compound",
-        compound_code: l.compound || null,
-        element_override_mg: l.override !== null && l.override !== "" ? Number(l.override) : null,
-      };
-    }
-    return { ingredient_code: l.code, amount: Number(l.amount), unit: l.unit };
   };
 
   const submit = (e: FormEvent) => {
