@@ -1,6 +1,7 @@
 """白話解釋（Seam C：模型閘道用假回應）：輸出檢查、重試、退回審定說明文字。"""
 
 import json
+import threading
 
 from nutrition_agent.assessment import assess
 from nutrition_agent.reporting.explanation import (
@@ -147,7 +148,12 @@ def test_no_evidence_means_no_model_call(fx_ref):
 # --- 整份報告：腳註與退回 ---
 
 
-def seed_evidence(db, ev_id="ev-aaa"):
+def seed_evidence(
+    db,
+    ev_id="ev-aaa",
+    ingredients=("vitamin_b12", "metformin"),
+    text="Metformin might reduce the absorption of vitamin B12.",
+):
     db.execute(
         "INSERT INTO evidence_chunk (id, source_type, document_name, document_path, ingredients,"
         " section, start_char, end_char, start_line, end_line, text, embedding)"
@@ -157,11 +163,11 @@ def seed_evidence(db, ev_id="ev-aaa"):
             "nih_ods_health_professional",
             "VitaminB12-HealthProfessional.md",
             "sources/nih_ods/VitaminB12-HealthProfessional.md",
-            ["vitamin_b12", "metformin"],
+            list(ingredients),
             "Interactions with Medications",
             1,
             2,
-            "Metformin might reduce the absorption of vitamin B12.",
+            text,
             "[0,0,0,0]",
         ),
     )
@@ -206,3 +212,93 @@ def test_build_explanations_survives_retrieval_failure(db, fx_ref):
     explanations, _ = build_explanations(db, BrokenEmbed(GOOD), assessment, fx_ref)
 
     assert explanations[0].source == "template"
+
+
+# --- 平行產生：回覆亂序完成，結果仍依卡片順序 ---
+
+PPI = drug("Nexium", ("esomeprazole", "ppi"))
+MAGNESIUM = product("鎂錠", [line("magnesium", 100, "mg")])
+GOOD_B = reply(("這類藥物可能影響體內鎂的狀態。", ["ev-bbb"]))
+TWO_CARDS = make_case(B12, MAGNESIUM, medications=(METFORMIN, PPI))
+
+
+def seed_two_cards(db):
+    seed_evidence(db)
+    seed_evidence(
+        db,
+        "ev-bbb",
+        ingredients=("magnesium", "esomeprazole"),
+        text="Prescription PPI drugs can cause hypomagnesemia.",
+    )
+
+
+class OutOfOrderGateway(ScriptedGateway):
+    """第一張卡的回覆要等第二張卡先回完；順序若是循序產生，第一張會卡到逾時。"""
+
+    def __init__(self, first_marker: str, replies: dict[str, str]) -> None:
+        super().__init__("unused")
+        self.first_marker = first_marker
+        self.by_marker = replies
+        self.second_done = threading.Event()
+        self.finished: list[str] = []
+
+    def complete(self, prompt, system=None):
+        marker = next(m for m in self.by_marker if m in prompt)
+        if marker == self.first_marker:
+            self.second_done.wait(timeout=3)
+        else:
+            self.second_done.set()
+        self.finished.append(marker)
+        return self.by_marker[marker]
+
+
+def test_parallel_generation_gives_the_same_result_as_sequential(db, fx_ref):
+    seed_two_cards(db)
+    assessment = assess(TWO_CARDS, fx_ref)
+    cards = [f.ingredient_code for f in assessment.interactions]
+    assert sorted(cards) == ["magnesium", "vitamin_b12"]
+    replies = {"ev-aaa": GOOD, "ev-bbb": GOOD_B}
+    first = "ev-aaa" if cards[0] == "vitamin_b12" else "ev-bbb"
+    gateway = OutOfOrderGateway(first, replies)
+
+    explanations, footnotes = build_explanations(db, gateway, assessment, fx_ref)
+
+    assert gateway.finished[-1] == first  # 第一張卡確實最後才完成
+    assert [e.ingredient_code for e in explanations] == cards
+    assert [e.source for e in explanations] == ["llm", "llm"]
+    assert [e.sentences[0].footnotes for e in explanations] == [[1], [2]]
+    assert [f.evidence_id for f in footnotes] == [
+        "ev-aaa" if c == "vitamin_b12" else "ev-bbb" for c in cards
+    ]
+
+
+def test_one_bad_card_falls_back_without_touching_the_others(db, fx_ref):
+    seed_two_cards(db)
+    assessment = assess(TWO_CARDS, fx_ref)
+    gateway = OutOfOrderGateway("none", {"ev-aaa": GOOD, "ev-bbb": reply(("有數字 3。", ["ev-bbb"]))})
+
+    explanations, footnotes = build_explanations(db, gateway, assessment, fx_ref)
+
+    by_code = {e.ingredient_code: e for e in explanations}
+    assert by_code["vitamin_b12"].source == "llm"
+    assert by_code["magnesium"].source == "template"
+    assert [f.evidence_id for f in footnotes] == ["ev-aaa"]
+    assert by_code["vitamin_b12"].sentences[0].footnotes == [1]
+
+
+def test_model_outage_on_one_card_only_affects_that_card(db, fx_ref):
+    seed_two_cards(db)
+    assessment = assess(TWO_CARDS, fx_ref)
+
+    class FlakyGateway(OutOfOrderGateway):
+        def complete(self, prompt, system=None):
+            if "ev-bbb" in prompt:
+                raise RuntimeError("model down")
+            return GOOD
+
+    explanations, _ = build_explanations(db, FlakyGateway("none", {}), assessment, fx_ref)
+
+    assert {e.ingredient_code: e.source for e in explanations} == {
+        "vitamin_b12": "llm",
+        "magnesium": "template",
+    }

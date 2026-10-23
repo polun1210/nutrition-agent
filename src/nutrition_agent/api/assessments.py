@@ -56,9 +56,12 @@ class DraftBody(BaseModel):
     medications: list[MedicationInput] = []
 
 
-def _draft_row(conn: psycopg.Connection, draft_id: int, user: User) -> tuple:
+def _draft_row(
+    conn: psycopg.Connection, draft_id: int, user: User, *, lock: bool = False
+) -> tuple:
     row = conn.execute(
-        "SELECT id, products, case_id, medications FROM assessment_drafts WHERE id = %s AND user_id = %s",
+        "SELECT id, products, case_id, medications FROM assessment_drafts "
+        "WHERE id = %s AND user_id = %s" + (" FOR UPDATE" if lock else ""),
         (draft_id, user.id),
     ).fetchone()
     if row is None:
@@ -66,8 +69,10 @@ def _draft_row(conn: psycopg.Connection, draft_id: int, user: User) -> tuple:
     return row
 
 
-def _editable_draft(conn: psycopg.Connection, draft_id: int, user: User) -> tuple:
-    row = _draft_row(conn, draft_id, user)
+def _editable_draft(
+    conn: psycopg.Connection, draft_id: int, user: User, *, lock: bool = False
+) -> tuple:
+    row = _draft_row(conn, draft_id, user, lock=lock)
     if row[2] is not None:
         raise HTTPException(status_code=409, detail="這份評估已送出，不能再修改")
     return row
@@ -337,7 +342,8 @@ def submit_draft(
     gateway: ModelGateway = Depends(get_gateway),
     today: date = Depends(get_today),
 ) -> dict:
-    row = _editable_draft(conn, draft_id, user)
+    # 列鎖：並行的第二次送出會等第一次交易結束，再看到 case_id 已設定而回 409。
+    row = _editable_draft(conn, draft_id, user, lock=True)
     products = [Product.model_validate(p) for p in row[1]]
     if not products:
         raise HTTPException(status_code=422, detail="至少要有一項保健食品才能送出")

@@ -12,6 +12,7 @@ import json
 import logging
 import re
 from collections.abc import Iterable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from typing import Literal
 
 import psycopg
@@ -27,6 +28,7 @@ from nutrition_agent.retrieval.search import Evidence, retrieve_evidence
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 2
+MAX_PARALLEL = 4  # 同時產生解釋的卡片數上限，避免撞到模型服務的限速
 SOURCE_LABELS = {
     "dris": "DRIs",
     "nih_ods_health_professional": "NIH ODS",
@@ -155,22 +157,53 @@ def _retrieve(
         return []
 
 
+def _explain_isolated(
+    gateway: ModelGateway,
+    finding: InteractionFinding,
+    ingredient_name: str,
+    evidence: Sequence[Evidence],
+) -> list[ExplainedSentence] | None:
+    """單張卡的任何失敗都只退回那一張，不影響其他卡。"""
+    try:
+        return explain_finding(gateway, finding, ingredient_name, evidence)
+    except Exception:
+        logger.exception("產生解釋失敗：%s", finding.ingredient_code)
+        return None
+
+
 def build_explanations(
     conn: psycopg.Connection,
     gateway: ModelGateway,
     assessment: Assessment,
     ref: ReferenceData,
 ) -> tuple[list[FindingExplanation], list[Footnote]]:
-    """替每張交互作用卡產生解釋，並依首次出現順序給全報告統一的腳註編號。"""
+    """替每張交互作用卡產生解釋，並依首次出現順序給全報告統一的腳註編號。
+
+    三階段：(1) 在呼叫端執行緒逐張檢索證據（資料庫連線不跨執行緒）；
+    (2) 只有「產生＋輸出檢查＋重試」放進執行緒池平行執行，期間不碰資料庫；
+    (3) 依卡片順序組裝，腳註編號與完成先後無關。
+    """
+    findings = list(assessment.interactions)
+    evidence_per_card = [_retrieve(conn, gateway, ref, f) for f in findings]
+    names = [
+        ing.display_name_zh if (ing := ref.ingredients.get(f.ingredient_code)) else f.ingredient_code
+        for f in findings
+    ]
+    if findings:
+        with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(findings))) as pool:
+            results = list(
+                pool.map(
+                    lambda args: _explain_isolated(gateway, *args),
+                    zip(findings, names, evidence_per_card, strict=True),
+                )
+            )
+    else:
+        results = []
+
     explanations: list[FindingExplanation] = []
     numbers: dict[str, int] = {}
     footnote_sources: dict[str, Evidence] = {}
-    for finding in assessment.interactions:
-        evidence = _retrieve(conn, gateway, ref, finding)
-        by_id = {e.id: e for e in evidence}
-        ingredient = ref.ingredients.get(finding.ingredient_code)
-        name = ingredient.display_name_zh if ingredient else finding.ingredient_code
-        sentences = explain_finding(gateway, finding, name, evidence)
+    for finding, evidence, sentences in zip(findings, evidence_per_card, results, strict=True):
         if sentences is None:
             explanations.append(
                 FindingExplanation(
@@ -180,6 +213,7 @@ def build_explanations(
                 )
             )
             continue
+        by_id = {e.id: e for e in evidence}
         numbered = []
         for s in sentences:
             for ev_id in s.evidence_ids:
@@ -211,6 +245,7 @@ def _footnotes(numbers: dict[str, int], sources: dict[str, Evidence]) -> list[Fo
 
 
 __all__: Iterable[str] = [
+    "MAX_PARALLEL",
     "MAX_RETRIES",
     "ExplainedSentence",
     "FindingExplanation",
