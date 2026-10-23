@@ -25,10 +25,14 @@ ROOT = HERE.parents[1]
 
 
 def _dry_run(cases, knowledge: Path) -> int:
-    from nutrition_agent.retrieval.evaluation import validate_against_corpus
+    from nutrition_agent.retrieval.evaluation import missing_raw_corpus, validate_against_corpus
 
     bad = 0
     for case in cases:
+        skip_reason = missing_raw_corpus(case, knowledge)
+        if skip_reason is not None:
+            print(f"{case.id}: 略過：{skip_reason}")
+            continue
         problems = validate_against_corpus(case, knowledge)
         bad += bool(problems)
         print(f"{case.id}: {'ok' if not problems else '; '.join(problems)}")
