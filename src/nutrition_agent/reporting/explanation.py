@@ -141,12 +141,15 @@ def explain_finding(
 
 
 def _retrieve(
-    conn: psycopg.Connection, gateway: ModelGateway, finding: InteractionFinding
+    conn: psycopg.Connection,
+    gateway: ModelGateway,
+    ref: ReferenceData,
+    finding: InteractionFinding,
 ) -> list[Evidence]:
     drug_codes = list(dict.fromkeys(d.ingredient_code for d in finding.triggering_drugs))
     try:
         with conn.transaction():  # 失敗時只回到 savepoint，不污染外層交易
-            return retrieve_evidence(conn, gateway, finding.ingredient_code, drug_codes)
+            return retrieve_evidence(conn, gateway, ref, finding.ingredient_code, drug_codes)
     except Exception:
         logger.exception("檢索證據失敗：%s", finding.ingredient_code)
         return []
@@ -163,7 +166,7 @@ def build_explanations(
     numbers: dict[str, int] = {}
     footnote_sources: dict[str, Evidence] = {}
     for finding in assessment.interactions:
-        evidence = _retrieve(conn, gateway, finding)
+        evidence = _retrieve(conn, gateway, ref, finding)
         by_id = {e.id: e for e in evidence}
         ingredient = ref.ingredients.get(finding.ingredient_code)
         name = ingredient.display_name_zh if ingredient else finding.ingredient_code

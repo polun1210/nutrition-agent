@@ -41,16 +41,18 @@ def _live(cases, limit: int) -> int:
     from nutrition_agent.assessment import InteractionFinding, TriggeringDrug
     from nutrition_agent.config import get_settings
     from nutrition_agent.gateway import OpenRouterGateway
+    from nutrition_agent.reference import load_reference_data
     from nutrition_agent.reporting.explanation import explain_finding
     from nutrition_agent.retrieval.evaluation import score_points, score_retrieval
     from nutrition_agent.retrieval.search import retrieve_evidence
 
     settings = get_settings()
     gateway = OpenRouterGateway.from_settings(settings)
+    ref = load_reference_data()
     with psycopg.connect(settings.database_url) as conn:
         for case in cases:
             evidence = retrieve_evidence(
-                conn, gateway, case.ingredient_code, case.drug_ingredient_codes, limit=limit
+                conn, gateway, ref, case.ingredient_code, case.drug_ingredient_codes, limit=limit
             )
             finding = InteractionFinding(
                 ingredient_code=case.ingredient_code,
