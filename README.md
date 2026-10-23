@@ -1,5 +1,7 @@
 # nutrition-agent
 
+[![CI](https://github.com/polun1210/nutrition-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/polun1210/nutrition-agent/actions/workflows/ci.yml)
+
 上傳保健食品標示與用藥，判斷多罐加總是否接近上限、是否與用藥有交互作用，並產出附引用來源的報告。
 
 ```
