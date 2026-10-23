@@ -322,6 +322,7 @@ interaction_type = "pharmacodynamic"
 requires_supplement_intake = true
 advice = "consult_before_combining"
 # 草稿（2026-10-23 agent 草擬，#40）：不進入判定；審定說明的文字由開發者審定時確認（#46）。
+# 構想參考舊專案 docs/legacy/rule-table.md:132（僅參考，判定依據是下列 NCCIH 引文）。
 # 引文只點名 lovastatin（不在用藥目錄），但第二、三句說紅麴產品可能有與 statin 類藥物相同的副作用
 # 與交互作用，所以條件寫成整個 Statin 類別。
 reason_zh = "紅麴可能含有與降血脂藥 lovastatin 結構相同的成分，與 Statin 類藥物併用，可能加重肌肉、肝臟或腎臟方面的副作用。"
