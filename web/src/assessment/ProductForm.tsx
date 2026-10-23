@@ -1,12 +1,11 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { request } from "../api";
+import { useState, type FormEvent } from "react";
+import { EstimateField } from "./EstimateField";
+import IntakeFields, { intakeDraftFrom, toIntake, type IntakeDraft } from "./IntakeFields";
 import {
   AMOUNT_UNITS,
   DOSE_UNITS,
-  FREQUENCIES,
   MINERALS,
   type CompoundOption,
-  type Frequency,
   type IngredientLine,
   type IngredientOption,
   type Product,
@@ -58,12 +57,7 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
       ? initial.ingredients.map(draftFromLine)
       : [emptyLine(options)],
   );
-  const [timesPerDay, setTimesPerDay] = useState(String(initial?.intake.times_per_day ?? 1));
-  const [perTime, setPerTime] = useState(String(initial?.intake.units_per_time ?? 1));
-  const [frequency, setFrequency] = useState<Frequency>(initial?.intake.frequency ?? "daily");
-  const [daysPerWeek, setDaysPerWeek] = useState(String(initial?.intake.days_per_week ?? 3));
-  const [onDays, setOnDays] = useState(String(initial?.intake.cycle_on_days ?? 21));
-  const [offDays, setOffDays] = useState(String(initial?.intake.cycle_off_days ?? 7));
+  const [intake, setIntake] = useState<IntakeDraft>(intakeDraftFrom(initial?.intake));
 
   const updateLine = (index: number, patch: Partial<LineDraft>) =>
     setLines(lines.map((l, i) => (i === index ? { ...l, ...patch } : l)));
@@ -96,22 +90,13 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
       dose_unit: doseUnit,
       units_per_serving: Number(perServing),
       ingredients,
-      intake: {
-        frequency,
-        times_per_day: Number(timesPerDay),
-        units_per_time: Number(perTime),
-        days_per_week: frequency === "weekly_days" ? Number(daysPerWeek) : null,
-        cycle_on_days: frequency === "cycle" ? Number(onDays) : null,
-        cycle_off_days: frequency === "cycle" ? Number(offDays) : null,
-      },
+      intake: toIntake(intake),
     });
     if (initial) return;
     setName("");
     setPerServing("1");
     setLines([emptyLine(options)]);
-    setTimesPerDay("1");
-    setPerTime("1");
-    setFrequency("daily");
+    setIntake(intakeDraftFrom());
   };
 
   return (
@@ -218,68 +203,7 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
           再加一個成分
         </button>
       </fieldset>
-      <label>
-        服用頻率
-        <select value={frequency} onChange={(e) => setFrequency(e.target.value as Frequency)}>
-          {FREQUENCIES.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="hint">
-        「需要時才吃」無法量化每日攝取量，所以不提供這個選項；請依你實際的規律選最接近的頻率。
-      </p>
-      {frequency === "weekly_days" && (
-        <label>
-          每週服用幾天
-          <input
-            type="number"
-            required
-            min="1"
-            max="6"
-            step="1"
-            value={daysPerWeek}
-            onChange={(e) => setDaysPerWeek(e.target.value)}
-          />
-        </label>
-      )}
-      {frequency === "cycle" && (
-        <>
-          <label>
-            連續服用幾天
-            <input type="number" required min="1" step="1" value={onDays} onChange={(e) => setOnDays(e.target.value)} />
-          </label>
-          <label>
-            停用幾天
-            <input type="number" required min="1" step="1" value={offDays} onChange={(e) => setOffDays(e.target.value)} />
-          </label>
-        </>
-      )}
-      <label>
-        服用當日的次數
-        <input
-          type="number"
-          required
-          min="1"
-          max="24"
-          step="1"
-          value={timesPerDay}
-          onChange={(e) => setTimesPerDay(e.target.value)}
-        />
-      </label>
-      <label>
-        每次幾{doseUnit}
-        <input
-          type="number"
-          required
-          min="0.01"
-          step="any"
-          value={perTime}
-          onChange={(e) => setPerTime(e.target.value)}
-        />
-      </label>
+      <IntakeFields value={intake} onChange={setIntake} doseUnit={doseUnit} />
       <button type="submit">{initial ? "儲存修改" : "加入這項保健食品"}</button>
       {onCancel && (
         <button type="button" className="secondary" onClick={onCancel}>
@@ -288,65 +212,4 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
       )}
     </form>
   );
-}
-
-/** 推估元素量：數值由後端計算（與送出時同一套），不同底色標示「推估」，可覆寫（覆寫後視為使用者提供的值）。 */
-function EstimateField({
-  line,
-  onOverride,
-}: {
-  line: LineDraft;
-  onOverride: (value: string | null) => void;
-}) {
-  const estimate = useEstimate(line);
-  if (!line.compound) {
-    return <p className="undetermined">此營養素的元素量無法判定，不會計入上限比對。</p>;
-  }
-  const overridden = line.override !== null;
-  return (
-    <label className={overridden ? "" : "estimated"}>
-      元素量（mg）{overridden ? "：使用者提供" : "：推估"}
-      <input
-        type="number"
-        min="0"
-        step="any"
-        aria-label="元素量"
-        value={overridden ? line.override ?? "" : (estimate ?? "")}
-        onChange={(e) => onOverride(e.target.value)}
-      />
-      {overridden && (
-        <button type="button" className="secondary" onClick={() => onOverride(null)}>
-          還原系統推估
-        </button>
-      )}
-    </label>
-  );
-}
-
-/** 向後端取推估預覽；輸入變動後稍等一下才送出請求，過期的回應丟掉。 */
-function useEstimate(line: LineDraft): number | null {
-  const [estimate, setEstimate] = useState<number | null>(null);
-  const { code, compound, amount, unit } = line;
-  useEffect(() => {
-    if (!compound || amount === "" || Number.isNaN(Number(amount))) {
-      setEstimate(null);
-      return;
-    }
-    let stale = false;
-    const timer = setTimeout(() => {
-      request<{ element_mg: number | null }>("POST", "/api/assessments/estimate", {
-        ingredient_code: code,
-        compound_code: compound,
-        amount: Number(amount),
-        unit,
-      })
-        .then((r) => !stale && setEstimate(r.element_mg))
-        .catch(() => !stale && setEstimate(null));
-    }, 200);
-    return () => {
-      stale = true;
-      clearTimeout(timer);
-    };
-  }, [code, compound, amount, unit]);
-  return estimate;
 }
