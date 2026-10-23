@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
 async function registerAndStartAssessment(page: Page) {
@@ -56,19 +57,15 @@ test("化合物重量推估元素量，可覆寫，報告註明系統推估", as
   await expect(table).toContainText("此數值為系統推估，非標示值");
 });
 
-// 假 VLM 對 123x45 的 JPEG 回「碳酸鈣 1250 mg」（scripts/e2e_server.py）：照片路徑出現化合物列與推估元素量。
+const COMPOUND_LABEL = fileURLToPath(new URL("./fixtures/compound-label.jpg", import.meta.url));
+
+// 假 VLM 對 123x45 的 JPEG（fixtures/compound-label.jpg，正規化不改小圖尺寸）回「碳酸鈣 1250 mg」（scripts/e2e_server.py）：照片路徑出現化合物列與推估元素量。
 test("照片辨識出化合物，校對頁顯示推估元素量，可覆寫與還原，並可選服用頻率", async ({ page }) => {
   await registerAndStartAssessment(page);
   await page.getByRole("button", { name: "新增一項" }).click();
   await page.getByRole("button", { name: "用照片新增" }).click();
 
-  // 只含 SOF 區段的最小 JPEG 檔頭：高 45、寬 123
-  const header = [0xff, 0xd8, 0xff, 0xc0, 0, 17, 8, 0, 45, 0, 123, 3, 1, 0x11, 0, 2, 0x11, 0];
-  await page.getByLabel("標示照片").setInputFiles({
-    name: "calcium.jpg",
-    mimeType: "image/jpeg",
-    buffer: Buffer.from(header),
-  });
+  await page.getByLabel("標示照片").setInputFiles(COMPOUND_LABEL);
   await page.getByRole("button", { name: "開始辨識" }).click();
 
   const review = page.getByRole("form", { name: "校對辨識結果" });

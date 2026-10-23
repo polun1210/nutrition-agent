@@ -11,9 +11,12 @@ class FakeGateway:
     complete_reply: str = "fake-completion"
     embedding_dim: int = 4
     calls: list[tuple[str, object]] = field(default_factory=list)
+    # 送進 vision 的 (圖檔, MIME)，依呼叫順序：驗證模型看到的就是存下來的那一張。
+    images: list[tuple[bytes, str]] = field(default_factory=list)
 
     def vision(self, prompt: str, image: bytes, mime_type: str) -> str:
         self.calls.append(("vision", prompt))
+        self.images.append((image, mime_type))
         if self.vision_replies:
             reply = self.vision_replies.pop(0)
             if isinstance(reply, Exception):

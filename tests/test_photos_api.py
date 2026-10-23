@@ -19,11 +19,10 @@ from tests.conftest import (
     bucket_keys,
     fail_storage,
 )
+from tests.images import JPEG, PNG
 from tests.test_assessments_api import supplement
 
 RECORDED = Path(__file__).resolve().parents[1] / "evals" / "vlm" / "recorded" / "vlm"
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 UNREADABLE = json.dumps({"readable": False, "rows": []})
 BACK = json.dumps(
     {
@@ -96,7 +95,7 @@ def test_上傳後照片存進bucket且key不含使用者資訊(login_as, gatewa
     [key] = bucket_keys(s3)
     assert re.fullmatch(r"product/[0-9a-f]{32}\.jpg", key)
     stored = s3.get_object(Bucket=TEST_BUCKET, Key=key)
-    assert stored["Body"].read() == JPEG and stored["ContentType"] == "image/jpeg"
+    assert stored["Body"].read() == gateway.images[0][0] and stored["ContentType"] == "image/jpeg"
 
 
 def test_照片只有本人拿得到(login_as, make_client, gateway):

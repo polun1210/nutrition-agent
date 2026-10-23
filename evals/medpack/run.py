@@ -27,10 +27,11 @@ from nutrition_agent.extraction.medication_pack import (
     parse_pack_reading,
     read_medication_pack,
 )
+from nutrition_agent.photo_normalization import NORMALIZED_MIME, normalize_photo
 from nutrition_agent.extraction.medication_pack_eval import PackEvalReport, format_pack_report, score_pack
 
 HERE = Path(__file__).resolve().parent
-IMAGE_SUFFIXES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
 
 
 def _replay(directory: Path, image_id: str) -> MedicationPackReading | None:
@@ -39,10 +40,10 @@ def _replay(directory: Path, image_id: str) -> MedicationPackReading | None:
 
 
 def _live(gateway, images: Path, image_id: str, save_to: Path | None) -> MedicationPackReading | None:
-    for suffix, mime in IMAGE_SUFFIXES.items():
+    for suffix in IMAGE_SUFFIXES:
         path = images / f"{image_id}{suffix}"
         if path.exists():
-            reading = read_medication_pack(gateway, path.read_bytes(), mime)
+            reading = read_medication_pack(gateway, normalize_photo(path.read_bytes()), NORMALIZED_MIME)
             if save_to is not None:
                 save_to.mkdir(parents=True, exist_ok=True)
                 (save_to / f"{image_id}.json").write_text(reading.model_dump_json(indent=2), encoding="utf-8")
