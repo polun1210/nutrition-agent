@@ -255,8 +255,8 @@ def create_draft(
         products = latest[0]["products"]
         medications = [{"name": m["raw_name"]} for m in latest[0].get("medications", [])]
     row = conn.execute(
-        "INSERT INTO assessment_drafts (user_id, products, medications) VALUES (%s, %s, %s) "
-        "RETURNING id, products, case_id, medications",
+        "INSERT INTO assessment_drafts (user_id, products, medications, updated_at) "
+        "VALUES (%s, %s, %s, clock_timestamp()) RETURNING id, products, case_id, medications",
         (user.id, Jsonb([]), Jsonb(medications)),
     ).fetchone()
     if products:
@@ -266,6 +266,29 @@ def create_draft(
             (Jsonb(_copy_photos(conn, products, user, row[0])), row[0]),
         ).fetchone()
     return _draft_json(row, ref, table)
+
+
+# 必須排在 /drafts/{draft_id} 之前，否則 "resumable" 會被當成草稿 id。
+@router.get("/drafts/resumable")
+def resumable_draft(
+    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection)
+) -> dict:
+    """可接續的草稿：自己的、尚未送出、至少一項保健食品或用藥，取最近修改的那一份。"""
+    row = conn.execute(
+        "SELECT id, jsonb_array_length(products), jsonb_array_length(medications), updated_at "
+        "FROM assessment_drafts WHERE user_id = %s AND case_id IS NULL "
+        "AND (products <> '[]'::jsonb OR medications <> '[]'::jsonb) "
+        "ORDER BY updated_at DESC, id DESC LIMIT 1",
+        (user.id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="沒有可以接續的評估")
+    return {
+        "id": row[0],
+        "product_count": row[1],
+        "medication_count": row[2],
+        "updated_at": row[3].isoformat(),
+    }
 
 
 @router.get("/drafts/{draft_id}")
@@ -291,9 +314,10 @@ def save_draft(
     _editable_draft(conn, draft_id, user)
     _check_ingredient_codes(body.products, ref)
     _check_photo_ids(conn, body.products, user, draft_id)
+    # clock_timestamp() 是實際寫入的時刻；now() 是交易開始時間，同一交易內的多次修改會分不出先後。
     row = conn.execute(
-        "UPDATE assessment_drafts SET products = %s, medications = %s, updated_at = now() "
-        "WHERE id = %s RETURNING id, products, case_id, medications",
+        "UPDATE assessment_drafts SET products = %s, medications = %s, "
+        "updated_at = clock_timestamp() WHERE id = %s RETURNING id, products, case_id, medications",
         (
             Jsonb([p.model_dump(mode="json") for p in body.products]),
             Jsonb([m.model_dump() for m in body.medications]),
