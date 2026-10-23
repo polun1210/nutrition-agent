@@ -38,6 +38,26 @@ TEST_S3_SETTINGS = Settings(
     s3_max_attempts=1,
 )
 STORAGE_DOWN = "照片儲存服務暫時無法使用，請稍後再試"
+# 探測資料庫的連線逾時（秒）：沒開資料庫時幾秒內就失敗，不必等 psycopg 預設的 130 秒。
+DB_PROBE_TIMEOUT = 3
+
+
+def _probe_database(url: str) -> None:
+    """先用短逾時連一次伺服器；連不上就以明確訊息失敗（只影響用到資料庫的測試）。"""
+    params = conninfo.conninfo_to_dict(url)
+    address = f"{params.get('host', 'localhost')}:{params.get('port', '5432')}"
+    admin = conninfo.make_conninfo(url, dbname="postgres", connect_timeout=DB_PROBE_TIMEOUT)
+    try:
+        with psycopg.connect(admin):
+            return
+    except psycopg.OperationalError as error:
+        reason = str(error)
+    # 在 except 外面才 fail，訊息不會被串上原本的例外。
+    pytest.fail(
+        f"連不上測試資料庫 {address}（{params.get('dbname')}）：{reason}\n"
+        "請先執行 `docker compose up -d db`，或用 TEST_DATABASE_URL 指向可連線的資料庫。",
+        pytrace=False,
+    )
 
 
 def _recreate_database(url: str) -> None:
@@ -54,6 +74,7 @@ def _recreate_database(url: str) -> None:
 
 @pytest.fixture(scope="session")
 def database_url() -> str:
+    _probe_database(TEST_DATABASE_URL)
     _recreate_database(TEST_DATABASE_URL)
     config = Config("alembic.ini")
     config.attributes["url"] = to_sqlalchemy_url(TEST_DATABASE_URL)

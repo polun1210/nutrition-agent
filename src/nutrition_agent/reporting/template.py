@@ -4,6 +4,7 @@
 報告永遠不寫「安全」「未發現問題」，也不給劑量建議。
 每段是 `Section(key, title, lines)`；lines 是整段的純文字，另外附前端排版用的結構化欄位
 （drug_groups、table、notes、groups，#23）。舊報告沒有這些欄位，前端退回逐行呈現。
+最上方的摘要段落（summary，#37）也由判定直接渲染；舊報告沒有這一段，前端就不顯示摘要卡。
 """
 
 from __future__ import annotations
@@ -188,6 +189,7 @@ def render_report(
         explanations=explanations or [],
         footnotes=footnotes or [],
         sections=[
+            _summary_section(case, assessment, names),
             Section(
                 key="interaction",
                 title="交互作用",
@@ -212,6 +214,46 @@ def render_report(
             Section(key="scope", title="評估範圍與揭露", lines=_flatten(scope), groups=scope),
         ]
     )
+
+
+def _summary_section(case: AssessmentCase, assessment: Assessment, names: _Names) -> Section:
+    """報告最上方的摘要（#37）：只重述判定已有的內容，不新增判定。
+
+    固定三項：交互作用、上限比對、無法確認（沒有就不寫）。沿用字卡結構，tone 標出需要注意的項目。
+    """
+    groups = [
+        _interaction_summary(case, assessment, names),
+        _ul_summary(assessment, names),
+        *_unconfirmed_summary(case, assessment),
+    ]
+    return Section(key="summary", title="摘要", lines=_flatten(groups), groups=groups)
+
+
+def _interaction_summary(case: AssessmentCase, assessment: Assessment, names: _Names) -> Group:
+    findings = assessment.interactions
+    if not findings:
+        return Group(title="交互作用", tone="neutral", lines=[_no_finding_text(case, assessment)])
+    ingredients = "、".join(names(f.ingredient_code) for f in findings)
+    text = f"{len(findings)} 項交互作用提醒，建議與醫師或藥師討論：{ingredients}"
+    return Group(title="交互作用", tone="warning", lines=[text])
+
+
+def _ul_summary(assessment: Assessment, names: _Names) -> Group:
+    exceeded = [names(c.nutrient_code) for c in assessment.ul_comparisons if c.exceeded]
+    if not exceeded:
+        return Group(title="上限比對", tone="neutral", lines=["沒有營養素已超過上限"])
+    return Group(title="上限比對", tone="warning", lines=[f"已超過上限：{'、'.join(exceeded)}"])
+
+
+def _unconfirmed_summary(case: AssessmentCase, assessment: Assessment) -> list[Group]:
+    """範圍狀態為「無法確認」的用藥與標示成分；範圍外的不算。"""
+    count = len(assessment.unconfirmed_ingredients) + sum(
+        m.scope_status == "unconfirmed" for m in case.medications
+    )
+    if not count:
+        return []
+    text = f"{count} 項無法確認的藥或成分，未納入判定"
+    return [Group(title="無法確認", tone="warning", lines=[text])]
 
 
 def _flatten(groups: list[Group]) -> list[str]:
@@ -362,9 +404,14 @@ def _interaction_lines(
 ) -> list[str]:
     if assessment.interactions:
         return [line for f in assessment.interactions for line in _card_lines(f, names)]
+    return [_no_finding_text(case, assessment)]
+
+
+def _no_finding_text(case: AssessmentCase, assessment: Assessment) -> str:
+    """沒有交互作用卡片時的措辭：分清楚「沒比對」與「沒命中」，都不說沒有交互作用。"""
     if not case.medications:
-        return [NO_MEDICATION_INTERACTION_TEXT]
-    return [NO_HIT_TEXT if assessment.approved_rule_count else NO_RULES_TEXT]
+        return NO_MEDICATION_INTERACTION_TEXT
+    return NO_HIT_TEXT if assessment.approved_rule_count else NO_RULES_TEXT
 
 
 def _card(f: InteractionFinding, names: _Names, case: AssessmentCase | None = None) -> Card:

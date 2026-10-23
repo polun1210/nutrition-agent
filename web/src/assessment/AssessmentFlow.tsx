@@ -11,6 +11,7 @@ import type {
   AssessmentCase,
   CompoundOption,
   Draft,
+  DraftSource,
   IngredientOption,
   MedicationInput,
   Product,
@@ -44,9 +45,18 @@ type SupplementView =
   | { kind: "add"; method: "photo" | "manual" | null }
   | { kind: "edit"; index: number };
 
-type Props = { copyFromLatest?: boolean; me: Me; onProfileSaved: () => void; goHome: () => void };
+type Props = { source: DraftSource; me: Me; onProfileSaved: () => void; goHome: () => void };
 
-export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSaved, goHome }: Props) {
+/** 接續時讀回既有草稿，不建新的；其餘情況建立新草稿（可帶入上一次評估）。 */
+function openDraft(source: DraftSource): Promise<Draft> {
+  if (source.kind === "resume") return request<Draft>("GET", `/api/assessments/drafts/${source.draftId}`);
+  return request<Draft>(
+    "POST",
+    source.kind === "copy_latest" ? "/api/assessments/drafts?copy_from=latest" : "/api/assessments/drafts",
+  );
+}
+
+export default function AssessmentFlow({ source, me, onProfileSaved, goHome }: Props) {
   const [step, setStep] = useHistoryState<StepKey>("step", "profile");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [supplementView, setSupplementView] = useHistoryState<SupplementView>("supplement", { kind: "list" });
@@ -60,10 +70,7 @@ export default function AssessmentFlow({ copyFromLatest = false, me, onProfileSa
   useEffect(() => {
     void (async () => {
       try {
-        setDraft(await request<Draft>(
-            "POST",
-            copyFromLatest ? "/api/assessments/drafts?copy_from=latest" : "/api/assessments/drafts",
-          ));
+        setDraft(await openDraft(source));
         setOptions(await request<IngredientOption[]>("GET", "/api/assessments/ingredient-options"));
         setCompounds(await request<CompoundOption[]>("GET", "/api/assessments/compound-options"));
       } catch (err) {

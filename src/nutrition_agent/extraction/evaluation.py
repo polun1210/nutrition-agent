@@ -13,7 +13,7 @@ from nutrition_agent.reference.ingredients import normalize_name
 GOLD_DOSE_UNITS = {"tablet": "錠", "capsule": "粒", "softgel": "粒"}
 GOLD_UNIT_ALIASES = {"mg_ate": "mg_alpha_te"}
 
-PRODUCT_FIELDS = ("product_name", "serving_size", "dose_unit")
+PRODUCT_FIELDS = ("product_exact", "product_name", "serving_size", "dose_unit")
 ROW_FIELDS = ("amount", "unit", "scope_status", "standard_code")
 
 
@@ -29,7 +29,9 @@ class FieldScore:
 
 @dataclass
 class EvalReport:
-    """各欄位的正確率。row_recall：金標準的列有多少被讀到；row_precision：讀到的列有多少在金標準裡。"""
+    """各欄位的正確率。row_recall：金標準的列有多少被讀到；row_precision：讀到的列有多少在金標準裡。
+    product_exact（產品全對）：一張照片的每份量、劑型單位，以及所有範圍內列（金標準有標準代碼且有含量）的
+    名稱、含量、單位都正確。每份量是整瓶所有成分的乘數，讀錯一次整瓶都錯，列層級的正確率反映不出來。"""
 
     fields: dict[str, FieldScore] = field(default_factory=lambda: defaultdict(FieldScore))
     gold_rows: int = 0
@@ -78,26 +80,47 @@ def _scores_scope(gold_row: dict, row, catalog: IngredientCatalog) -> bool:
     return found is not None and found.category is IngredientCategory.ALLOWED_INGREDIENT
 
 
+def _counts_for_product(gold_row: dict) -> bool:
+    """產品全對要看的列：金標準有標準代碼且有含量。這些列一定通過 `_scores_scope`。"""
+    return bool(gold_row.get("standard_code")) and gold_row.get("per_serving") is not None
+
+
 def score_product(
     gold: dict, extraction: ProductExtraction, report: EvalReport, catalog: IngredientCatalog
 ) -> None:
     serving = gold["serving_info"]
     report.add("product_name", normalize_name(extraction.product_name or "") == normalize_name(gold["product_name"]))
-    report.add("serving_size", _same_number(extraction.units_per_serving, serving.get("serving_size")))
-    report.add("dose_unit", extraction.dose_unit == GOLD_DOSE_UNITS.get(serving.get("dose_unit")))
+    serving_ok = _same_number(extraction.units_per_serving, serving.get("serving_size"))
+    dose_ok = extraction.dose_unit == GOLD_DOSE_UNITS.get(serving.get("dose_unit"))
+    report.add("serving_size", serving_ok)
+    report.add("dose_unit", dose_ok)
+    rows_ok = _score_rows(gold, extraction, report, catalog)
+    report.add("product_exact", serving_ok and dose_ok and rows_ok)
 
+
+def _score_rows(
+    gold: dict, extraction: ProductExtraction, report: EvalReport, catalog: IngredientCatalog
+) -> bool:
+    """逐列評分，回傳範圍內列是否全對。"""
     extracted = {_row_key(r.raw_name, r.section): r for r in extraction.rows}
     report.extracted_rows += len(extracted)
+    all_ok = True
     for gold_row in gold["nutrients"]:
         report.gold_rows += 1
         row = extracted.get(_row_key(gold_row["raw_name"], gold_row["label_section"]))
         if row is None:
+            if _counts_for_product(gold_row):
+                all_ok = False
             continue
         report.matched_rows += 1
         gold_unit = gold_row.get("unit")
         gold_unit = GOLD_UNIT_ALIASES.get(gold_unit, gold_unit)
-        report.add("amount", _same_number(row.amount, gold_row.get("per_serving")))
-        report.add("unit", normalize_unit(row.unit) == gold_unit)
+        amount_ok = _same_number(row.amount, gold_row.get("per_serving"))
+        unit_ok = normalize_unit(row.unit) == gold_unit
+        report.add("amount", amount_ok)
+        report.add("unit", unit_ok)
+        if _counts_for_product(gold_row) and not (amount_ok and unit_ok):
+            all_ok = False
         if not _scores_scope(gold_row, row, catalog):
             continue
         # 金標準只分範圍內／範圍外；我們的「無法確認」對金標準來說也是不進入評估
@@ -105,6 +128,7 @@ def score_product(
         report.add("scope_status", ours == gold_row["scope_status"])
         if ours == "in_scope" or gold_row.get("standard_code"):  # 範圍外的列金標準沒有標準代碼
             report.add("standard_code", row.ingredient_code == gold_row.get("standard_code"))
+    return all_ok
 
 
 def format_report(report: EvalReport) -> str:

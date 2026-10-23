@@ -73,6 +73,20 @@ def score_points(case: RagCase, explanation_text: str) -> Score:
     return Score(found, len(case.expected_points))
 
 
+def missing_raw_corpus(case: RagCase, knowledge_dir: Path) -> str | None:
+    """預期證據指向不進 git 的 raw/ 語料（例如 raw/tfda），而本機沒有這份語料時，回傳略過原因。
+
+    只看語料目錄在不在：語料在、但缺某份文件時回傳 None，交給 validate_against_corpus 報錯。
+    """
+    for expected in case.expected_evidence:
+        parts = Path(expected.document_path).parts
+        if len(parts) > 2 and parts[0] == "raw":
+            corpus = Path(*parts[:2])
+            if not (Path(knowledge_dir) / corpus).is_dir():
+                return f"語料不在 repo：{corpus.as_posix()}（不進 git，見 knowledge/README.md）"
+    return None
+
+
 def validate_against_corpus(case: RagCase, knowledge_dir: Path) -> list[str]:
     """離線檢查：預期原文真的在語料裡，避免 eval 資料本身寫錯。"""
     problems = []

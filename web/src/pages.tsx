@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { request, type Me, type Profile } from "./api";
+import type { DraftSource, ResumableDraft } from "./assessment/types";
 import ProfileFields from "./ProfileFields";
 
 const EMPTY_PROFILE: Profile = { birth_year: 0, birth_month: 0, sex: "" as never, conditions: [] };
@@ -108,28 +109,44 @@ export function HomePage({
   onLogout,
 }: {
   me: Me;
-  startAssessment: (copyFromLatest: boolean) => void;
+  startAssessment: (source: DraftSource) => void;
   goHistory: () => void;
   goProfile: () => void;
   onLogout: () => void;
 })  {
   const [hasHistory, setHasHistory] = useState(false);
+  const [resumable, setResumable] = useState<ResumableDraft | null>(null);
   useEffect(() => {
     request<unknown[]>("GET", "/api/assessments")
       .then((items) => setHasHistory(items.length > 0))
       .catch(() => setHasHistory(false));
+    // 沒有可接續的草稿時後端回 404，首頁就不顯示「繼續」
+    request<ResumableDraft>("GET", "/api/assessments/drafts/resumable")
+      .then(setResumable)
+      .catch(() => setResumable(null));
   }, []);
   return (
     <main className="page">
       <h1>補對了嗎？</h1>
       <p>你好，{me.email}（{me.age} 歲）</p>
       {!me.is_adult && <p role="alert">{me.underage_message}</p>}
-      <button type="button" onClick={() => startAssessment(false)} disabled={!me.is_adult} title={me.is_adult ? undefined : "未滿 19 歲無法使用"}>
+      {resumable && (
+        <>
+          <button type="button" onClick={() => startAssessment({ kind: "resume", draftId: resumable.id })} disabled={!me.is_adult}>
+            繼續上次未完成的評估
+          </button>
+          <p className="hint">
+            {resumable.product_count} 項保健食品、{resumable.medication_count} 項用藥，最後修改於{" "}
+            {new Date(resumable.updated_at).toLocaleString("zh-TW", { dateStyle: "medium", timeStyle: "short" })}
+          </p>
+        </>
+      )}
+      <button type="button" onClick={() => startAssessment({ kind: "new" })} disabled={!me.is_adult} title={me.is_adult ? undefined : "未滿 19 歲無法使用"}>
         開始評估
       </button>
       {hasHistory && (
         <>
-          <button type="button" className="secondary" onClick={() => startAssessment(true)} disabled={!me.is_adult}>
+          <button type="button" className="secondary" onClick={() => startAssessment({ kind: "copy_latest" })} disabled={!me.is_adult}>
             沿用上次的藥和保健食品
           </button>
           <p className="hint">帶入上次的內容，可以再新增或刪除</p>

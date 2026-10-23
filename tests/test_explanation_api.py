@@ -66,7 +66,8 @@ def test_report_is_still_complete_when_the_model_misbehaves(login_as, db, gatewa
 
     assert case["report"]["explanations"][0]["source"] == "template"
     assert case["report"]["footnotes"] == []
-    assert [s["key"] for s in case["report"]["sections"]][:3] == [
+    assert [s["key"] for s in case["report"]["sections"]][:4] == [
+        "summary",
         "interaction",
         "ul_comparison",
         "not_evaluated",
