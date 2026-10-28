@@ -78,6 +78,7 @@ services:
   web:
     build:
       context: web
+      target: dev
     depends_on:
       api:
         condition: service_healthy
