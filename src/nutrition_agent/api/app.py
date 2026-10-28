@@ -7,7 +7,7 @@ import psycopg
 from fastapi import Depends, FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
-from nutrition_agent.api import assessments, auth, medication_photos, photos
+from nutrition_agent.api import assessments, auth, health, medication_photos, photos
 from nutrition_agent.api.deps import (
     get_connection,
     get_gateway,
@@ -53,6 +53,7 @@ def create_app(
     if photo_store is not None:
         app.dependency_overrides[get_photo_store] = lambda: photo_store
 
+    app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(assessments.router)
     app.include_router(photos.router)
