@@ -63,6 +63,17 @@ services:
       timeout: 3s
       retries: 20
       start_period: 30s
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./src
+          target: /app/src
+          ignore:
+            - __pycache__/
+        - action: rebuild
+          path: ./uv.lock
+        - action: rebuild
+          path: ./pyproject.toml
 
   web:
     build:
@@ -72,6 +83,17 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:5173:5173"
+    develop:
+      watch:
+        - action: sync
+          path: ./web/src
+          target: /app/src
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./web/package.json
+        - action: rebuild
+          path: ./web/package-lock.json
 
 volumes:
   dbdata:
