@@ -34,6 +34,24 @@ docker compose up --build   # db（pgvector）+ seaweedfs（S3 :8333）+ api :80
 
 照片存在 SeaweedFS 的 bucket `photos`（API 啟動時自動建立），開 http://127.0.0.1:8888/buckets/photos/ 可以看到物件。
 
+API 容器以非 root 使用者 `app`（uid 1000）執行，可用 `docker compose exec api whoami` 確認。健康檢查（health check）端點為 `GET /api/health`，前端會等 API 健康後啟動。
+
+開發時，在另一個終端機執行檔案監看（Compose Watch）：
+
+```
+docker compose watch
+```
+
+修改 `src/` 會同步並重啟 API；修改 `web/src/` 會同步，由 Vite 熱模組替換（Hot Module Replacement）更新畫面。Python 或前端的套件宣告、鎖定檔變動時會重新建置，`node_modules` 不會同步。
+
+在本機演練前端正式版（需要 Docker Compose 2.24.4 以上，以支援連接埠清單的 `!override`）：
+
+```
+docker compose -f compose.yaml -f compose.prod.yaml up --build
+```
+
+開啟 http://127.0.0.1:8080 。正式版以 nginx 提供前端靜態檔案，將 `/api/` 反向代理（reverse proxy）到 API，並支援非根路徑重新整理與照片上傳。這是本機演練設定；後端環境變數沿用開發堆疊，不是完整的正式部署設定。切回開發版時重新執行 `docker compose up --build`。
+
 只跑資料庫與物件儲存、其餘在本機：
 
 ```

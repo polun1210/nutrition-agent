@@ -17,9 +17,13 @@ TFDA 仿單（`raw/`）刻意留在維護者本機，不隨 repo 分享，所以
 
 | 能做 | 做不到 |
 |---|---|
-| `uv run pytest`、`uv run ruff check`（不打外部 API、不需要語料） | ingest 出含仿單的資料庫：只會有 DRIs／NIH ODS／NCCIH，藥物相關的檢索查不到仿單段落 |
+| `uv run pytest`、`uv run ruff check`（不打外部 API，不需額外安裝原始語料） | ingest 出含仿單的資料庫：只會有 DRIs／NIH ODS／NCCIH，藥物相關的檢索查不到仿單段落 |
 | 有自己的 `OPENROUTER_API_KEY` 時，ingest `sources/` 的語料並試檢索 | `evals/rag/run.py --dry-run` 全數通過：預期證據在 `raw/tfda/` 的題目會報「找不到文件」 |
 | 閱讀切塊、檢索、報告的程式與 `docs/adr/` | 重現 `evals/rag/` 的命中率（limit=8 時開發題預期段落 16/16、保留題 6/8，是在完整語料上量的） |
+
+語料驗證測試會逐筆檢查預期證據。只有整個 `raw/tfda/` 尚未安裝時，依賴該目錄的證據才會明確標記略過（skip）；可用 `uv run pytest -ra` 查看原因。已收錄的 `sources/` 缺檔、已安裝原始語料卻缺少指定文件，或原文不符，都會失敗。CI 通過不代表原始仿單也已驗證。
+
+完整資料檢查仍使用 `uv run python evals/rag/run.py --dry-run`：缺少任何文件或預期原文都會回傳非零退出碼，不會略過。命令列程式的自動測試使用獨立測試資料，驗證正常資料可通過，以及缺少來源、缺少原始仿單或原文不符時確實失敗。
 
 ## raw/ 的來源
 

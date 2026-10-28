@@ -57,14 +57,44 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./src
+          target: /app/src
+          ignore:
+            - __pycache__/
+        - action: rebuild
+          path: ./uv.lock
+        - action: rebuild
+          path: ./pyproject.toml
 
   web:
     build:
       context: web
+      target: dev
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "127.0.0.1:5173:5173"
+    develop:
+      watch:
+        - action: sync
+          path: ./web/src
+          target: /app/src
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./web/package.json
+        - action: rebuild
+          path: ./web/package-lock.json
 
 volumes:
   dbdata:
