@@ -8,9 +8,7 @@ LLM 只解釋已經產生的判定，每句附證據段落 ID；數值一律由�
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 from collections.abc import Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Literal
@@ -24,6 +22,7 @@ from nutrition_agent.reference import ReferenceData
 from nutrition_agent.reference.names import contains_quantity
 from nutrition_agent.reporting.forbidden import find_forbidden_terms
 from nutrition_agent.retrieval.search import Evidence, retrieve_evidence
+from nutrition_agent.structured import ResponseSchema, json_object_text
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +48,20 @@ class ExplainedSentence(BaseModel):
     text: str
     evidence_ids: list[str] = []  # 審定說明文字（退回模板）沒有證據段落
     footnotes: list[int] = []  # 對應 Report.footnotes 的編號
+
+
+class SentenceReply(BaseModel):
+    text: str
+    evidence_ids: list[str]
+
+
+class ExplanationReply(BaseModel):
+    """模型回覆的形狀：以物件包住句子陣列（strict schema 的最外層必須是物件）。"""
+
+    sentences: list[SentenceReply]
+
+
+REPLY_SCHEMA = ResponseSchema.from_model(ExplanationReply)
 
 
 class FindingExplanation(BaseModel):
@@ -92,15 +105,11 @@ def check_sentences(
 
 
 def _parse(raw: str) -> list[ExplainedSentence] | None:
-    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
     try:
-        data = json.loads(cleaned)
-        return [
-            ExplainedSentence(text=str(item["text"]), evidence_ids=[str(i) for i in item["evidence_ids"]])
-            for item in data
-        ]
-    except (ValueError, TypeError, KeyError):
+        reply = ExplanationReply.model_validate_json(json_object_text(raw))
+    except ValueError:  # pydantic 的 ValidationError 是 ValueError 的子類別
         return None
+    return [ExplainedSentence(text=s.text, evidence_ids=s.evidence_ids) for s in reply.sentences]
 
 
 def _prompt(finding: InteractionFinding, ingredient_name: str, evidence: Sequence[Evidence]) -> str:
@@ -114,7 +123,7 @@ def _prompt(finding: InteractionFinding, ingredient_name: str, evidence: Sequenc
         "- 每一句都必須引用至少一個上面的證據段落 ID，且只能用上面列出的 ID。\n"
         "- 不得出現任何數字或數量，中文數字也算（例如「一年」「兩粒」），數值由系統另外呈現；成分與藥品名稱本身可以寫。\n"
         "- 不得說「安全」「未發現問題」，不得下診斷，不得建議劑量、停用或購買。\n"
-        '只輸出 JSON 陣列，例如：[{"text": "…", "evidence_ids": ["ev-…"]}]'
+        '只輸出 JSON 物件，例如：{"sentences": [{"text": "…", "evidence_ids": ["ev-…"]}]}'
     )
 
 
@@ -131,7 +140,7 @@ def explain_finding(
     prompt = _prompt(finding, ingredient_name, evidence)
     for attempt in range(1 + MAX_RETRIES):
         try:
-            sentences = _parse(gateway.complete(prompt, system=SYSTEM_PROMPT))
+            sentences = _parse(gateway.complete(prompt, system=SYSTEM_PROMPT, schema=REPLY_SCHEMA))
         except Exception:  # 模型服務故障算一次不合格，不能讓報告產不出來
             logger.exception("產生白話解釋失敗（第 %d 次）", attempt + 1)
             continue

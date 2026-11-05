@@ -179,6 +179,7 @@ def test_read_label把照片送給模型並解析回覆():
 
     assert reading.product_name == "挺立 葡萄糖胺強力錠"
     assert gateway.calls[0][0] == "vision"
+    assert gateway.schemas == [None]  # 標示讀取刻意不用結構化輸出（ADR-0005）
 
 
 

@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from nutrition_agent.gateway import ModelGateway
+from nutrition_agent.structured import json_object_text
 
 Section = Literal["nutrition_table", "ingredient_list", "per_unit_note"]
 
@@ -58,19 +59,15 @@ class VlmReading(BaseModel):
 UNREADABLE = VlmReading(readable=False)
 
 
-def _json_text(reply: str) -> str:
-    start, end = reply.find("{"), reply.rfind("}")
-    return reply[start : end + 1] if 0 <= start < end else reply
-
-
 def parse_reading(reply: str) -> VlmReading:
     """解析模型回覆；格式不對就當成整張讀不到，不嘗試修補。"""
     try:
-        return VlmReading.model_validate(json.loads(_json_text(reply)))
+        return VlmReading.model_validate(json.loads(json_object_text(reply)))
     except (ValueError, ValidationError):
         log.warning("模型回覆無法解析，視為讀不到：%.200r", reply, exc_info=True)
         return UNREADABLE
 
 
 def read_label(gateway: ModelGateway, image: bytes, mime_type: str) -> VlmReading:
+    # 刻意不用結構化輸出：live eval 中 strict schema 讓成分列 recall 下降，見 ADR-0005。
     return parse_reading(gateway.vision(PROMPT, image, mime_type))

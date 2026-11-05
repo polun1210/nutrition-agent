@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 
 from PIL import Image
 
+from nutrition_agent.structured import ResponseSchema
+
 Reply = str | Exception
 
 
@@ -22,11 +24,16 @@ class FakeGateway:
     calls: list[tuple[str, object]] = field(default_factory=list)
     # 送進 vision 的 (圖檔, MIME)，依呼叫順序：驗證模型看到的就是存下來的那一張。
     images: list[tuple[bytes, str]] = field(default_factory=list)
+    # 每次 vision／complete 收到的 schema（沒傳就是 None），依呼叫順序。
+    schemas: list[ResponseSchema | None] = field(default_factory=list)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
-    def vision(self, prompt: str, image: bytes, mime_type: str) -> str:
+    def vision(
+        self, prompt: str, image: bytes, mime_type: str, *, schema: ResponseSchema | None = None
+    ) -> str:
         with self._lock:
             self.calls.append(("vision", prompt))
+            self.schemas.append(schema)
             self.images.append((image, mime_type))
             reply = self._next_vision_reply(image)
         if isinstance(reply, Exception):
@@ -40,9 +47,12 @@ class FakeGateway:
             return self.vision_replies.pop(0)
         return self.vision_reply
 
-    def complete(self, prompt: str, system: str | None = None) -> str:
+    def complete(
+        self, prompt: str, system: str | None = None, *, schema: ResponseSchema | None = None
+    ) -> str:
         with self._lock:
             self.calls.append(("complete", prompt))
+            self.schemas.append(schema)
         return self.complete_reply
 
     def embed(self, texts: list[str]) -> list[list[float]]:

@@ -60,7 +60,7 @@ def test_多張照片同時辨識且並行數有上限(login_as, gateway, endpoi
     active = peak = 0
     original = gateway.vision
 
-    def vision(prompt, image, mime_type):
+    def vision(prompt, image, mime_type, **kwargs):
         nonlocal active, peak
         with lock:
             active += 1
@@ -69,7 +69,7 @@ def test_多張照片同時辨識且並行數有上限(login_as, gateway, endpoi
         time.sleep(0.05)
         with lock:
             active -= 1
-        return original(prompt, image, mime_type)
+        return original(prompt, image, mime_type, **kwargs)
 
     gateway.vision_reply = reply
     gateway.vision = vision

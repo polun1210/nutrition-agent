@@ -34,7 +34,8 @@ def evidence(ev_id: str = "ev-aaa", source_type: str = "nih_ods_health_professio
 
 def reply(*sentences: tuple[str, list[str]]) -> str:
     return json.dumps(
-        [{"text": t, "evidence_ids": ids} for t, ids in sentences], ensure_ascii=False
+        {"sentences": [{"text": t, "evidence_ids": ids} for t, ids in sentences]},
+        ensure_ascii=False,
     )
 
 
@@ -47,9 +48,11 @@ class ScriptedGateway:
     def __init__(self, *replies: str | Exception) -> None:
         self.replies = list(replies)
         self.prompts: list[str] = []
+        self.schemas: list = []
 
-    def complete(self, prompt, system=None):
+    def complete(self, prompt, system=None, schema=None):
         self.prompts.append(prompt)
+        self.schemas.append(schema)
         item = self.replies.pop(0) if len(self.replies) > 1 else self.replies[0]
         if isinstance(item, Exception):
             raise item
@@ -58,7 +61,7 @@ class ScriptedGateway:
     def embed(self, texts):
         return [[0.0] * 4 for _ in texts]
 
-    def vision(self, prompt, image, mime_type):  # pragma: no cover
+    def vision(self, prompt, image, mime_type, schema=None):  # pragma: no cover
         raise NotImplementedError
 
 
@@ -110,6 +113,21 @@ def test_valid_reply_is_accepted_with_one_call(fx_ref):
     assert sentences[0].evidence_ids == ["ev-aaa"]
     assert len(gw.prompts) == 1
     assert "ev-aaa" in gw.prompts[0] and "Glucophage" in gw.prompts[0]
+    assert [s.name for s in gw.schemas] == ["ExplanationReply"]
+
+
+def test_reply_wrapped_in_code_fence_is_still_parsed(fx_ref):
+    f, _ = finding(fx_ref)
+    gw = ScriptedGateway("```json\n" + GOOD + "\n```")
+
+    assert explain_finding(gw, f, "維生素 B12", [evidence()]) is not None
+
+
+def test_bare_array_from_the_old_format_counts_as_invalid(fx_ref):
+    f, _ = finding(fx_ref)
+    old = json.dumps([{"text": "這個藥可能影響維生素 B12 的吸收。", "evidence_ids": ["ev-aaa"]}])
+
+    assert explain_finding(ScriptedGateway(old), f, "維生素 B12", [evidence()]) is None
 
 
 def test_invalid_then_valid_reply_retries(fx_ref):
@@ -242,7 +260,7 @@ class OutOfOrderGateway(ScriptedGateway):
         self.second_done = threading.Event()
         self.finished: list[str] = []
 
-    def complete(self, prompt, system=None):
+    def complete(self, prompt, system=None, schema=None):
         marker = next(m for m in self.by_marker if m in prompt)
         if marker == self.first_marker:
             self.second_done.wait(timeout=3)
@@ -291,7 +309,7 @@ def test_model_outage_on_one_card_only_affects_that_card(db, fx_ref):
     assessment = assess(TWO_CARDS, fx_ref)
 
     class FlakyGateway(OutOfOrderGateway):
-        def complete(self, prompt, system=None):
+        def complete(self, prompt, system=None, schema=None):
             if "ev-bbb" in prompt:
                 raise RuntimeError("model down")
             return GOOD

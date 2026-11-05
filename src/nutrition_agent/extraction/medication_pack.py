@@ -6,6 +6,7 @@ import logging
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from nutrition_agent.gateway import ModelGateway
+from nutrition_agent.structured import ResponseSchema, json_object_text
 from nutrition_agent.reference.drug_names import normalize_name
 
 MAX_NAMES_PER_PHOTO = 20
@@ -34,11 +35,7 @@ class MedicationPackReading(BaseModel):
 
 
 UNREADABLE = MedicationPackReading(readable=False)
-
-
-def _json_text(reply: str) -> str:
-    start, end = reply.find("{"), reply.rfind("}")
-    return reply[start : end + 1] if 0 <= start < end else reply
+SCHEMA = ResponseSchema.from_model(MedicationPackReading)
 
 
 def _clean_names(names: list[str]) -> list[str]:
@@ -56,7 +53,7 @@ def _clean_names(names: list[str]) -> list[str]:
 def parse_pack_reading(reply: str) -> MedicationPackReading:
     """解析模型回覆；格式不對、標示讀不到或一個藥名都沒有，都當成這張讀不到。"""
     try:
-        raw = MedicationPackReading.model_validate(json.loads(_json_text(reply)))
+        raw = MedicationPackReading.model_validate(json.loads(json_object_text(reply)))
     except (ValueError, ValidationError):
         log.warning("模型回覆無法解析，視為讀不到：%.200r", reply, exc_info=True)
         return UNREADABLE
@@ -67,4 +64,4 @@ def parse_pack_reading(reply: str) -> MedicationPackReading:
 
 
 def read_medication_pack(gateway: ModelGateway, image: bytes, mime_type: str) -> MedicationPackReading:
-    return parse_pack_reading(gateway.vision(PROMPT, image, mime_type))
+    return parse_pack_reading(gateway.vision(PROMPT, image, mime_type, schema=SCHEMA))

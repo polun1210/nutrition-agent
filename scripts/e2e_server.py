@@ -27,6 +27,7 @@ from nutrition_agent.extraction import medication_pack
 from nutrition_agent.photos import PhotoStore
 from nutrition_agent.reference import load_reference_data, load_rule_set
 from nutrition_agent.reference.drug_names import load_sample_drug_names
+from nutrition_agent.structured import ResponseSchema
 
 MEDICATION_PACK_REPLY = '{"readable": true, "names": ["Amlodipine", "Zantac"]}'
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,21 +76,23 @@ class RecordedVlmGateway:
     - 標示照片：COMPOUND_LABEL_SIZE 尺寸的回化合物鈣片，其餘回錄製的 p01 辨識結果。
     """
 
-    def vision(self, prompt: str, image: bytes, mime_type: str) -> str:
+    def vision(
+        self, prompt: str, image: bytes, mime_type: str, *, schema: ResponseSchema | None = None
+    ) -> str:
         if prompt == medication_pack.PROMPT:
             return MEDICATION_PACK_REPLY
         if jpeg_size(image) == COMPOUND_LABEL_SIZE:
             return COMPOUND_LABEL_REPLY
         return (RECORDED_VLM / "p01-img01.json").read_text(encoding="utf-8")
 
-    def complete(self, prompt: str, system: str | None = None) -> str:
+    def complete(
+        self, prompt: str, system: str | None = None, *, schema: ResponseSchema | None = None
+    ) -> str:
         match = re.search(r"ev-[0-9a-f]+", prompt)
         if match is None:
             return "fake-completion"
-        return json.dumps(
-            [{"text": "這個藥可能影響維生素 B12 的吸收。", "evidence_ids": [match.group()]}],
-            ensure_ascii=False,
-        )
+        sentence = {"text": "這個藥可能影響維生素 B12 的吸收。", "evidence_ids": [match.group()]}
+        return json.dumps({"sentences": [sentence]}, ensure_ascii=False)
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         return [[0.0] * 4 for _ in texts]
