@@ -29,3 +29,7 @@ harness 用正規化後的名稱加標示區塊比對列，名稱多了字或區
   - #19 修完後（部分比對、拆開中英文藥名、忽略商標符號、prompt 只讀照片主體）重跑 haiku：成分 recall 92.3%、precision 100%，不另用 gemini。剩下沒對到的 m05、m07 是只印有效成分學名、沒有商品名的盒子背面，模型沒有列出任何藥名。錄製回應在 `evals/medpack/recorded/`。
 - 每個模型只跑一次、照片數少，差一兩張就會改變排名，只能看大方向。
 - 實拍藥包 m16–m32 是壓縮圖；保健食品 p01–p06 的原圖已拿不到，沒有納入。
+- 結構化輸出（structured outputs，#43，2026-11-05）：OpenRouter 上 haiku-5.5 的部分供應商（Anthropic、Google、Azure）支援 `structured_outputs`，Amazon Bedrock 與 Claude Platform on AWS 只列 `response_format`、不保證遵守 schema。所以用 `response_format` 的 `json_schema`（`strict: true`）並加 `provider.require_parameters: true`，只路由到真的支援的供應商。schema 由 pydantic 模型產生（展開 `$ref`、每個物件 `additionalProperties: false`、全部欄位 required）；去掉 code fence、擷取大括號的寬鬆解析保留為後備。
+  - **藥包讀取採用**：live 成分 recall 92.3%、precision 96.0%，與上面持平。
+  - **標示讀取不採用**：同一天、同一批 19 張各跑兩次 live eval，strict 的 row_recall 62.4%／64.2%，plain 是 65.6%／69.1%，strict 也較常漏讀成分列（p16 曾一次只讀出 0 列）。plain 在這 38 次呼叫中沒有發生過格式解析失敗，所以 strict 在這條路徑上沒有換到好處。閘道的 `schema` 參數仍保留，之後換模型或調 schema 時可以再比較。
+
