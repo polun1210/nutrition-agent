@@ -69,3 +69,12 @@ PNG = make_image("PNG")
 WEBP = make_image("WEBP")
 # 開頭像 JPEG、其實解不開：通得過魔術位元組檢查，過不了解碼。
 MAGIC_ONLY_JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
+
+
+def size_of(data: bytes) -> tuple[int, int]:
+    return open_image(data).size
+
+
+# 與 JPEG／PNG 尺寸都不同：假閘道依尺寸回覆，平行辨識時仍分得出是哪一張。
+WIDE = make_image("JPEG", (96, 48))
+TALL = make_image("PNG", (48, 96))

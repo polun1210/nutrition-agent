@@ -3,6 +3,8 @@
 照片與辨識結果都以 user.id 過濾；別人的草稿或照片一律 404，不洩漏是否存在。
 """
 
+from functools import partial
+
 import psycopg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse
@@ -21,6 +23,7 @@ from nutrition_agent.api.uploads import (
     model_service_errors,
     photo_storage_errors,
     read_upload,
+    recognize_in_parallel,
     stored_photos,
 )
 from nutrition_agent.extraction import VlmReading, build_extraction, read_label
@@ -64,7 +67,7 @@ def recognize_photos(
 
     # 先全部辨識完才存檔：模型服務出錯時不會留下沒用的照片。
     with model_service_errors("VLM"):
-        new_readings = [read_label(gateway, data, mime) for data, mime, _ in uploads]
+        new_readings = recognize_in_parallel(partial(read_label, gateway), uploads)
 
     def write_row(key: str, mime: str, reading: VlmReading) -> int:
         return conn.execute(

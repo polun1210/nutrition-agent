@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Callable, Iterator, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from typing import TypeVar
 
@@ -17,6 +18,7 @@ from nutrition_agent.photo_normalization import (
 from nutrition_agent.photos import MAX_PHOTO_BYTES, PhotoStorageError, PhotoStore, sniff_image
 
 MAX_PHOTOS_PER_PRODUCT = 8
+MAX_PARALLEL_VLM = 4  # 同時辨識的照片數上限，避免撞到模型服務的限速
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +55,18 @@ def check_photo_count(count: int, limit_prefix: str) -> None:
         raise HTTPException(
             status_code=422, detail=f"{limit_prefix}最多 {MAX_PHOTOS_PER_PRODUCT} 張照片"
         )
+
+
+def recognize_in_parallel(read: Callable[[bytes, str], R], uploads: Sequence[Upload]) -> list[R]:
+    """每張照片各呼叫一次 read，最多 MAX_PARALLEL_VLM 張同時進行；結果依上傳順序排列。
+
+    任一張丟出例外時，等其他張結束後原樣往外丟（呼叫端照舊包在 model_service_errors 裡），
+    此時還沒存任何東西，所以失敗不會留下照片。read 不能碰資料庫連線（連線不跨執行緒）。
+    """
+    if not uploads:
+        return []
+    with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL_VLM, len(uploads))) as pool:
+        return list(pool.map(lambda upload: read(upload[0], upload[1]), uploads))
 
 
 @contextmanager
