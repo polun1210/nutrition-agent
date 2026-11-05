@@ -148,8 +148,38 @@ def test_dry_run_lists_cases_whose_raw_corpus_is_absent_as_skipped(tmp_path):
         json.dumps([case.model_dump() for case in cases], ensure_ascii=False), encoding="utf-8"
     )
 
-    result = _dry_run("--cases", str(cases_file), "--knowledge", str(knowledge))
+    no_adversarial = tmp_path / "adversarial.json"
+    no_adversarial.write_text("[]", encoding="utf-8")
+
+    result = _dry_run(
+        "--cases", str(cases_file), "--knowledge", str(knowledge), "--adversarial", str(no_adversarial)
+    )
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "in-git: ok" in result.stdout
     assert "needs-raw: 略過：語料不在 repo：raw/tfda" in result.stdout
+
+
+def test_dry_run_also_validates_adversarial_sentences():
+    result = _dry_run()
+
+    assert "對抗句" in result.stdout and "ok" in result.stdout.split("對抗句")[1]
+
+
+def test_dry_run_fails_when_adversarial_sentence_cites_text_not_in_corpus(tmp_path):
+    bad = [
+        {
+            "id": "bad",
+            "sentence": "可以放心一起吃。",
+            "evidence": {"document_path": "sources/nih_ods/VitaminB12-HealthProfessional.md", "contains": "這句不在語料裡"},
+            "expected_support": ["unsupported"],
+            "expected_flagged": True,
+        }
+    ]
+    path = tmp_path / "adversarial.json"
+    path.write_text(json.dumps(bad, ensure_ascii=False), encoding="utf-8")
+
+    result = _dry_run("--adversarial", str(path))
+
+    assert result.returncode == 1
+    assert "bad" in result.stdout and "這句不在語料裡" in result.stdout

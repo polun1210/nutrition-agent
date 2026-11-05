@@ -7,6 +7,13 @@ src/nutrition_agent/retrieval/evaluation.py。
   uv run python -m nutrition_agent.retrieval.ingest）：
       uv run python evals/rag/run.py --live [--limit 8]
   --live 逐筆輸出：預期段落找到幾個、解釋是否通過輸出檢查（或退回模板）、預期重點涵蓋幾個。
+  這兩項是主要評分，不依賴 LLM 評審、可重現。
+
+忠實度評審（選用，需要 .env 的 EVAL_JUDGE_MODEL，建議和 LLM_MODEL 不同）：
+      uv run python evals/rag/run.py --live --judge
+  另一個模型逐句判斷解釋是否被引用的段落支持、有沒有換句話說的違規說法，最後彙總；
+  接著跑 adversarial.json 的對抗句，報告程式的輸出檢查是否放行、評審是否攔下。
+  --dry-run 也會檢查 adversarial.json 的格式與引用原文是否在語料裡。
 
 cases_neutral.json（--cases 指定）是中立題組，用來比較不同檢索做法，出題規則：
   - 題目來源：NIH ODS HP 的 Interactions with Medications 小節與 NCCIH 頁面中，
@@ -24,8 +31,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 
 
-def _dry_run(cases, knowledge: Path) -> int:
+def _dry_run(cases, knowledge: Path, adversarial: Path) -> int:
     from nutrition_agent.retrieval.evaluation import missing_raw_corpus, validate_against_corpus
+    from nutrition_agent.retrieval.faithfulness import load_adversarial, validate_adversarial
 
     bad = 0
     for case in cases:
@@ -36,10 +44,24 @@ def _dry_run(cases, knowledge: Path) -> int:
         problems = validate_against_corpus(case, knowledge)
         bad += bool(problems)
         print(f"{case.id}: {'ok' if not problems else '; '.join(problems)}")
+    adversarial_cases = load_adversarial(adversarial)
+    problems = validate_adversarial(adversarial_cases, knowledge)
+    bad += bool(problems)
+    print(f"對抗句 {len(adversarial_cases)} 句：{'ok' if not problems else '; '.join(problems)}")
     return 1 if bad else 0
 
 
-def _live(cases, limit: int) -> int:
+def _judge_gateway(settings):
+    from nutrition_agent.gateway import OpenRouterGateway
+    from nutrition_agent.retrieval.faithfulness import judge_model
+
+    model, warning = judge_model(settings)
+    if warning:
+        print(warning, file=sys.stderr)
+    return OpenRouterGateway.from_settings(settings.model_copy(update={"llm_model": model}))
+
+
+def _live(cases, limit: int, judge: bool, knowledge: Path, adversarial: Path) -> int:
     import psycopg
 
     from nutrition_agent.assessment import InteractionFinding, TriggeringDrug
@@ -48,11 +70,22 @@ def _live(cases, limit: int) -> int:
     from nutrition_agent.reference import load_reference_data
     from nutrition_agent.reporting.explanation import explain_finding
     from nutrition_agent.retrieval.evaluation import score_points, score_retrieval
+    from nutrition_agent.retrieval.faithfulness import (
+        JudgedSentence,
+        format_adversarial,
+        format_summary,
+        judge_sentence,
+        load_adversarial,
+        run_adversarial,
+        summarize,
+    )
     from nutrition_agent.retrieval.search import retrieve_evidence
 
     settings = get_settings()
     gateway = OpenRouterGateway.from_settings(settings)
     ref = load_reference_data()
+    judge_gateway = _judge_gateway(settings) if judge else None
+    judged: list[JudgedSentence] = []
     with psycopg.connect(settings.database_url) as conn:
         for case in cases:
             evidence = retrieve_evidence(
@@ -84,6 +117,19 @@ def _live(cases, limit: int) -> int:
                 f"{case.id}: 檢索 {retrieval.found}/{retrieval.total}；解釋合格；"
                 f"重點 {points.found}/{points.total}"
             )
+            if judge_gateway is not None:
+                by_id = {e.id: e.text for e in evidence}
+                judged += [
+                    JudgedSentence(
+                        case.id, s.text, judge_sentence(judge_gateway, s.text, [by_id[i] for i in s.evidence_ids])
+                    )
+                    for s in sentences
+                ]
+    if judge_gateway is not None:
+        print("\n== 忠實度評審 ==")
+        print(format_summary(summarize(judged)))
+        print("\n== 對抗句 ==")
+        print(format_adversarial(run_adversarial(judge_gateway, load_adversarial(adversarial), knowledge)))
     return 0
 
 
@@ -95,13 +141,19 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--dry-run", action="store_true")
     mode.add_argument("--live", action="store_true")
     parser.add_argument("--limit", type=int, default=8, help="每個問題檢索幾個段落")
+    parser.add_argument("--judge", action="store_true", help="--live 時加跑忠實度評審與對抗句")
+    parser.add_argument("--adversarial", type=Path, default=HERE / "adversarial.json")
     args = parser.parse_args(argv)
+    if args.judge and not args.live:
+        parser.error("--judge 要搭配 --live")
     sys.stdout.reconfigure(encoding="utf-8")  # Windows 主控台預設不是 UTF-8
 
     from nutrition_agent.retrieval.evaluation import load_cases
 
     cases = load_cases(args.cases)
-    return _dry_run(cases, args.knowledge) if args.dry_run else _live(cases, args.limit)
+    if args.dry_run:
+        return _dry_run(cases, args.knowledge, args.adversarial)
+    return _live(cases, args.limit, args.judge, args.knowledge, args.adversarial)
 
 
 if __name__ == "__main__":
