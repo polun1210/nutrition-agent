@@ -139,7 +139,7 @@ export default function ReportView({
       {sections.map((s) =>
         s.key === "summary" ? null : COLLAPSED.has(s.key) ? (
           <Fragment key={s.key}>
-            {s.key === firstCollapsed && <p className="hint more-hint">下面三項預設收合，點標題展開。</p>}
+            {s.key === firstCollapsed && <p className="hint more-hint">下面的資料預設收合，點標題展開。</p>}
             <Collapsible id={s.key} title={s.title}>
               <SectionBody section={s} report={report} footnote={footnote} />
             </Collapsible>
