@@ -35,7 +35,7 @@ function Quote({ footnote }: { footnote: Footnote }) {
       <strong>
         出處 {footnote.number}・{footnote.source_label}：{footnote.document_name}（{footnote.section}）
       </strong>
-      <blockquote>{footnote.text}</blockquote>
+      <span className="quote-text">{footnote.text}</span>
     </span>
   );
 }
