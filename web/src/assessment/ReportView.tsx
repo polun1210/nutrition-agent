@@ -1,5 +1,6 @@
-import { useEffect, type ReactNode } from "react";
-import { DrugCard, GroupCards, LegacyCard, Lines, SummaryCard, UlTable } from "./ReportParts";
+import { Fragment, useEffect, type ReactNode } from "react";
+import { useFootnoteState, type FootnoteState } from "./Explanations";
+import { DrugCard, GroupCards, LegacyCard, Lines, SummaryCard, UlCards } from "./ReportParts";
 import type { AssessmentCase, ReportSection } from "./types";
 
 /**
@@ -8,6 +9,12 @@ import type { AssessmentCase, ReportSection } from "./types";
  */
 const ORDER = ["summary", "interaction", "ul_comparison", "not_evaluated", "profile", "scope"];
 const COLLAPSED = new Set(["profile", "scope"]);
+
+/** 各段落標題下的操作提示；純說明怎麼看，不改判定文字。 */
+const HINTS: Record<string, string> = {
+  interaction: "點開每一項，看原因、數字和資料出處。",
+  ul_comparison: "深色直線是上限，只算你填的保健食品。",
+};
 
 const rank = (s: ReportSection) => (ORDER.includes(s.key) ? ORDER.indexOf(s.key) : ORDER.length);
 
@@ -24,8 +31,16 @@ function Collapsible({ id, title, children }: { id: string; title: string; child
   );
 }
 
-function SectionBody({ section, report }: { section: ReportSection; report: AssessmentCase }) {
-  const evidence = { explanations: report.report.explanations ?? [], footnotes: report.report.footnotes ?? [] };
+function SectionBody({
+  section,
+  report,
+  footnote,
+}: {
+  section: ReportSection;
+  report: AssessmentCase;
+  footnote: FootnoteState;
+}) {
+  const evidence = { explanations: report.report.explanations ?? [], footnotes: report.report.footnotes ?? [], footnote };
   const photos = Object.fromEntries(report.products.map((p) => [p.name, p.photo_ids]));
   const cards = section.cards ?? [];
   if (section.drug_groups && section.drug_groups.length > 0) {
@@ -49,7 +64,7 @@ function SectionBody({ section, report }: { section: ReportSection; report: Asse
   if (section.table && section.table.length > 0) {
     return (
       <>
-        <UlTable rows={section.table} photos={photos} />
+        <UlCards rows={section.table} photos={photos} />
         {section.notes && section.notes.length > 0 && <Lines lines={section.notes} />}
       </>
     );
@@ -96,7 +111,8 @@ export default function ReportView({
   goHome: () => void;
   backLabel?: string;
 }) {
-  // 列印時展開所有收合的區塊
+  const footnote = useFootnoteState();
+  // 列印時展開所有收合的區塊（含營養素手風琴）；出處原文在 Explanations 內處理
   useEffect(() => {
     const openAll = () => document.querySelectorAll("details").forEach((d) => (d.open = true));
     window.addEventListener("beforeprint", openAll);
@@ -107,6 +123,7 @@ export default function ReportView({
     .filter((s) => s.key !== "not_evaluated" || s.lines.length > 0)
     .sort((a, b) => rank(a) - rank(b));
 
+  const firstCollapsed = sections.find((s) => COLLAPSED.has(s.key))?.key;
   const summary = sections.find((s) => s.key === "summary");
   const profileLines = report.report.sections.find((s) => s.key === "profile")?.lines ?? [];
   // 「你的資料」前三行固定是年齡、性別、慢性病；只在格式吻合時放進頁首
@@ -122,23 +139,31 @@ export default function ReportView({
       </header>
       {sections.map((s) =>
         s.key === "summary" ? null : COLLAPSED.has(s.key) ? (
-          <Collapsible key={s.key} id={s.key} title={s.title}>
-            <SectionBody section={s} report={report} />
-          </Collapsible>
+          <Fragment key={s.key}>
+            {s.key === firstCollapsed && <p className="hint more-hint">下面三項預設收合，點標題展開。</p>}
+            <Collapsible id={s.key} title={s.title}>
+              <SectionBody section={s} report={report} footnote={footnote} />
+            </Collapsible>
+          </Fragment>
         ) : (
           <section key={s.key} data-section={s.key}>
             <h2>{s.title}</h2>
-            <SectionBody section={s} report={report} />
+            {HINTS[s.key] && <p className="hint">{HINTS[s.key]}</p>}
+            <SectionBody section={s} report={report} footnote={footnote} />
           </section>
         ),
       )}
       <References report={report} />
-      <button type="button" className="no-print" onClick={() => window.print()}>
-        列印報告
-      </button>
-      <button type="button" className="secondary no-print" onClick={goHome}>
-        {backLabel}
-      </button>
+      <div className="report-bar no-print">
+        <div className="report-bar-inner">
+          <button type="button" onClick={() => window.print()}>
+            列印給醫師看
+          </button>
+          <button type="button" className="secondary" onClick={goHome}>
+            {backLabel}
+          </button>
+        </div>
+      </div>
     </main>
   );
 }

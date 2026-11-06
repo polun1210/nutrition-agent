@@ -52,7 +52,7 @@ test("化合物重量推估元素量，可覆寫，報告註明系統推估", as
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
 
-  const table = page.getByRole("table");
+  const table = page.locator('[data-section="ul_comparison"]');
   await expect(table).toContainText("210.8 mg");
   await expect(table).toContainText("此數值為系統推估，非標示值");
 });
@@ -89,7 +89,7 @@ test("照片辨識出化合物，校對頁顯示推估元素量，可覆寫與�
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
 
-  const table = page.getByRole("table");
+  const table = page.locator('[data-section="ul_comparison"]');
   await expect(table).toContainText("500.5 mg");
   await expect(table).toContainText("此數值為系統推估，非標示值");
 });
