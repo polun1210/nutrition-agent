@@ -1,7 +1,7 @@
 """評估 API：草稿逐步儲存 → 送出成不可變的評估個案 → 報告。
 
 所有查詢都以 `user.id` 過濾；別人的草稿與個案一律回 404。
-送出時後端自己組快照（個人資料取當下最新值、年齡以今天計）並跑判定引擎與報告模板，
+送出時後端自己組快照（個人資料取當下最新值、年齡以台北的今天計）並跑判定引擎與報告模板，
 結果整份凍結進 assessment_cases。
 """
 
@@ -15,7 +15,7 @@ from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field, StringConstraints
 
 from nutrition_agent.accounts import UnderageError, require_adult
-from nutrition_agent.api.deps import User, current_user, get_connection, get_gateway
+from nutrition_agent.api.deps import User, current_user, get_connection, get_gateway, get_today
 from nutrition_agent.assessment import (
     UNKNOWN_INGREDIENT,
     AssessmentCase,
@@ -56,9 +56,12 @@ class DraftBody(BaseModel):
     medications: list[MedicationInput] = []
 
 
-def _draft_row(conn: psycopg.Connection, draft_id: int, user: User) -> tuple:
+def _draft_row(
+    conn: psycopg.Connection, draft_id: int, user: User, *, lock: bool = False
+) -> tuple:
     row = conn.execute(
-        "SELECT id, products, case_id, medications FROM assessment_drafts WHERE id = %s AND user_id = %s",
+        "SELECT id, products, case_id, medications FROM assessment_drafts "
+        "WHERE id = %s AND user_id = %s" + (" FOR UPDATE" if lock else ""),
         (draft_id, user.id),
     ).fetchone()
     if row is None:
@@ -66,8 +69,10 @@ def _draft_row(conn: psycopg.Connection, draft_id: int, user: User) -> tuple:
     return row
 
 
-def _editable_draft(conn: psycopg.Connection, draft_id: int, user: User) -> tuple:
-    row = _draft_row(conn, draft_id, user)
+def _editable_draft(
+    conn: psycopg.Connection, draft_id: int, user: User, *, lock: bool = False
+) -> tuple:
+    row = _draft_row(conn, draft_id, user, lock=lock)
     if row[2] is not None:
         raise HTTPException(status_code=409, detail="這份評估已送出，不能再修改")
     return row
@@ -206,7 +211,7 @@ def estimate(
 
 @router.get("")
 def list_cases(
-    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection)
+    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection, scope="function")
 ) -> list[dict]:
     """歷史列表：只含自己的個案，新的在前。每筆帶當時的參考資料版本。"""
     rows = conn.execute(
@@ -233,7 +238,7 @@ def list_cases(
 def create_draft(
     copy_from: Literal["latest"] | None = None,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
@@ -255,8 +260,8 @@ def create_draft(
         products = latest[0]["products"]
         medications = [{"name": m["raw_name"]} for m in latest[0].get("medications", [])]
     row = conn.execute(
-        "INSERT INTO assessment_drafts (user_id, products, medications) VALUES (%s, %s, %s) "
-        "RETURNING id, products, case_id, medications",
+        "INSERT INTO assessment_drafts (user_id, products, medications, updated_at) "
+        "VALUES (%s, %s, %s, clock_timestamp()) RETURNING id, products, case_id, medications",
         (user.id, Jsonb([]), Jsonb(medications)),
     ).fetchone()
     if products:
@@ -268,11 +273,34 @@ def create_draft(
     return _draft_json(row, ref, table)
 
 
+# 必須排在 /drafts/{draft_id} 之前，否則 "resumable" 會被當成草稿 id。
+@router.get("/drafts/resumable")
+def resumable_draft(
+    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection, scope="function")
+) -> dict:
+    """可接續的草稿：自己的、尚未送出、至少一項保健食品或用藥，取最近修改的那一份。"""
+    row = conn.execute(
+        "SELECT id, jsonb_array_length(products), jsonb_array_length(medications), updated_at "
+        "FROM assessment_drafts WHERE user_id = %s AND case_id IS NULL "
+        "AND (products <> '[]'::jsonb OR medications <> '[]'::jsonb) "
+        "ORDER BY updated_at DESC, id DESC LIMIT 1",
+        (user.id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="沒有可以接續的評估")
+    return {
+        "id": row[0],
+        "product_count": row[1],
+        "medication_count": row[2],
+        "updated_at": row[3].isoformat(),
+    }
+
+
 @router.get("/drafts/{draft_id}")
 def get_draft(
     draft_id: int,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
@@ -284,16 +312,17 @@ def save_draft(
     draft_id: int,
     body: DraftBody,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
     _editable_draft(conn, draft_id, user)
     _check_ingredient_codes(body.products, ref)
     _check_photo_ids(conn, body.products, user, draft_id)
+    # clock_timestamp() 是實際寫入的時刻；now() 是交易開始時間，同一交易內的多次修改會分不出先後。
     row = conn.execute(
-        "UPDATE assessment_drafts SET products = %s, medications = %s, updated_at = now() "
-        "WHERE id = %s RETURNING id, products, case_id, medications",
+        "UPDATE assessment_drafts SET products = %s, medications = %s, "
+        "updated_at = clock_timestamp() WHERE id = %s RETURNING id, products, case_id, medications",
         (
             Jsonb([p.model_dump(mode="json") for p in body.products]),
             Jsonb([m.model_dump() for m in body.medications]),
@@ -307,16 +336,17 @@ def save_draft(
 def submit_draft(
     draft_id: int,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
     gateway: ModelGateway = Depends(get_gateway),
+    today: date = Depends(get_today),
 ) -> dict:
-    row = _editable_draft(conn, draft_id, user)
+    # 列鎖：並行的第二次送出會等第一次交易結束，再看到 case_id 已設定而回 409。
+    row = _editable_draft(conn, draft_id, user, lock=True)
     products = [Product.model_validate(p) for p in row[1]]
     if not products:
         raise HTTPException(status_code=422, detail="至少要有一項保健食品才能送出")
-    today = date.today()
     profile = user.profile
     try:
         age = require_adult(profile.birth_year, profile.birth_month, today)
@@ -353,7 +383,7 @@ def submit_draft(
 def get_case(
     case_id: int,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
 ) -> dict:
     row = conn.execute(
         "SELECT id, snapshot, assessment, report, reference_versions, created_at "

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchMe, request, type Me } from "./api";
 import AssessmentFlow from "./assessment/AssessmentFlow";
 import HistoryPage from "./assessment/HistoryPage";
+import type { DraftSource } from "./assessment/types";
 import { useHistoryState } from "./history";
 import { HomePage, LoginPage, ProfilePage, RegisterPage } from "./pages";
 
@@ -12,7 +13,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, navigate, replaceView] = useHistoryState<View>("view", "login");
-  const [copyLatest, setCopyLatest] = useState(false);
+  const [draftSource, setDraftSource] = useState<DraftSource>({ kind: "new" });
 
   const refresh = useCallback(async (next?: View) => {
     try {
@@ -48,15 +49,15 @@ export default function App() {
   }
   if (view === "assess") {
     return (
-      <AssessmentFlow copyFromLatest={copyLatest} me={me} onProfileSaved={() => void refresh("assess")} goHome={() => navigate("home")} />
+      <AssessmentFlow source={draftSource} me={me} onProfileSaved={() => void refresh("assess")} goHome={() => navigate("home")} />
     );
   }
   if (view === "history") return <HistoryPage goHome={() => navigate("home")} />;
   return view === "profile" ? (
     <ProfilePage me={me} onSaved={() => void refresh("profile")} goHome={() => navigate("home")} />
   ) : (
-    <HomePage me={me} startAssessment={(copy) => {
-        setCopyLatest(copy);
+    <HomePage me={me} startAssessment={(source) => {
+        setDraftSource(source);
         navigate("assess");
       }}
       goHistory={() => navigate("history")} goProfile={() => navigate("profile")} onLogout={() => void logout()} />

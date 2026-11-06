@@ -4,6 +4,9 @@ import httpx
 import pytest
 
 from nutrition_agent.gateway import MAX_ATTEMPTS, OpenRouterGateway
+from nutrition_agent.structured import ResponseSchema
+
+SCHEMA = ResponseSchema(name="Thing", schema={"type": "object", "properties": {}})
 
 
 def _gateway(handler, **overrides) -> OpenRouterGateway:
@@ -69,6 +72,55 @@ def test_provider_setting_is_forwarded_when_present():
     assert seen["body"]["provider"] == {"order": ["some-provider"], "allow_fallbacks": False}
 
 
+def _capture():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    return seen, handler
+
+
+def test_沒傳schema時請求不帶結構化輸出參數():
+    seen, handler = _capture()
+    gateway = _gateway(handler)
+
+    gateway.complete("q")
+    assert set(seen["body"]) == {"model", "messages"}
+    gateway.vision("讀標示", b"png-bytes", "image/png")
+    assert set(seen["body"]) == {"model", "messages"}
+
+
+@pytest.mark.parametrize("call", ["complete", "vision"])
+def test_有傳schema時帶上json_schema並只路由到支援的供應商(call):
+    seen, handler = _capture()
+    gateway = _gateway(handler)
+
+    if call == "complete":
+        gateway.complete("q", system="s", schema=SCHEMA)
+    else:
+        gateway.vision("讀標示", b"png-bytes", "image/png", schema=SCHEMA)
+
+    assert seen["body"]["response_format"] == {
+        "type": "json_schema",
+        "json_schema": {"name": "Thing", "strict": True, "schema": SCHEMA.schema},
+    }
+    assert seen["body"]["provider"] == {"require_parameters": True}
+
+
+def test_schema與指定供應商的設定合併():
+    seen, handler = _capture()
+
+    _gateway(handler, provider="some-provider").complete("q", schema=SCHEMA)
+
+    assert seen["body"]["provider"] == {
+        "order": ["some-provider"],
+        "allow_fallbacks": False,
+        "require_parameters": True,
+    }
+
+
 def _flaky(statuses: list[int]):
     """依序回傳指定狀態碼，最後一次回 200（embedding 格式）。"""
     calls = []
@@ -108,3 +160,10 @@ def test_gives_up_after_max_attempts():
     with pytest.raises(httpx.HTTPStatusError):
         _gateway(handler, sleep=lambda _: None).complete("q")
     assert len(calls) == MAX_ATTEMPTS
+
+
+def test_api_的模型閘道整個程序共用一個實例():
+    from nutrition_agent.api.deps import get_gateway
+
+    # 每個請求新建一個沒關閉的 HTTP client 會漏連線；共用的 httpx.Client 可跨執行緒使用。
+    assert get_gateway() is get_gateway()

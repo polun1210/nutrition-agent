@@ -17,6 +17,7 @@ def test_sections_in_reading_order(ref):
     report = render_report(case := make_case(product("鈣", [line("calcium", 500)])), assess(case, ref), ref)
 
     assert [s.key for s in report.sections] == [
+        "summary",
         "interaction",
         "ul_comparison",
         "not_evaluated",

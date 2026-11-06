@@ -115,3 +115,8 @@ jobs:
         working-directory: web
       - run: npx playwright test
         working-directory: web
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: web/test-results

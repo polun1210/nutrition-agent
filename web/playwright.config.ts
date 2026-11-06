@@ -5,7 +5,12 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
-  use: { baseURL: "http://127.0.0.1:5174", viewport: { width: 390, height: 844 } },
+  use: {
+    baseURL: "http://127.0.0.1:5174",
+    viewport: { width: 390, height: 844 },
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
   webServer: [
     {
       command: "uv run python scripts/e2e_server.py 8001",

@@ -1,6 +1,6 @@
 """評估流程（Seam A：HTTP API）：草稿逐步儲存 → 送出成不可變個案 → 報告。"""
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 
 def supplement(name="鈣片", lines=None, **intake):
@@ -63,7 +63,11 @@ def test_submit_freezes_a_case_with_age_versions_and_report(login_as):
     assert case["profile"]["sex"] == "female"
     assert case["products"][0]["name"] == "鈣片"
     assert set(case["reference_versions"]) >= {"manifest", "dris", "ingredients", "rules"}
-    assert [s["key"] for s in case["report"]["sections"]][:2] == ["interaction", "ul_comparison"]
+    assert [s["key"] for s in case["report"]["sections"]][:3] == [
+        "summary",
+        "interaction",
+        "ul_comparison",
+    ]
 
 
 def test_report_shows_percent_of_ul_rendered_by_template(login_as):
@@ -172,6 +176,21 @@ def test_under_19_on_assessment_day_cannot_submit(login_as):
     assert "19" in response.json()["detail"]
 
 
+def test_評估日期與年齡依台北日期計算(login_as, app):
+    from nutrition_agent.api.deps import get_now
+
+    # 台北 2026-06-01 01:30，UTC 還是 5/31：依 UTC 日期算會差一天、還沒滿 19 歲。
+    app.dependency_overrides[get_now] = lambda: datetime(2026, 5, 31, 17, 30, tzinfo=UTC)
+    client = login_as("teen@example.com", birth_year=2007, birth_month=6)
+
+    _, response = submit(client, supplement())
+
+    assert response.status_code == 201, response.text
+    case = client.get(f"/api/assessments/{response.json()['id']}").json()
+    assert case["assessed_on"] == "2026-06-01"
+    assert case["age"] == 19
+
+
 def test_cannot_submit_without_any_product(login_as):
     client = login_as()
     draft = client.post("/api/assessments/drafts").json()
@@ -227,7 +246,7 @@ def test_assessment_endpoints_require_login(client):
     assert client.get("/api/assessments/1").status_code == 401
 
 
-def test_report_has_five_sections_with_fixed_disclosures_and_no_interaction_claim(login_as):
+def test_report_has_summary_and_five_sections_with_fixed_disclosures_and_no_interaction_claim(login_as):
     client = login_as(conditions=["hypertension"])
     _, response = submit(client, supplement())
 
@@ -235,7 +254,7 @@ def test_report_has_five_sections_with_fixed_disclosures_and_no_interaction_clai
     text = report_text(client, case["id"])
 
     assert [s["title"] for s in case["report"]["sections"]] == [
-        "交互作用", "上限比對", "本系統未評估的成分", "你的資料", "評估範圍與揭露",
+        "摘要", "交互作用", "上限比對", "本系統未評估的成分", "你的資料", "評估範圍與揭露",
     ]
     assert "健康族群" in text and "孕期" in text and "DPP-4 抑制劑" in text
     assert "沒有交互作用" not in text

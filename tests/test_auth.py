@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 
 from tests.conftest import register_payload
 
@@ -130,6 +130,19 @@ def test_me_reports_age_for_adult(login_as):
     assert me["age"] >= 25
     assert me["is_adult"] is True
     assert me["underage_message"] is None
+
+
+def test_me_的年齡與是否成年依台北日期計算(login_as, app):
+    from nutrition_agent.api.deps import get_now
+
+    # 台北 2026-06-01 01:30，UTC 還是 5/31：依 UTC 日期算會差一天、還沒滿 19 歲。
+    app.dependency_overrides[get_now] = lambda: datetime(2026, 5, 31, 17, 30, tzinfo=UTC)
+    user = login_as("teen@example.com", birth_year=2007, birth_month=6)
+
+    me = user.get("/api/me").json()
+
+    assert me["age"] == 19
+    assert me["is_adult"] is True
 
 
 def test_underage_user_gets_explicit_message(login_as):

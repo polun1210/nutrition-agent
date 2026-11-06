@@ -4,6 +4,8 @@
 讀了什麼；照片本身不參與判定：使用者在清單上確認後，送出時後端仍以藥名原文重新對照。
 """
 
+from functools import partial
+
 import psycopg
 from fastapi import APIRouter, Depends, File, UploadFile
 
@@ -19,6 +21,7 @@ from nutrition_agent.api.uploads import (
     check_photo_count,
     model_service_errors,
     read_upload,
+    recognize_in_parallel,
     stored_photos,
 )
 from nutrition_agent.assessment.medications import resolve_medication
@@ -40,7 +43,7 @@ def recognize_medication_photos(
     draft_id: int,
     files: list[UploadFile] = File(default_factory=list),
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     gateway: ModelGateway = Depends(get_gateway),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
@@ -52,7 +55,7 @@ def recognize_medication_photos(
     uploads = [read_upload(f) for f in files]
 
     with model_service_errors("藥包 VLM"):
-        readings = [read_medication_pack(gateway, data, mime) for data, mime, _ in uploads]
+        readings = recognize_in_parallel(partial(read_medication_pack, gateway), uploads)
 
     def write_row(key: str, mime: str, reading: MedicationPackReading) -> None:
         conn.execute(

@@ -144,6 +144,25 @@ export function UlTable({ rows, photos }: { rows: UlRow[]; photos: PhotoMap }) {
   );
 }
 
+/** 摘要卡（#37）：報告最上方的結論，每項一列，需要注意的項目用警示底色。內容由後端模板從判定渲染。 */
+export function SummaryCard({ title, groups }: { title: string; groups: ReportGroup[] }) {
+  return (
+    <section className="summary-card" data-section="summary" data-testid="report-summary">
+      <h2>{title}</h2>
+      <dl>
+        {groups.map((g) => (
+          <div key={g.title} data-tone={g.tone}>
+            <dt>{g.title}</dt>
+            {g.lines.map((line, i) => (
+              <dd key={i}>{line}</dd>
+            ))}
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 /** 字卡：同一類的揭露事項放在一起，警示類用不同底色。 */
 export function GroupCards({ groups }: { groups: ReportGroup[] }) {
   return (

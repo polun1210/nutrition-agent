@@ -7,10 +7,9 @@ import httpx
 import pytest
 
 from tests.conftest import STORAGE_DOWN, TEST_BUCKET, bucket_keys, fail_storage
+from tests.images import JPEG, WIDE, size_of
 from tests.test_medications_api import profile_text, save
 
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 
 
 def pack(*names, readable=True):
@@ -27,10 +26,10 @@ def upload(client, draft_id, *images):
 
 
 def test_一批多張照片每張多個藥名並顯示範圍狀態(login_as, gateway):
-    gateway.vision_replies = [pack("Amlodipine", "Zantac"), pack("Bisoprolol", "完全沒聽過的藥")]
+    gateway.vision_by_size = {size_of(JPEG): pack("Amlodipine", "Zantac"), size_of(WIDE): pack("Bisoprolol", "完全沒聽過的藥")}
     client = login_as()
 
-    response = upload(client, new_draft(client), JPEG, PNG)
+    response = upload(client, new_draft(client), JPEG, WIDE)
 
     assert response.status_code == 200, response.text
     body = response.json()
@@ -47,19 +46,19 @@ def test_一批多張照片每張多個藥名並顯示範圍狀態(login_as, gat
 
 
 def test_跨照片重複的藥名只留一個(login_as, gateway):
-    gateway.vision_replies = [pack("Amlodipine"), pack("amlodipine", "Zantac")]
+    gateway.vision_by_size = {size_of(JPEG): pack("Amlodipine"), size_of(WIDE): pack("amlodipine", "Zantac")}
     client = login_as()
 
-    body = upload(client, new_draft(client), JPEG, PNG).json()
+    body = upload(client, new_draft(client), JPEG, WIDE).json()
 
     assert [m["raw_name"] for m in body["medications"]] == ["Amlodipine", "Zantac"]
 
 
 def test_讀不到的照片指出是哪一張並附重拍提示(login_as, gateway):
-    gateway.vision_replies = [pack("Amlodipine"), "抱歉我看不懂"]
+    gateway.vision_by_size = {size_of(JPEG): pack("Amlodipine"), size_of(WIDE): "抱歉我看不懂"}
     client = login_as()
 
-    body = upload(client, new_draft(client), JPEG, PNG).json()
+    body = upload(client, new_draft(client), JPEG, WIDE).json()
 
     first, second = body["photos"]
     assert first["readable"] is True and first["hint"] is None
@@ -68,10 +67,10 @@ def test_讀不到的照片指出是哪一張並附重拍提示(login_as, gatewa
 
 
 def test_模型服務故障回502且不留下照片(login_as, gateway, db, s3):
-    gateway.vision_replies = [pack("Amlodipine"), httpx.ConnectError("down")]
+    gateway.vision_by_size = {size_of(JPEG): pack("Amlodipine"), size_of(WIDE): httpx.ConnectError("down")}
     client = login_as()
 
-    response = upload(client, new_draft(client), JPEG, PNG)
+    response = upload(client, new_draft(client), JPEG, WIDE)
 
     assert response.status_code == 502
     assert photo_rows(db) == []
@@ -117,31 +116,32 @@ def photo_rows(db):
 
 
 def test_上傳後照片存進bucket且資料表記下讀出的藥名(login_as, gateway, db, s3):
-    gateway.vision_replies = [pack("Amlodipine", "Zantac"), "抱歉我看不懂"]
+    gateway.vision_by_size = {size_of(JPEG): pack("Amlodipine", "Zantac"), size_of(WIDE): "抱歉我看不懂"}
     client = login_as()
     draft_id = new_draft(client)
 
-    assert upload(client, draft_id, JPEG, PNG).status_code == 200
+    assert upload(client, draft_id, JPEG, WIDE).status_code == 200
 
     rows = photo_rows(db)
     assert [(r[1], r[3], r[4]) for r in rows] == [
         (draft_id, "image/jpeg", ["Amlodipine", "Zantac"]),
-        (draft_id, "image/png", []),
+        (draft_id, "image/jpeg", []),
     ]
     keys = [r[2] for r in rows]
     assert sorted(bucket_keys(s3)) == sorted(keys)
     assert re.fullmatch(r"medication/[0-9a-f]{32}\.jpg", keys[0])
-    assert re.fullmatch(r"medication/[0-9a-f]{32}\.png", keys[1])
+    assert re.fullmatch(r"medication/[0-9a-f]{32}\.jpg", keys[1])
     stored = s3.get_object(Bucket=TEST_BUCKET, Key=keys[0])
-    assert stored["Body"].read() == JPEG and stored["ContentType"] == "image/jpeg"
+    seen = next(img for img, _ in gateway.images if size_of(img) == size_of(JPEG))
+    assert stored["Body"].read() == seen and stored["ContentType"] == "image/jpeg"
 
 
 def test_儲存服務故障回502且不留下照片(login_as, gateway, db, s3):
-    gateway.vision_replies = [pack("Amlodipine"), pack("Zantac")]
+    gateway.vision_by_size = {size_of(JPEG): pack("Amlodipine"), size_of(WIDE): pack("Zantac")}
     client = login_as()
     fail_storage(s3, "PutObject", after=1)  # 第一張存進去、第二張失敗
 
-    response = upload(client, new_draft(client), JPEG, PNG)
+    response = upload(client, new_draft(client), JPEG, WIDE)
 
     assert response.status_code == 502
     assert response.json()["detail"] == STORAGE_DOWN

@@ -3,6 +3,8 @@
 照片與辨識結果都以 user.id 過濾；別人的草稿或照片一律 404，不洩漏是否存在。
 """
 
+from functools import partial
+
 import psycopg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse
@@ -21,6 +23,7 @@ from nutrition_agent.api.uploads import (
     model_service_errors,
     photo_storage_errors,
     read_upload,
+    recognize_in_parallel,
     stored_photos,
 )
 from nutrition_agent.extraction import VlmReading, build_extraction, read_label
@@ -51,7 +54,7 @@ def recognize_photos(
     files: list[UploadFile] = File(default_factory=list),
     photo_ids: list[int] = Form(default_factory=list),
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     gateway: ModelGateway = Depends(get_gateway),
     store: PhotoStore = Depends(get_photo_store),
     ref: ReferenceData = Depends(get_reference),
@@ -64,7 +67,7 @@ def recognize_photos(
 
     # 先全部辨識完才存檔：模型服務出錯時不會留下沒用的照片。
     with model_service_errors("VLM"):
-        new_readings = [read_label(gateway, data, mime) for data, mime, _ in uploads]
+        new_readings = recognize_in_parallel(partial(read_label, gateway), uploads)
 
     def write_row(key: str, mime: str, reading: VlmReading) -> int:
         return conn.execute(
@@ -75,14 +78,14 @@ def recognize_photos(
 
     with stored_photos(store, PRODUCT_PREFIX, uploads, new_readings, write_row) as photo_ids:
         merged = [*readings, *zip(photo_ids, new_readings, strict=True)]
-        return build_extraction(merged, ref.ingredients).model_dump(mode="json")
+        return build_extraction(merged, ref.ingredients, ref.compounds).model_dump(mode="json")
 
 
 @router.get("/photos/{photo_id}")
 def get_photo(
     photo_id: int,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     store: PhotoStore = Depends(get_photo_store),
 ) -> RedirectResponse:
     """確認是本人的照片後，302 導向短效 presigned URL，讓瀏覽器直接向物件儲存取圖。"""

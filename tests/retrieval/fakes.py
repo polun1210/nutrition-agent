@@ -25,8 +25,8 @@ class BagOfWordsGateway:
         self.embedded.extend(texts)
         return [embed_text(t) for t in texts]
 
-    def vision(self, prompt, image, mime_type):  # pragma: no cover
+    def vision(self, prompt, image, mime_type, *, schema=None):  # pragma: no cover
         raise NotImplementedError
 
-    def complete(self, prompt, system=None):  # pragma: no cover
+    def complete(self, prompt, system=None, *, schema=None):  # pragma: no cover
         raise NotImplementedError

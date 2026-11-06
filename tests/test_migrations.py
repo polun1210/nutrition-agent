@@ -76,3 +76,26 @@ def test_遷移時既有的藥包照片不標記過期(migration_db):
 
     with psycopg.connect(url) as conn:
         assert conn.execute("SELECT expired_at FROM medication_photos").fetchall() == [(None,)]
+
+
+def table_exists(conn: psycopg.Connection, name: str) -> bool:
+    return conn.execute("SELECT to_regclass(%s)", (name,)).fetchone()[0] is not None
+
+
+def test_遷移後已啟用_pgvector(db):
+    row = db.execute("SELECT extname FROM pg_extension WHERE extname = 'vector'").fetchone()
+
+    assert row is not None
+
+
+def test_升級後沒有_ping_資料表_降級後恢復(migration_db):
+    url, config = migration_db
+
+    command.upgrade(config, "head")
+    with psycopg.connect(url) as conn:
+        assert not table_exists(conn, "ping")
+
+    command.downgrade(config, "0009")
+    with psycopg.connect(url) as conn:
+        assert table_exists(conn, "ping")
+        conn.execute("INSERT INTO ping DEFAULT VALUES")

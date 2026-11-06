@@ -8,6 +8,7 @@ from typing import Protocol
 import httpx
 
 from nutrition_agent.config import Settings
+from nutrition_agent.structured import ResponseSchema
 
 # 被限速（429）或供應商暫時錯誤（5xx）時重試，等待 1、2、4、8 秒。
 MAX_ATTEMPTS = 5
@@ -15,9 +16,13 @@ _RETRYABLE = frozenset({429, 500, 502, 503, 504})
 
 
 class ModelGateway(Protocol):
-    def vision(self, prompt: str, image: bytes, mime_type: str) -> str: ...
+    def vision(
+        self, prompt: str, image: bytes, mime_type: str, *, schema: ResponseSchema | None = None
+    ) -> str: ...
 
-    def complete(self, prompt: str, system: str | None = None) -> str: ...
+    def complete(
+        self, prompt: str, system: str | None = None, *, schema: ResponseSchema | None = None
+    ) -> str: ...
 
     def embed(self, texts: list[str]) -> list[list[float]]: ...
 
@@ -59,28 +64,42 @@ class OpenRouterGateway:
             provider=settings.openrouter_provider,
         )
 
-    def vision(self, prompt: str, image: bytes, mime_type: str) -> str:
+    def vision(
+        self, prompt: str, image: bytes, mime_type: str, *, schema: ResponseSchema | None = None
+    ) -> str:
         data_url = f"data:{mime_type};base64,{base64.b64encode(image).decode()}"
         content = [
             {"type": "text", "text": prompt},
             {"type": "image_url", "image_url": {"url": data_url}},
         ]
-        return self._chat(self._vlm_model, [{"role": "user", "content": content}])
+        return self._chat(self._vlm_model, [{"role": "user", "content": content}], schema)
 
-    def complete(self, prompt: str, system: str | None = None) -> str:
+    def complete(
+        self, prompt: str, system: str | None = None, *, schema: ResponseSchema | None = None
+    ) -> str:
         messages = [{"role": "system", "content": system}] if system else []
         messages.append({"role": "user", "content": prompt})
-        return self._chat(self._llm_model, messages)
+        return self._chat(self._llm_model, messages, schema)
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         response = self._post("/embeddings", {"model": self._embedding_model, "input": texts})
         rows = sorted(response.json()["data"], key=lambda row: row["index"])
         return [row["embedding"] for row in rows]
 
-    def _chat(self, model: str, messages: list[dict]) -> str:
+    def _chat(self, model: str, messages: list[dict], schema: ResponseSchema | None) -> str:
         body: dict = {"model": model, "messages": messages}
+        provider: dict = {}
         if self._provider:
-            body["provider"] = {"order": [self._provider], "allow_fallbacks": False}
+            provider |= {"order": [self._provider], "allow_fallbacks": False}
+        if schema is not None:
+            body["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": schema.name, "strict": True, "schema": schema.schema},
+            }
+            # 有些供應商（如 Amazon Bedrock）不支援 structured_outputs，會把 schema 當提示或忽略。
+            provider["require_parameters"] = True
+        if provider:
+            body["provider"] = provider
         response = self._post("/chat/completions", body)
         return response.json()["choices"][0]["message"]["content"]
 

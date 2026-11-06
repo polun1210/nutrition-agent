@@ -5,7 +5,7 @@
       uv run python evals/vlm/run.py
       uv run python evals/vlm/run.py --recorded evals/vlm/recorded/vlm
   打真模型（需要 .env 的 OPENROUTER_* 與 VLM_MODEL；照片不在 repo，放在 --images 資料夾，
-  檔名 <image_id>.jpg/.png/.webp）：
+  檔名 <image_id>.jpg/.png/.webp；送模型前套用和上傳端點同一個正規化，見 ADR-0007）：
       uv run python evals/vlm/run.py --live --images D:/photos [--save-recorded evals/vlm/recorded/vlm]
 
 只比對有錄製回應／有照片的 image_id；沒有的會列出略過。
@@ -18,10 +18,11 @@ from pathlib import Path
 
 from nutrition_agent.extraction import VlmReading, build_extraction, parse_reading, read_label
 from nutrition_agent.extraction.evaluation import EvalReport, format_report, score_product
+from nutrition_agent.photo_normalization import NORMALIZED_MIME, normalize_photo
 from nutrition_agent.reference import load_reference_data
 
 HERE = Path(__file__).resolve().parent
-IMAGE_SUFFIXES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
 
 
 def _replay(directory: Path, image_id: str) -> VlmReading | None:
@@ -30,10 +31,10 @@ def _replay(directory: Path, image_id: str) -> VlmReading | None:
 
 
 def _live(gateway, images: Path, image_id: str, save_to: Path | None) -> VlmReading | None:
-    for suffix, mime in IMAGE_SUFFIXES.items():
+    for suffix in IMAGE_SUFFIXES:
         path = images / f"{image_id}{suffix}"
         if path.exists():
-            reading = read_label(gateway, path.read_bytes(), mime)
+            reading = read_label(gateway, normalize_photo(path.read_bytes()), NORMALIZED_MIME)
             if save_to is not None:
                 save_to.mkdir(parents=True, exist_ok=True)
                 (save_to / f"{image_id}.json").write_text(
@@ -63,7 +64,8 @@ def main(argv: list[str] | None = None) -> int:
 
         gateway = OpenRouterGateway.from_settings(get_settings())
 
-    catalog = load_reference_data().ingredients
+    ref = load_reference_data()
+    catalog = ref.ingredients
     report, skipped = EvalReport(), []
     for gold_path in sorted(args.gold.glob("p*.json")):
         gold = json.loads(gold_path.read_text(encoding="utf-8"))
@@ -76,7 +78,8 @@ def main(argv: list[str] | None = None) -> int:
         if reading is None:
             skipped.append(image_id)
             continue
-        score_product(gold, build_extraction([(0, reading)], catalog), report, catalog)
+        extraction = build_extraction([(0, reading)], catalog, ref.compounds)
+        score_product(gold, extraction, report, catalog)
 
     if args.json:
         print(json.dumps(report.summary(), ensure_ascii=False, indent=2))

@@ -42,3 +42,11 @@ def test_read_medication_pack_用閘道的視覺回覆():
 
     assert reading.names == ["Norvasc"]
     assert gateway.calls[0][0] == "vision"
+    assert [s.name for s in gateway.schemas] == ["MedicationPackReading"]
+
+
+FENCE = "```json\n{}\n```"
+
+
+def test_回覆包在程式碼區塊也能解析():
+    assert parse_pack_reading(FENCE.format(reply(["Norvasc"]))).names == ["Norvasc"]

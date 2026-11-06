@@ -27,6 +27,7 @@ from nutrition_agent.extraction import medication_pack
 from nutrition_agent.photos import PhotoStore
 from nutrition_agent.reference import load_reference_data, load_rule_set
 from nutrition_agent.reference.drug_names import load_sample_drug_names
+from nutrition_agent.structured import ResponseSchema
 
 MEDICATION_PACK_REPLY = '{"readable": true, "names": ["Amlodipine", "Zantac"]}'
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,24 +36,63 @@ RECORDED_VLM = ROOT / "evals" / "vlm" / "recorded" / "vlm"
 FIXTURE_RULES = ROOT / "tests" / "fixtures" / "rules.toml"
 EVIDENCE_ID = "ev-e2e0000000000001"
 EVIDENCE_TEXT = "Metformin might reduce the absorption of vitamin B12 and reduce serum concentrations."
+# 這個像素尺寸（寬, 高）的 JPEG 標示照片回「只標化合物重量」的鈣片（e2e/estimation.spec.ts）。
+# 依像素尺寸而不是位元組判斷：照片正規化重新編碼後尺寸不變（小圖不放大）。
+COMPOUND_LABEL_SIZE = (123, 45)
+COMPOUND_LABEL_REPLY = json.dumps(
+    {
+        "readable": True,
+        "product_name": "碳酸鈣錠",
+        "serving_size": 1,
+        "dose_unit": "錠",
+        "rows": [
+            {"raw_name": "碳酸鈣", "section": "nutrition_table", "amount": 1250, "unit": "mg"},
+        ],
+    },
+    ensure_ascii=False,
+)
+# 帶寬高的 SOF 區段（排除 DHT C4、JPG C8、DAC CC 這三個同區間但不是 SOF 的標記）
+_SOF_MARKERS = frozenset(range(0xC0, 0xD0)) - {0xC4, 0xC8, 0xCC}
+
+
+def jpeg_size(data: bytes) -> tuple[int, int] | None:
+    """從 JPEG 的 SOF 區段讀出 (寬, 高)；不是 JPEG 或讀不到時回 None。"""
+    if not data.startswith(b"\xff\xd8"):
+        return None
+    i = 2
+    while i + 9 <= len(data) and data[i] == 0xFF:
+        marker = data[i + 1]
+        if marker in _SOF_MARKERS:
+            height = int.from_bytes(data[i + 5 : i + 7], "big")
+            width = int.from_bytes(data[i + 7 : i + 9], "big")
+            return width, height
+        i += 2 + int.from_bytes(data[i + 2 : i + 4], "big")
+    return None
 
 
 class RecordedVlmGateway:
-    """煙霧測試用的假模型閘道：標示照片回錄製的 p01 辨識結果，藥包照片回固定的兩個藥名，不打外部 API。"""
+    """煙霧測試用的假模型閘道，不打外部 API：
+    - 藥包照片：固定回兩個藥名。
+    - 標示照片：COMPOUND_LABEL_SIZE 尺寸的回化合物鈣片，其餘回錄製的 p01 辨識結果。
+    """
 
-    def vision(self, prompt: str, image: bytes, mime_type: str) -> str:
-        if prompt == medication_pack.PROMPT:  # 藥包照片：固定回兩個藥名
+    def vision(
+        self, prompt: str, image: bytes, mime_type: str, *, schema: ResponseSchema | None = None
+    ) -> str:
+        if prompt == medication_pack.PROMPT:
             return MEDICATION_PACK_REPLY
+        if jpeg_size(image) == COMPOUND_LABEL_SIZE:
+            return COMPOUND_LABEL_REPLY
         return (RECORDED_VLM / "p01-img01.json").read_text(encoding="utf-8")
 
-    def complete(self, prompt: str, system: str | None = None) -> str:
+    def complete(
+        self, prompt: str, system: str | None = None, *, schema: ResponseSchema | None = None
+    ) -> str:
         match = re.search(r"ev-[0-9a-f]+", prompt)
         if match is None:
             return "fake-completion"
-        return json.dumps(
-            [{"text": "這個藥可能影響維生素 B12 的吸收。", "evidence_ids": [match.group()]}],
-            ensure_ascii=False,
-        )
+        sentence = {"text": "這個藥可能影響維生素 B12 的吸收。", "evidence_ids": [match.group()]}
+        return json.dumps({"sentences": [sentence]}, ensure_ascii=False)
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         return [[0.0] * 4 for _ in texts]

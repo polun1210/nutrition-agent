@@ -19,11 +19,10 @@ from tests.conftest import (
     bucket_keys,
     fail_storage,
 )
+from tests.images import JPEG, PNG, WIDE, size_of
 from tests.test_assessments_api import supplement
 
 RECORDED = Path(__file__).resolve().parents[1] / "evals" / "vlm" / "recorded" / "vlm"
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 UNREADABLE = json.dumps({"readable": False, "rows": []})
 BACK = json.dumps(
     {
@@ -47,10 +46,10 @@ def upload(client, draft_url, *images, **data):
 
 
 def test_多張照片合併成一筆並預填(login_as, gateway):
-    gateway.vision_replies = [p01_reply(), BACK]
+    gateway.vision_by_size = {size_of(JPEG): p01_reply(), size_of(WIDE): BACK}
     client = login_as()
 
-    response = upload(client, new_draft(client), JPEG, PNG)
+    response = upload(client, new_draft(client), JPEG, WIDE)
 
     assert response.status_code == 200, response.text
     body = response.json()
@@ -62,10 +61,10 @@ def test_多張照片合併成一筆並預填(login_as, gateway):
 
 
 def test_讀不到的照片會指出是哪一張並附重拍提示(login_as, gateway):
-    gateway.vision_replies = [p01_reply(), UNREADABLE]
+    gateway.vision_by_size = {size_of(JPEG): p01_reply(), size_of(WIDE): UNREADABLE}
     client = login_as()
 
-    body = upload(client, new_draft(client), JPEG, PNG).json()
+    body = upload(client, new_draft(client), JPEG, WIDE).json()
 
     first, second = body["photos"]
     assert first["readable"] is True
@@ -96,7 +95,7 @@ def test_上傳後照片存進bucket且key不含使用者資訊(login_as, gatewa
     [key] = bucket_keys(s3)
     assert re.fullmatch(r"product/[0-9a-f]{32}\.jpg", key)
     stored = s3.get_object(Bucket=TEST_BUCKET, Key=key)
-    assert stored["Body"].read() == JPEG and stored["ContentType"] == "image/jpeg"
+    assert stored["Body"].read() == gateway.images[0][0] and stored["ContentType"] == "image/jpeg"
 
 
 def test_照片只有本人拿得到(login_as, make_client, gateway):
@@ -164,11 +163,11 @@ def test_模型服務故障時回報稍後再試且不留下照片(login_as, gat
 
 
 def test_儲存服務故障時上傳回報稍後再試且不留下照片(login_as, gateway, db, s3):
-    gateway.vision_replies = [p01_reply(), BACK]
+    gateway.vision_by_size = {size_of(JPEG): p01_reply(), size_of(WIDE): BACK}
     client = login_as()
     fail_storage(s3, "PutObject", after=1)  # 第一張存進去、第二張失敗
 
-    response = upload(client, new_draft(client), JPEG, PNG)
+    response = upload(client, new_draft(client), JPEG, WIDE)
 
     assert response.status_code == 502
     assert response.json()["detail"] == STORAGE_DOWN

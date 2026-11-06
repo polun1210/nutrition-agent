@@ -2,15 +2,23 @@
 
 import logging
 from collections.abc import Callable, Iterator, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from typing import TypeVar
 
 import httpx
 from fastapi import HTTPException, UploadFile
 
+from nutrition_agent.photo_normalization import (
+    NORMALIZED_EXT,
+    NORMALIZED_MIME,
+    UnreadablePhoto,
+    normalize_photo,
+)
 from nutrition_agent.photos import MAX_PHOTO_BYTES, PhotoStorageError, PhotoStore, sniff_image
 
 MAX_PHOTOS_PER_PRODUCT = 8
+MAX_PARALLEL_VLM = 4  # 同時辨識的照片數上限，避免撞到模型服務的限速
 
 log = logging.getLogger(__name__)
 
@@ -20,14 +28,23 @@ T = TypeVar("T")
 
 
 def read_upload(upload: UploadFile) -> Upload:
-    """回傳 (內容, MIME 類型, 副檔名)；太大或不是支援的圖片格式就拒絕。"""
+    """回傳正規化後的 (內容, MIME 類型, 副檔名)；太大或不是支援的圖片格式就拒絕。
+
+    大小與魔術位元組是第一道關卡，通過後才解碼正規化；辨識與存檔都用正規化後的版本。
+    """
     data = upload.file.read(MAX_PHOTO_BYTES + 1)
     if len(data) > MAX_PHOTO_BYTES:
         raise HTTPException(status_code=413, detail="照片太大，請壓縮到 10 MB 以下再上傳")
-    kind = sniff_image(data)
-    if kind is None:
+    if sniff_image(data) is None:
         raise HTTPException(status_code=422, detail="只能上傳 JPEG、PNG 或 WebP 照片")
-    return data, kind[0], kind[1]
+    try:
+        normalized = normalize_photo(data)
+    except UnreadablePhoto as err:
+        log.warning("照片解不開：%s", err)
+        raise HTTPException(
+            status_code=422, detail="這張照片打不開，請重拍或換一張再上傳"
+        ) from err
+    return normalized, NORMALIZED_MIME, NORMALIZED_EXT
 
 
 def check_photo_count(count: int, limit_prefix: str) -> None:
@@ -38,6 +55,18 @@ def check_photo_count(count: int, limit_prefix: str) -> None:
         raise HTTPException(
             status_code=422, detail=f"{limit_prefix}最多 {MAX_PHOTOS_PER_PRODUCT} 張照片"
         )
+
+
+def recognize_in_parallel(read: Callable[[bytes, str], R], uploads: Sequence[Upload]) -> list[R]:
+    """每張照片各呼叫一次 read，最多 MAX_PARALLEL_VLM 張同時進行；結果依上傳順序排列。
+
+    任一張丟出例外時，等其他張結束後原樣往外丟（呼叫端照舊包在 model_service_errors 裡），
+    此時還沒存任何東西，所以失敗不會留下照片。read 不能碰資料庫連線（連線不跨執行緒）。
+    """
+    if not uploads:
+        return []
+    with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL_VLM, len(uploads))) as pool:
+        return list(pool.map(lambda upload: read(upload[0], upload[1]), uploads))
 
 
 @contextmanager

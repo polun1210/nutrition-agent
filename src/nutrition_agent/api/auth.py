@@ -13,7 +13,7 @@ from pwdlib import PasswordHash
 from pydantic import BaseModel, EmailStr, Field
 
 from nutrition_agent.accounts import UnderageError, age_on, require_adult
-from nutrition_agent.api.deps import SESSION_KEY, User, current_user, get_connection
+from nutrition_agent.api.deps import SESSION_KEY, User, current_user, get_connection, get_today
 from nutrition_agent.profile import Profile
 
 _hasher = PasswordHash.recommended()
@@ -35,7 +35,7 @@ class LoginRequest(BaseModel):
 
 @router.post("/auth/register", status_code=201)
 def register(
-    body: RegisterRequest, request: Request, conn: psycopg.Connection = Depends(get_connection)
+    body: RegisterRequest, request: Request, conn: psycopg.Connection = Depends(get_connection, scope="function")
 ) -> dict:
     row = conn.execute(
         "INSERT INTO users (email, password_hash, birth_year, birth_month, sex, conditions) "
@@ -57,7 +57,7 @@ def register(
 
 @router.post("/auth/login")
 def login(
-    body: LoginRequest, request: Request, conn: psycopg.Connection = Depends(get_connection)
+    body: LoginRequest, request: Request, conn: psycopg.Connection = Depends(get_connection, scope="function")
 ) -> dict:
     row = conn.execute(
         "SELECT id, password_hash FROM users WHERE lower(email) = lower(%s)", (body.email,)
@@ -77,8 +77,7 @@ def logout(request: Request) -> Response:
 
 
 @router.get("/me")
-def me(user: User = Depends(current_user)) -> dict:
-    today = date.today()
+def me(user: User = Depends(current_user), today: date = Depends(get_today)) -> dict:
     profile = user.profile
     underage_message = None
     try:
@@ -99,7 +98,7 @@ def me(user: User = Depends(current_user)) -> dict:
 def update_profile(
     body: Profile,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
 ) -> dict:
     conn.execute(
         "UPDATE users SET birth_year = %s, birth_month = %s, sex = %s, conditions = %s "

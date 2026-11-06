@@ -208,6 +208,26 @@
     ]
   },
   {
+    "id": "rosuvastatin-red-yeast-rice",
+    "question": "我每天吃冠脂妥控制膽固醇，最近想買紅麴膠囊來吃，可以一起吃嗎？",
+    "ingredient_code": "red_yeast_rice",
+    "drug_ingredient_codes": ["rosuvastatin"],
+    "expected_evidence": [
+      {
+        "document_path": "sources/nccih/RedYeastRice-NCCIH.md",
+        "contains": "Monacolin K is structurally identical to the medicine lovastatin"
+      },
+      {
+        "document_path": "sources/nccih/RedYeastRice-NCCIH.md",
+        "contains": "Red yeast rice products can have the same types of drug interactions as statin drugs"
+      }
+    ],
+    "expected_points": [
+      {"label": "紅麴含與 lovastatin 結構相同的成分", "any_of": ["lovastatin", "洛伐他汀", "monacolin", "莫納可林", "莫那可林"]},
+      {"label": "可能加重肌肉、肝或腎的副作用", "any_of": ["肌肉", "肝", "腎"]}
+    ]
+  },
+  {
     "id": "holdout-lansoprazole-b12",
     "question": "我吃蘭索拉唑（lansoprazole）好幾年了，需要擔心維生素 B12 嗎？",
     "ingredient_code": "vitamin_b12",

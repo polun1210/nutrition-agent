@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     vlm_model: str = ""
     llm_model: str = ""
     embedding_model: str = ""
+    # 只給 eval 用：RAG 忠實度評審的模型（evals/rag/run.py --judge），建議和 LLM_MODEL 不同。
+    eval_judge_model: str = ""
 
 
 @lru_cache

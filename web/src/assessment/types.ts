@@ -52,6 +52,8 @@ export type Extraction = {
     readable: boolean;
     ingredient_code: string | null;
     scope_status: ScopeStatus;
+    basis: "labeled" | "compound";
+    compound_code: string | null;
     nutrition_fact: boolean;
     photo_id: number;
   }[];
@@ -107,6 +109,17 @@ export type Draft = {
   medications: MedicationInput[];
   submitted_case_id: number | null;
 };
+
+/** 首頁「繼續上次未完成的評估」的草稿摘要。 */
+export type ResumableDraft = {
+  id: number;
+  product_count: number;
+  medication_count: number;
+  updated_at: string;
+};
+
+/** 評估流程的草稿從哪裡來：新建、從上一次評估複製，或接續未送出的草稿。 */
+export type DraftSource = { kind: "new" } | { kind: "copy_latest" } | { kind: "resume"; draftId: number };
 
 export type InteractionCard = {
   ingredient: string;

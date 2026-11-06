@@ -1,16 +1,24 @@
 import { useState, type ChangeEvent } from "react";
 import { upload } from "../api";
+import { EstimateField, toIngredientLine } from "./EstimateField";
+import IntakeFields, { intakeDraftFrom, toIntake, type IntakeDraft } from "./IntakeFields";
 import PhotoThumbs from "./PhotoThumbs";
 import {
   DOSE_UNITS,
   ROW_UNITS,
   unitLabel,
+  type CompoundOption,
   type Extraction,
   type IngredientOption,
   type Product,
 } from "./types";
 
-type Props = { draftId: number; options: IngredientOption[]; onAdd: (product: Product) => void };
+type Props = {
+  draftId: number;
+  options: IngredientOption[];
+  compounds: CompoundOption[];
+  onAdd: (product: Product) => void;
+};
 
 type Row = {
   key: number;
@@ -18,6 +26,9 @@ type Row = {
   code: string;
   amount: string;
   unit: string;
+  basis: "labeled" | "compound"; // compound = amount 是化合物重量，元素量由後端推估
+  compound: string; // 化合物代碼；"" = 無法判定
+  override: string | null; // 使用者覆寫推估值（mg）；null = 沿用系統推估
 };
 
 type Review = {
@@ -54,6 +65,9 @@ function toReview(result: Extraction): Review {
         code: r.ingredient_code ?? UNKNOWN,
         amount: r.amount?.toString() ?? "",
         unit: r.unit ?? "mg",
+        basis: r.basis,
+        compound: r.compound_code ?? "",
+        override: null,
       })),
     outOfScope: outOfScope.map((r) => ({ ingredient_code: r.ingredient_code ?? UNKNOWN, amount: r.amount ?? 0, unit: r.unit ?? "mg" })),
     otherIngredients: result.rows.filter((r) => !r.nutrition_fact && isListedOnly(r)).map((r) => r.raw_name),
@@ -62,14 +76,13 @@ function toReview(result: Extraction): Review {
 }
 
 /** 用照片新增一項保健食品：上傳 → 辨識中 → 校對（整瓶看過確認一次）→ 加入。 */
-export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
+export default function PhotoProductForm({ draftId, options, compounds, onAdd }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [keptIds, setKeptIds] = useState<number[]>([]); // 已辨識且讀得到、重傳時沿用的照片
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<Review | null>(null);
-  const [timesPerDay, setTimesPerDay] = useState("1");
-  const [perTime, setPerTime] = useState("1");
+  const [intake, setIntake] = useState<IntakeDraft>(intakeDraftFrom());
 
   const recognize = async () => {
     setError(null);
@@ -106,6 +119,9 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
           code: options[0]?.code ?? UNKNOWN,
           amount: "",
           unit: options[0]?.unit ?? "mg",
+          basis: "labeled",
+          compound: "",
+          override: null,
         },
       ],
     });
@@ -115,6 +131,12 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
     setFiles([]);
     setKeptIds([]);
     setError(null);
+    setIntake(intakeDraftFrom());
+  };
+
+  const pickIngredient = (key: number, code: string) => {
+    const option = options.find((o) => o.code === code);
+    patchRow(key, { code, unit: option?.unit ?? "mg", basis: "labeled", compound: "", override: null });
   };
 
   const add = () => {
@@ -128,10 +150,10 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
       dose_unit: review.doseUnit as Product["dose_unit"],
       units_per_serving: Number(review.perServing),
       ingredients: [
-        ...review.rows.map((r) => ({ ingredient_code: r.code, amount: Number(r.amount), unit: r.unit })),
+        ...review.rows.map(toIngredientLine),
         ...review.outOfScope,
       ],
-      intake: { frequency: "daily", times_per_day: Number(timesPerDay), units_per_time: Number(perTime) },
+      intake: toIntake(intake),
       photo_ids: review.photos.map((p) => p.photo_id),
     });
     reset();
@@ -206,7 +228,7 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
                   <select
                     aria-label="成分"
                     value={r.code}
-                    onChange={(e) => patchRow(r.key, { code: e.target.value })}
+                    onChange={(e) => pickIngredient(r.key, e.target.value)}
                   >
                     {options.map((o) => (
                       <option key={o.code} value={o.code}>
@@ -215,10 +237,29 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
                     ))}
                   </select>
                 </label>
+                {r.basis === "compound" && (
+                  <label>
+                    化合物
+                    <select
+                      aria-label="化合物"
+                      value={r.compound}
+                      onChange={(e) => patchRow(r.key, { compound: e.target.value, override: null })}
+                    >
+                      <option value="">其他／不在清單內（無法判定）</option>
+                      {compounds
+                        .filter((c) => c.nutrient_code === r.code)
+                        .map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                )}
                 <label>
-                  含量
+                  {r.basis === "compound" ? "化合物重量" : "含量"}
                   <input
-                    aria-label="含量"
+                    aria-label={r.basis === "compound" ? "化合物重量" : "含量"}
                     type="number"
                     min="0"
                     step="any"
@@ -237,6 +278,7 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
                     ))}
                   </select>
                 </label>
+                {r.basis === "compound" && <EstimateField line={r} onOverride={(v) => patchRow(r.key, { override: v })} />}
                 <button
                   type="button"
                   className="secondary"
@@ -256,15 +298,7 @@ export default function PhotoProductForm({ draftId, options, onAdd }: Props) {
               <p>{review.otherIngredients.join("、")}</p>
             </details>
           )}
-          <p>服用方式：每天服用</p>
-          <label>
-            每日次數
-            <input type="number" required min="1" max="24" step="1" value={timesPerDay} onChange={(e) => setTimesPerDay(e.target.value)} />
-          </label>
-          <label>
-            每次幾{review.doseUnit || "個"}
-            <input type="number" required min="0.01" step="any" value={perTime} onChange={(e) => setPerTime(e.target.value)} />
-          </label>
+          <IntakeFields value={intake} onChange={setIntake} doseUnit={review.doseUnit} />
           <button type="submit">內容都核對過了，加入這項保健食品</button>
           <button type="button" className="secondary" onClick={reset}>
             放棄這次辨識
