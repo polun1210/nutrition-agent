@@ -12,6 +12,9 @@ export function useFootnoteState(): FootnoteState {
   return { open, toggle: (key) => setOpen((cur) => (cur === key ? null : key)) };
 }
 
+/** 腳註的展開 key：成分、句子序號、腳註編號。 */
+const footnoteKey = (code: string, sentence: number, n: number) => `${code}:${sentence}:${n}`;
+
 /** 列印期間為 true：此時所有出處都展開。 */
 function usePrinting(): boolean {
   const [printing, setPrinting] = useState(false);
@@ -62,13 +65,13 @@ export default function Explanations({
           <p key={e.ingredient_code}>
             {e.sentences.map((s, i) => {
               const shown = s.footnotes
-                .map((n) => ({ n, key: `${e.ingredient_code}:${i}:${n}` }))
+                .map((n) => ({ n, key: footnoteKey(e.ingredient_code, i, n) }))
                 .filter(({ key }) => printing || footnote.open === key);
               return (
                 <span key={i}>
                   {s.text}
                   {s.footnotes.map((n) => {
-                    const key = `${e.ingredient_code}:${i}:${n}`;
+                    const key = footnoteKey(e.ingredient_code, i, n);
                     return (
                       <button
                         key={n}
