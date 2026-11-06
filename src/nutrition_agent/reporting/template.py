@@ -29,6 +29,7 @@ from nutrition_agent.assessment import (
     Medication,
     IngredientLine,
     Product,
+    ProfileSnapshot,
     SourceKind,
     UlComparison,
 )
@@ -113,6 +114,7 @@ class Card(BaseModel):
     drugs: list[str]
     reasons: list[str]
     advice: list[str]
+    advice_codes: list[str] = []  # 建議行動代碼（前端用來決定顏色與圖示）；舊報告沒有
     values: list[CardValue]
     supplemented: bool = True  # False = 沒有補充，是藥影響體內的這項營養素
     products: list[str] = []  # 含這個成分的保健食品
@@ -137,6 +139,7 @@ class UlRow(BaseModel):
     intake: str
     ul: str
     percent: str | None  # None = 無已知上限攝取量
+    percent_value: float | None = None  # 佔上限的數值（量表填色用）；舊報告沒有
     exceeded: bool
     products: list[str]
     note: str
@@ -150,6 +153,9 @@ class Group(BaseModel):
     title: str
     tone: Literal["neutral", "warning"]
     lines: list[str]
+    # 只有摘要段落會填（#53）：前端有 count 就畫大數字卡；舊報告沒有這兩欄。
+    count: int | None = None
+    note: str | None = None
 
 
 class Section(BaseModel):
@@ -233,16 +239,31 @@ def _interaction_summary(case: AssessmentCase, assessment: Assessment, names: _N
     findings = assessment.interactions
     if not findings:
         return Group(title="交互作用", tone="neutral", lines=[_no_finding_text(case, assessment)])
-    ingredients = "、".join(names(f.ingredient_code) for f in findings)
-    text = f"{len(findings)} 項交互作用提醒，建議與醫師或藥師討論：{ingredients}"
-    return Group(title="交互作用", tone="warning", lines=[text])
+    consult = [
+        names(f.ingredient_code) for f in findings if "consult_before_combining" in f.advice
+    ]
+    note = (
+        f"其中 {len(consult)} 件，合併使用前請先問過：{'、'.join(consult)}" if consult else None
+    )
+    return Group(
+        title="交互作用",
+        tone="warning",
+        lines=[f"{len(findings)} 件事要告訴醫師或藥師"],
+        count=len(findings),
+        note=note,
+    )
 
 
 def _ul_summary(assessment: Assessment, names: _Names) -> Group:
     exceeded = [names(c.nutrient_code) for c in assessment.ul_comparisons if c.exceeded]
     if not exceeded:
-        return Group(title="上限比對", tone="neutral", lines=["沒有營養素已超過上限"])
-    return Group(title="上限比對", tone="warning", lines=[f"已超過上限：{'、'.join(exceeded)}"])
+        return Group(title="上限比對", tone="neutral", lines=["沒有營養素已超過上限"], count=0)
+    return Group(
+        title="上限比對",
+        tone="warning",
+        lines=[f"已超過上限：{'、'.join(exceeded)}"],
+        count=len(exceeded),
+    )
 
 
 def _unconfirmed_summary(case: AssessmentCase, assessment: Assessment) -> list[Group]:
@@ -253,7 +274,7 @@ def _unconfirmed_summary(case: AssessmentCase, assessment: Assessment) -> list[G
     if not count:
         return []
     text = f"{count} 項無法確認的藥或成分，未納入判定"
-    return [Group(title="無法確認", tone="warning", lines=[text])]
+    return [Group(title="無法確認", tone="warning", lines=[text], count=count)]
 
 
 def _flatten(groups: list[Group]) -> list[str]:
@@ -284,6 +305,14 @@ def _compound_name(ref: ReferenceData, code: str | None) -> str:
 
 def _num(value: float) -> str:
     return f"{round(value, 1):g}"
+
+
+def profile_labels(profile: ProfileSnapshot) -> dict:
+    """報告頁首用的中文標籤（性別、慢性病）；舊個案從快照的個人資料即時對照。"""
+    return {
+        "sex": SEX_LABELS[profile.sex],
+        "conditions": [CONDITION_LABELS[c] for c in profile.conditions if c != NO_CONDITION],
+    }
 
 
 def _profile_lines(case: AssessmentCase, names: _Names, ref: ReferenceData) -> list[str]:
@@ -370,6 +399,7 @@ def _ul_row(c: UlComparison, names: _Names, case: AssessmentCase) -> UlRow:
         intake=f"{_num(c.intake)} {c.unit}",
         ul=f"{_num(c.ul)} {c.unit}" if c.ul is not None else "無已知上限攝取量",
         percent=f"{_num(c.ul_percent)}%" if c.ul_percent is not None else None,
+        percent_value=c.ul_percent,
         exceeded=c.exceeded,
         products=_products_with(case, c.nutrient_code),
         note="；".join(notes),
@@ -421,6 +451,7 @@ def _card(f: InteractionFinding, names: _Names, case: AssessmentCase | None = No
         drugs=[d.raw_name for d in f.triggering_drugs],
         reasons=list(f.reasons_zh),
         advice=[_advice_text(f, a) for a in f.advice],
+        advice_codes=list(f.advice),
         values=_card_values(f),
         supplemented=f.supplemented,
         products=_products_with(case, f.ingredient_code) if case else [],

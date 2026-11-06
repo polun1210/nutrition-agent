@@ -1,0 +1,457 @@
+/* 交互作用：以藥分組，每個營養素一張手風琴卡片。顏色與圖示只代表建議行動，不代表嚴重度（ADR-0001）。 */
+.interaction-card {
+  margin: var(--space-4) 0;
+}
+
+.interaction-card h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.card-advice {
+  font-weight: bold;
+}
+
+.nutrient-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  margin: var(--space-2) 0;
+  overflow: hidden;
+}
+
+.nutrient-card summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 4rem;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.nutrient-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.nutrient-card summary:focus-visible {
+  outline: 3px solid var(--color-amber);
+  outline-offset: -3px;
+}
+
+.nutrient-head {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nutrient-name {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.nutrient-action {
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.nutrient-card[data-action="consult"] .nutrient-action {
+  color: var(--color-main);
+}
+
+.nutrient-card[data-action="inform"] .nutrient-action {
+  color: var(--color-amber-text);
+}
+
+.chevron {
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: var(--text-xl);
+  transition: transform 0.2s;
+}
+
+.nutrient-card[open] .chevron {
+  transform: rotate(90deg);
+}
+
+.nutrient-body {
+  padding: 0 var(--space-4) var(--space-4);
+  border-top: 1px dashed var(--color-line);
+  overflow-wrap: anywhere;
+}
+
+.nutrient-from {
+  color: var(--color-muted);
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.vals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.vals div {
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  text-align: center;
+}
+
+.vals dt {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-muted);
+}
+
+.vals dd {
+  margin: var(--space-1) 0 0;
+  font-weight: 700;
+  font-size: var(--text-base);
+}
+
+/* 白話解釋與出處：出處在該句下方就地展開 */
+.talk {
+  background: var(--color-amber-soft);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.talk b {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-amber-text);
+}
+
+.talk p {
+  margin: var(--space-1) 0 0;
+}
+
+.footnote-ref {
+  width: auto;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  color: var(--color-amber-text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  vertical-align: baseline;
+}
+
+.footnote-ref[aria-expanded="true"] {
+  background: var(--color-amber-text);
+  color: var(--color-on-main);
+}
+
+.quote {
+  display: block;
+  margin: var(--space-2) 0;
+  background: var(--color-card);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.quote strong {
+  display: block;
+  color: var(--color-ink);
+}
+
+.quote .quote-text {
+  display: block;
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+}
+
+/* 上限比對量表卡：軌道 = 上限的 125%，上限線在 80% 位置 */
+.ul-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin: var(--space-2) 0;
+  break-inside: avoid;
+  overflow-wrap: anywhere;
+}
+
+.ul-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ul-top h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.tag.over-tag {
+  background: var(--color-over);
+  color: var(--color-on-over);
+}
+
+.gauge-track {
+  position: relative;
+  height: 0.875rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-pill);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.gauge-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-amber);
+}
+
+.ul-card[data-exceeded="true"] .gauge-track i {
+  background: var(--color-over);
+}
+
+.gauge-limit {
+  position: absolute;
+  top: -0.3rem;
+  bottom: -0.3rem;
+  left: var(--ul-pos);
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-ink);
+}
+
+.ul-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+}
+
+.ul-figures dt {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.ul-figures dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.ul-products,
+.ul-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+/* 頁首（暖色區塊，#53）：日期、標題、年齡性別慢性病，摘要卡放在裡面 */
+.report-hero .report-date {
+  font-size: var(--text-sm);
+}
+
+.report-hero h1 {
+  font-family: var(--font-head);
+  font-size: var(--text-2xl);
+  margin: var(--space-1) 0;
+}
+
+.report-hero .report-who {
+  margin-bottom: var(--space-4);
+}
+
+/* 摘要卡：有 count 的項目畫大數字；顏色只代表需要注意與否，不代表嚴重度 */
+.summary-card h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.summary-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* 只剩一張（或最後一張落單）時佔滿一列 */
+.summary-tile:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.summary-tile {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  break-inside: avoid;
+}
+
+.summary-tile[data-tone="warning"] {
+  border-left: 6px solid var(--color-amber);
+  background: var(--color-amber-soft);
+}
+
+.summary-tile p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-ink);
+  font-size: var(--text-base);
+}
+
+.summary-tile .summary-title {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.summary-tile .summary-count {
+  font-family: var(--font-head);
+  font-size: 2.5rem;
+  line-height: 1.1;
+  color: var(--color-main);
+}
+
+.summary-tile[data-tone="warning"] .summary-count {
+  color: var(--color-amber-text);
+}
+
+.summary-tile .summary-note {
+  color: var(--color-muted);
+}
+
+/* 字卡：同一類的揭露事項 */
+.group-card {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
+  break-inside: avoid;
+}
+
+.group-card h3 {
+  margin: var(--space-1) 0;
+  font-size: 1rem;
+}
+
+.group-card ul {
+  padding-left: 1.25rem;
+  margin: var(--space-1) 0;
+}
+
+.group-card[data-tone="warning"] {
+  border-color: var(--color-amber);
+  background: var(--color-amber-soft);
+}
+
+/* 預設收合的段落：整列標題都能點 */
+.more-hint {
+  margin-top: var(--space-5);
+}
+
+.collapsible {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 0 var(--space-4);
+  margin: var(--space-3) 0;
+}
+
+.collapsible summary {
+  cursor: pointer;
+  min-height: var(--tap-min);
+  display: flex;
+  align-items: center;
+}
+
+.collapsible summary h2 {
+  display: inline;
+  margin: var(--space-3) 0;
+  font-size: var(--text-lg);
+}
+
+.collapsible[open] > summary {
+  margin-bottom: var(--space-2);
+}
+
+/* 底部固定操作列；頁面底部留白避免蓋住最後的內容 */
+.page:has(.report-bar) {
+  padding-bottom: 7.5rem;
+}
+
+.report-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  background: var(--color-card);
+  border-top: 1px solid var(--color-line);
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+}
+
+.report-bar-inner {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.report-bar-inner button {
+  flex: 1;
+  margin: 0;
+  padding: 0 var(--space-2);
+}
+
+.references {
+  padding-left: var(--space-5);
+}
+
+@media print {
+  .no-print,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: var(--color-card);
+    color: var(--color-ink);
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .collapsible summary {
+    list-style: none;
+  }
+
+  .collapsible summary::-webkit-details-marker,
+  .chevron,
+  .more-hint {
+    display: none;
+  }
+
+  .page:has(.report-bar) {
+    padding-bottom: 0;
+  }
+
+  .report-bar {
+    display: none !important;
+  }
+
+  .nutrient-card,
+  .collapsible {
+    break-inside: avoid;
+  }
+
+  /* 摘要卡列印時保留粗框與警示底色，不靠瀏覽器的「列印背景」設定 */
+  .report-hero,
+  .summary-tile {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -127,6 +127,8 @@ export type InteractionCard = {
   drugs: string[];
   reasons: string[];
   advice: string[];
+  /** 建議行動代碼（inform_provider、consult_before_combining 等）；舊報告沒有，前端退回比對文字。 */
+  advice_codes?: string[];
   values: { label: string; text: string }[];
   /** 以下為 #23 新增；舊報告沒有這些欄位。 */
   supplemented?: boolean;
@@ -140,12 +142,21 @@ export type UlRow = {
   intake: string;
   ul: string;
   percent: string | null;
+  /** 佔上限的數值（量表填色用）；舊報告沒有，前端退回解析 percent 文字。 */
+  percent_value?: number | null;
   exceeded: boolean;
   products: string[];
   note: string;
 };
 
-export type ReportGroup = { title: string; tone: "neutral" | "warning"; lines: string[] };
+/** count / note 只有新版報告的摘要段落會有；舊報告沒有，前端退回文字卡。 */
+export type ReportGroup = {
+  title: string;
+  tone: "neutral" | "warning";
+  lines: string[];
+  count?: number | null;
+  note?: string | null;
+};
 
 export type ReportSection = {
   key: string;
@@ -185,6 +196,9 @@ export type HistoryItem = {
 export type AssessmentCase = {
   id: number;
   age: number;
+  /** 頁首用的中文標籤，後端從個案快照的個人資料對照；沒勾慢性病時 conditions 為空。 */
+  profile_labels?: { sex: string; conditions: string[] };
+  assessed_on?: string;
   products: Product[];
   reference_versions?: Record<string, string>;
   report: {

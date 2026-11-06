@@ -34,3 +34,22 @@ def test_其他營養素的上限仍寫定義上包含飲食(ref):
 def test_葉酸的上限比對標明是依_DRIs_推導的解讀(ref):
     text = ul_line(ref, "葉酸", line("folate", 400, "ug"))
     assert "解讀" in text
+
+
+def test_ul_row_carries_numeric_percent_for_the_gauge(ref):
+    case = make_case(product("鐵", [line("iron", 20)]))
+    report = render_report(case, assess(case, ref), ref)
+    section = next(s for s in report.sections if s.key == "ul_comparison")
+    row = section.table[0]
+
+    assert row.percent_value is not None
+    assert row.percent == f"{round(row.percent_value, 1):g}%"
+
+
+def test_ul_row_without_known_ul_has_no_numeric_percent(ref):
+    case = make_case(product("B12", [line("vitamin_b12", 10, "ug")]))
+    report = render_report(case, assess(case, ref), ref)
+    rows = next(s for s in report.sections if s.key == "ul_comparison").table
+    row = next(r for r in rows if r.percent is None)
+
+    assert row.percent_value is None

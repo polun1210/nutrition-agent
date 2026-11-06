@@ -1,0 +1,49 @@
+/* 設計 token：配色、字型、字級、間距、圓角只在這裡定義，其他樣式檔一律引用。 */
+:root {
+  /* 配色。文字色已調整到對底色達 WCAG AA（4.5:1 以上），裝飾用填色保留原型色。 */
+  --color-bg: #f3f1e7;
+  --color-card: #fffdf6;
+  --color-ink: #33382f;
+  --color-muted: #5f6658;
+  --color-line: #e1e2d2;
+  --color-main: #4e6d49;
+  --color-main-soft: #e3ebd8;
+  --color-on-main: #ffffff;
+  --color-amber: #c08a3e;
+  --color-amber-text: #85591a;
+  --color-amber-soft: #f6e8cf;
+  --color-over: #a64b28;
+  --color-over-soft: #f8e6de;
+  --color-on-over: #ffffff;
+  --gradient-hero: linear-gradient(160deg, #dfe8d2, #f5efdc);
+
+  /* 字型 */
+  --font-head: "Huninn", "Noto Sans TC", system-ui, sans-serif;
+  --font-body: "Noto Sans TC", system-ui, -apple-system, "Microsoft JhengHei", sans-serif;
+
+  /* 字級（內文至少 18px） */
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.75rem;
+  --line-height: 1.7;
+
+  /* 間距 */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* 圓角 */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-pill: 999px;
+
+  /* 尺寸 */
+  --tap-min: 3.25rem; /* 按鈕與輸入框最小高度，18px 基準下約 58px */
+  --page-width: 440px;
+}

@@ -1,3 +1,5 @@
+import Waiting from "./Waiting";
+import { SUPPLEMENT_PHOTO_SECONDS } from "./waitingTimes";
 import { useState, type ChangeEvent } from "react";
 import { upload } from "../api";
 import { EstimateField, toIngredientLine } from "./EstimateField";
@@ -162,7 +164,7 @@ export default function PhotoProductForm({ draftId, options, compounds, onAdd }:
   const unreadable = review?.photos.map((p, i) => ({ ...p, index: i + 1 })).filter((p) => !p.readable) ?? [];
 
   return (
-    <section aria-label="用照片新增">
+    <section aria-label="用照片新增" className="photo-add">
       <h2>用照片新增</h2>
       <p>請拍成分欄與營養標示，同一項產品可以選多張。</p>
       <label>
@@ -170,9 +172,16 @@ export default function PhotoProductForm({ draftId, options, compounds, onAdd }:
         <input type="file" accept="image/*" multiple onChange={onPick} />
       </label>
       <button type="button" disabled={busy || (files.length === 0 && keptIds.length === 0)} onClick={() => void recognize()}>
-        {busy ? "辨識中…" : "開始辨識"}
+        開始辨識
       </button>
-      {error && <p role="alert">{error}</p>}
+      <Waiting
+        active={busy}
+        title="正在辨識標示照片"
+        detail="系統正在讀出成分與含量，辨識完成後請你逐項校對。"
+        expected={SUPPLEMENT_PHOTO_SECONDS}
+        error={error}
+        onRetry={() => void recognize()}
+      />
       {unreadable.map((p) => (
         <p key={p.photo_id} role="alert">
           第 {p.index} 張照片：{p.hint} 請重新選擇照片後再按「開始辨識」。
@@ -181,6 +190,7 @@ export default function PhotoProductForm({ draftId, options, compounds, onAdd }:
       {review && (
         <form
           aria-label="校對辨識結果"
+          className="product-form"
           onSubmit={(e) => {
             e.preventDefault();
             add();
@@ -220,7 +230,7 @@ export default function PhotoProductForm({ draftId, options, compounds, onAdd }:
           <fieldset>
             <legend>辨識到的成分</legend>
             {review.rows.map((r) => (
-              <div key={r.key} className="ingredient-row" data-unknown={r.code === UNKNOWN}>
+              <div key={r.key} className="ingredient-row" data-unknown={r.code === UNKNOWN} data-missing={r.amount === ""}>
                 {r.rawName && <p>包裝上寫：{r.rawName}</p>}
                 {r.code === UNKNOWN && <p className="undetermined">系統認不出這個名稱。如果它是營養素，請從選單改選；不是的話可以刪除。</p>}
                 <label>

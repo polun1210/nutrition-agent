@@ -66,17 +66,23 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await page.getByRole("button", { name: "送出評估" }).click();
 
   await expect(page.getByRole("heading", { name: "上限比對" })).toBeVisible();
-  // 兩罐峰值加總 1000 mg → 上限 2500 mg 的 40%，以表格呈現（#23）
-  const calcium = page.getByRole("table").locator("tbody").filter({ hasText: "鈣" });
+  // 兩罐峰值加總 1000 mg → 上限 2500 mg 的 40%，以量表卡呈現（#54）
+  const calcium = page.getByTestId("ul-card").filter({ hasText: "鈣" });
   await expect(calcium).toContainText("1000 mg");
   await expect(calcium).toContainText("2500 mg");
   await expect(calcium).toContainText("40%");
   await expect(calcium).toContainText("非每天服用");
+  // 量表：軌道 = 上限的 125%，40% 的填色寬度 = 32%；未超過上限沒有標籤
+  await expect(calcium.getByTestId("ul-gauge")).toHaveAttribute("data-fill", "32");
+  await expect(calcium.getByText("已超過上限")).toHaveCount(0);
   await expect(page.locator('[data-section="ul_comparison"]').getByText("已超過上限")).toHaveCount(0);
   // 摘要卡在最上方：不用讀完整份就知道結論（#37）
   const summary = page.getByTestId("report-summary");
   await expect(summary).toContainText(/交互作用.*未命中已審定的規則.*這不表示兩者不會交互作用/);
   await expect(summary).toContainText("沒有營養素已超過上限");
+  // 沒有判定的說明維持文字卡，不會變成「0」；上限比對的 0 是數字
+  await expect(summary.locator('.summary-tile[data-kind="text"]')).toContainText("這不表示兩者不會交互作用");
+  await expect(summary.locator('.summary-tile[data-kind="count"] .summary-count')).toHaveText("0");
   await expect(summary).not.toContainText("無法確認");
   // 段落順序：摘要 → 重點 → 細節收合；沒有未評估成分時不顯示該段
   await expect(page.locator("section[data-section] h2")).toHaveText([
@@ -95,7 +101,7 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await expect(page.getByRole("heading", { name: "計算方式的限制" })).toBeVisible();
   await expect(page.getByText(/DPP-4 抑制劑/)).toBeVisible();
   await expect(page.getByText(/同一天服用/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "列印報告" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "列印給醫師看" })).toBeVisible();
   await page.getByText("你的資料").click();
   await expect(page.getByText(/用藥 Amlodipine：在評估範圍內.*氨氯地平/)).toBeVisible();
   await page.getByRole("button", { name: "回首頁" }).click();
@@ -112,7 +118,7 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await expect(page.getByRole("button", { name: "刪除 隔天吃的鈣片" })).toHaveCount(0);
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
-  await expect(page.getByRole("table").locator("tbody").filter({ hasText: "鈣" })).toContainText("20%");
+  await expect(page.getByTestId("ul-card").filter({ hasText: "鈣" })).toContainText("20%");
   await page.getByRole("button", { name: "回首頁" }).click();
 
   // 歷史報告：兩筆，點開舊的那筆仍是 40%，且顯示參考資料版本
@@ -126,13 +132,31 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
     await route.fulfill({ response, json: { ...body, report: { ...body.report, sections } } });
   });
   await page.getByRole("button", { name: /的評估（2 項保健食品/ }).click();
-  await expect(page.getByRole("table").locator("tbody").filter({ hasText: "鈣" })).toContainText("40%");
+  await expect(page.getByTestId("ul-card").filter({ hasText: "鈣" })).toContainText("40%");
   await expect(page.getByTestId("report-summary")).toHaveCount(0);
   await expect(page.locator("section[data-section] h2").first()).toHaveText("交互作用");
   await page.getByText("參考資料來源").click();
   await expect(page.getByTestId("reference-versions")).toContainText("dris");
 
   // 瀏覽器上一頁：報告 → 歷史列表 → 首頁，不會離開 app（#21）
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "歷史報告" })).toBeVisible();
+  // 沒有 count / note 的舊摘要格式（#53）：全部顯示文字卡，不會壞掉
+  await page.route(/\/api\/assessments\/\d+$/, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    for (const s of body.report.sections) {
+      for (const g of s.groups ?? []) {
+        delete g.count;
+        delete g.note;
+      }
+    }
+    await route.fulfill({ response, json: body });
+  });
+  await page.getByRole("button", { name: /的評估（2 項保健食品/ }).click();
+  const legacy = page.getByTestId("report-summary");
+  await expect(legacy).toContainText("沒有營養素已超過上限");
+  await expect(legacy.locator(".summary-count")).toHaveCount(0);
   await page.goBack();
   await expect(page.getByRole("heading", { name: "歷史報告" })).toBeVisible();
   await page.goBack();
@@ -231,7 +255,7 @@ test("用一張照片新增保健食品：辨識 → 整瓶確認一次 → 送�
 
   await expect(page.getByRole("heading", { name: "上限比對" })).toBeVisible();
   // 每份（3 錠）含鈣 360 mg，每次 1 錠 = 120 mg
-  await expect(page.getByRole("table").locator("tbody").filter({ hasText: "鈣" })).toContainText("4.8%");
+  await expect(page.getByTestId("ul-card").filter({ hasText: "鈣" })).toContainText("4.8%");
   await expect(thumb).toHaveText("照片已超過保存期限");
   // 校對頁隱藏的範圍外成分仍保存，報告照實揭露
   await expect(page.getByText(/維生素 ?B1」：不在本系統評估範圍/)).toBeVisible();
@@ -257,23 +281,77 @@ test("交互作用的白話解釋附腳註，點開看到原文與來源", async
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
 
-  await expect(page.getByTestId("report-summary")).toContainText(
-    "1 項交互作用提醒，建議與醫師或藥師討論：維生素 B12",
-  );
+  await expect(page.getByRole("heading", { name: "這次的評估報告" })).toBeVisible();
+  const interactionTile = page.getByTestId("report-summary").locator(".summary-tile").filter({ hasText: "交互作用" });
+  await expect(interactionTile.locator(".summary-count")).toHaveText("1");
+  // 大數字下方的標籤不重複數字
+  await expect(interactionTile.locator(".summary-line")).toHaveText(/^件事要告訴醫師或藥師/);
+  // 頁首：年齡・性別・慢性病（結構化資料，不解析報告文字）
+  await expect(page.locator(".report-who")).toHaveText(/^\d+ 歲・(男性|女性)/);
 
-  // 以藥為主角：先講重點，後面才是白話說明（#23）
+  // 以藥為主角：每個營養素一張手風琴卡片，預設收合，收合時就看得到營養素與建議行動（#54）
   const card = page.getByTestId("interaction-card");
   await expect(card.getByRole("heading", { name: /^你吃的：/ })).toContainText("你吃的：Metformin");
-  await expect(card).toContainText("與你補充的「維生素 B12」有交互作用");
-  await expect(card).toContainText("維生素 B12（來自 B12 錠）");
+  const nutrient = card.getByTestId("nutrient-card");
+  await expect(nutrient.locator("summary")).toContainText("維生素 B12");
+  await expect(nutrient.locator("summary")).toContainText("告知你的醫師或藥師");
+  await expect(nutrient.getByTestId("nutrient-body")).toBeHidden();
+  await nutrient.locator("summary").click();
+  const body = nutrient.getByTestId("nutrient-body");
+  await expect(body).toBeVisible();
+  await expect(body).toContainText("來自 B12 錠");
+  await expect(body.locator("dt")).not.toHaveCount(0); // 原因與三個數值
+  await expect(body.locator("dd").first()).toBeVisible();
 
   const explanations = page.getByTestId("explanations");
   await expect(explanations).toContainText("這個藥可能影響維生素 B12 的吸收。");
+  // 出處就地展開，再點一次收起
   await expect(page.getByTestId("footnote-detail")).toHaveCount(0);
-  await explanations.getByRole("button", { name: "腳註 1" }).click();
+  const ref = explanations.getByRole("button", { name: "腳註 1" });
+  await ref.click();
   const detail = page.getByTestId("footnote-detail");
   await expect(detail).toContainText("NIH ODS");
   await expect(detail).toContainText("Metformin might reduce the absorption of vitamin B12");
+  await ref.click();
+  await expect(detail).toHaveCount(0);
+  await ref.click();
+  await expect(detail).toBeVisible();
+
+  // 沒有已知上限攝取量的營養素：不畫量表，直接寫明
+  const b12 = page.getByTestId("ul-card").filter({ hasText: "維生素 B12" });
+  await expect(b12).toContainText("無已知上限攝取量");
+  await expect(b12.getByTestId("ul-gauge")).toHaveCount(0);
+
+  // 底部固定操作列
+  await expect(page.getByRole("button", { name: "列印給醫師看" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "回首頁" })).toBeVisible();
+
+  // 列印：所有收合展開（含手風琴與出處），固定操作列不印出
+  await page.emulateMedia({ media: "print" });
+  await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+  await expect(body).toBeVisible();
+  await expect(page.getByRole("button", { name: "列印給醫師看" })).toBeHidden();
+  await page.emulateMedia({ media: "screen" });
+});
+
+test("超過上限的營養素有標籤，量表填滿並畫出上限線", async ({ page }) => {
+  await registerAndOpenMedications(page);
+  await page.getByRole("button", { name: "我沒有用藥" }).click();
+  await addManually(page);
+  const form = page.getByRole("form", { name: "新增保健食品" });
+  await form.getByLabel("產品名稱").fill("高劑量鈣片");
+  await form.getByLabel("成分", { exact: true }).selectOption({ label: "鈣" });
+  await form.getByLabel("含量").fill("3000");
+  await form.getByRole("button", { name: "加入這項保健食品" }).click();
+  await page.getByRole("button", { name: "下一步" }).click();
+  await page.getByRole("button", { name: "送出評估" }).click();
+
+  const calcium = page.getByTestId("ul-card").filter({ hasText: "鈣" });
+  await expect(calcium.getByText("已超過上限")).toBeVisible();
+  await expect(calcium).toContainText("3000 mg");
+  await expect(calcium).toContainText("2500 mg");
+  await expect(calcium).toContainText("120%");
+  await expect(calcium.getByTestId("ul-gauge")).toHaveAttribute("data-fill", "96");
 });
 
 // 後端的假 VLM 對藥包照片固定回 Amlodipine、Zantac。

@@ -1,0 +1,210 @@
+.stepper {
+  display: flex;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  font-size: var(--text-sm);
+}
+
+.stepper li {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-1);
+  text-align: center;
+  border-radius: var(--radius-md);
+  background: var(--color-line);
+  color: var(--color-muted);
+}
+
+.stepper li[aria-current="step"] {
+  background: var(--color-amber-soft);
+  color: var(--color-amber-text);
+  box-shadow: inset 0 0 0 2px var(--color-amber);
+  font-weight: 700;
+}
+
+.stepper li.done {
+  background: var(--color-main-soft);
+  color: var(--color-main);
+}
+
+.stepper li.done::before {
+  content: "✓ ";
+}
+
+/* 流程頁的標題區塊：接在步驟條下方，四邊圓角 */
+.page-hero.in-flow {
+  margin: 0 0 var(--space-4);
+  border-radius: var(--radius-lg);
+}
+
+.summary-card {
+  font-size: var(--text-lg);
+}
+
+/* 新增方式：兩個大選項 */
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.option-group button {
+  min-height: 5rem;
+  font-size: var(--text-lg);
+  font-family: var(--font-head);
+  margin: 0;
+}
+
+.option-group button:nth-child(2) {
+  background: var(--color-card);
+  color: var(--color-main);
+}
+
+.replacing-note {
+  background: var(--color-amber-soft);
+  color: var(--color-amber-text);
+}
+
+/* 手動輸入與照片校對共用的表單區塊 */
+.product-form fieldset,
+.photo-add .product-form fieldset {
+  background: var(--color-card);
+}
+
+.photo-add > label,
+.photo-add > button {
+  margin-bottom: var(--space-3);
+}
+
+.ingredient-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-left: 6px solid var(--color-main);
+  border-radius: var(--radius-md);
+}
+
+.ingredient-row button + button {
+  margin-top: 0;
+}
+
+/* 讀不出含量：欄位用琥珀色標出 */
+.ingredient-row[data-missing="true"] {
+  border-left-color: var(--color-amber);
+}
+
+.ingredient-row[data-missing="true"] input[type="number"] {
+  border-color: var(--color-amber);
+  background: var(--color-amber-soft);
+}
+
+/* 系統推估的數值：與使用者輸入值不同底色 */
+label.estimated input {
+  background: var(--color-amber-soft);
+  border-color: var(--color-amber);
+}
+
+.undetermined {
+  color: var(--color-amber-text);
+}
+
+.thumbs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  vertical-align: middle;
+}
+
+.thumb {
+  width: 3rem;
+  height: 3rem;
+  object-fit: cover;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+}
+
+.thumb-missing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0.125rem;
+  font-size: 0.625rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--color-muted);
+  background: var(--color-bg);
+}
+
+/* 系統認不出的名稱：可能是營養素的其他寫法，提醒使用者看一下 */
+.ingredient-row[data-unknown="true"] {
+  background: var(--color-amber-soft);
+  border-left-color: var(--color-amber);
+}
+
+
+/* 等待區塊：不確定進度的動畫，不顯示百分比 */
+.waiting-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--color-main-soft);
+}
+
+.waiting-card p {
+  margin: 0;
+}
+
+.waiting-title {
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+.waiting-expected {
+  color: var(--color-muted);
+}
+
+.waiting-dots {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.waiting-dots i {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-main);
+  animation: waiting-pulse 1.2s ease-in-out infinite;
+}
+
+.waiting-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.waiting-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes waiting-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting-dots i {
+    animation: none;
+  }
+}

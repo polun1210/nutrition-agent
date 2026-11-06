@@ -1,0 +1,32 @@
+/* 帳號與首頁：登入、註冊、首頁、個人資料。 */
+.account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.account-actions button + button {
+  margin-top: 0;
+}
+
+.account-actions > .hint {
+  margin: calc(var(--space-2) * -1) 0 0;
+}
+
+.account-switch {
+  margin-top: var(--space-4);
+}
+
+.resume-card {
+  background: var(--color-main-soft);
+  border-color: var(--color-main);
+}
+
+.resume-card .hint {
+  margin-bottom: var(--space-3);
+}
+
+form + button {
+  margin-top: var(--space-4);
+}
