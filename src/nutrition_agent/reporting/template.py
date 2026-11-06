@@ -114,6 +114,7 @@ class Card(BaseModel):
     drugs: list[str]
     reasons: list[str]
     advice: list[str]
+    advice_codes: list[str] = []  # 建議行動代碼（前端用來決定顏色與圖示）；舊報告沒有
     values: list[CardValue]
     supplemented: bool = True  # False = 沒有補充，是藥影響體內的這項營養素
     products: list[str] = []  # 含這個成分的保健食品
@@ -448,6 +449,7 @@ def _card(f: InteractionFinding, names: _Names, case: AssessmentCase | None = No
         drugs=[d.raw_name for d in f.triggering_drugs],
         reasons=list(f.reasons_zh),
         advice=[_advice_text(f, a) for a in f.advice],
+        advice_codes=list(f.advice),
         values=_card_values(f),
         supplemented=f.supplemented,
         products=_products_with(case, f.ingredient_code) if case else [],

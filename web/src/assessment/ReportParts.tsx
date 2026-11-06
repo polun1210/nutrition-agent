@@ -51,7 +51,11 @@ function NutrientDetail({ card, explanations, footnotes, footnote }: { card: Int
   );
 }
 
-const isConsult = (card: InteractionCard) => card.advice.some((a) => a.startsWith("合併使用前先諮詢"));
+/** 有建議行動代碼就用代碼；舊報告沒有代碼，退回比對建議文字。 */
+const isConsult = (card: InteractionCard) =>
+  card.advice_codes
+    ? card.advice_codes.includes("consult_before_combining")
+    : card.advice.some((a) => a.startsWith("合併使用前先諮詢"));
 
 /** 手風琴卡片：收合時看得到營養素與建議行動，展開才看來源、原因、數值與白話解釋。顏色與圖示只代表建議行動（ADR-0001）。 */
 function NutrientCard({ card, photos, ...evidence }: { card: InteractionCard; photos: PhotoMap } & Evidence) {

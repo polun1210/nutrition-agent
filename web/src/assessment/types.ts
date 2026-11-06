@@ -127,6 +127,8 @@ export type InteractionCard = {
   drugs: string[];
   reasons: string[];
   advice: string[];
+  /** 建議行動代碼（inform_provider、consult_before_combining 等）；舊報告沒有，前端退回比對文字。 */
+  advice_codes?: string[];
   values: { label: string; text: string }[];
   /** 以下為 #23 新增；舊報告沒有這些欄位。 */
   supplemented?: boolean;
