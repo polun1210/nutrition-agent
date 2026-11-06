@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Explanations, { type FootnoteState } from "./Explanations";
 import PhotoThumbs from "./PhotoThumbs";
 import type { DrugGroup, FindingExplanation, Footnote, InteractionCard, ReportGroup, UlRow } from "./types";
@@ -126,11 +127,15 @@ export function LegacyCard({ card, ...evidence }: { card: InteractionCard } & Ev
   );
 }
 
-/** 軌道長度代表上限的 125%，上限線在 80% 的位置；填色 = 佔上限百分比 ÷ 125%，超過就畫滿。 */
+/** 軌道長度代表上限的 125%；上限線位置由這個常數算出，透過 --ul-pos 傳給樣式，比例只在這裡定義。 */
 const TRACK_RATIO = 1.25;
-export const gaugeFill = (percent: string): number => {
-  const value = parseFloat(percent);
-  return Number.isFinite(value) ? Math.round(Math.min((value / 100 / TRACK_RATIO) * 100, 100) * 10) / 10 : 0;
+const LIMIT_POS = `${Math.round((1 / TRACK_RATIO) * 1000) / 10}%`;
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/** 填色 = 佔上限百分比 ÷ 125%，超過就畫滿。優先用後端的數值；舊報告沒有，退回解析文字。 */
+export const gaugeFill = (row: Pick<UlRow, "percent" | "percent_value">): number => {
+  const value = row.percent_value ?? parseFloat(row.percent ?? "");
+  return Number.isFinite(value) ? round1(Math.min((value / 100 / TRACK_RATIO) * 100, 100)) : 0;
 };
 
 /** 上限比對量表卡：每個營養素一張；沒有已知上限的不畫量表。 */
@@ -144,8 +149,13 @@ export function UlCards({ rows, photos }: { rows: UlRow[]; photos: PhotoMap }) {
             {r.exceeded && <span className="tag over-tag">已超過上限</span>}
           </div>
           {r.percent !== null ? (
-            <div className="gauge-track" data-testid="ul-gauge" data-fill={gaugeFill(r.percent)}>
-              <i style={{ width: `${gaugeFill(r.percent)}%` }} />
+            <div
+              className="gauge-track"
+              data-testid="ul-gauge"
+              data-fill={gaugeFill(r)}
+              style={{ "--ul-pos": LIMIT_POS } as CSSProperties}
+            >
+              <i style={{ width: `${gaugeFill(r)}%` }} />
               <span className="gauge-limit" />
             </div>
           ) : null}
@@ -156,7 +166,7 @@ export function UlCards({ rows, photos }: { rows: UlRow[]; photos: PhotoMap }) {
             </div>
             <div>
               <dt>上限</dt>
-              <dd>{r.percent === null ? "無已知上限攝取量" : r.ul}</dd>
+              <dd>{r.ul}</dd>
             </div>
             {r.percent !== null && (
               <div>

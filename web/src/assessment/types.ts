@@ -142,6 +142,8 @@ export type UlRow = {
   intake: string;
   ul: string;
   percent: string | null;
+  /** 佔上限的數值（量表填色用）；舊報告沒有，前端退回解析 percent 文字。 */
+  percent_value?: number | null;
   exceeded: boolean;
   products: string[];
   note: string;

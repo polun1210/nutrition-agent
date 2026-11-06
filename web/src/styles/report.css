@@ -221,7 +221,7 @@
   position: absolute;
   top: -0.3rem;
   bottom: -0.3rem;
-  left: 80%;
+  left: var(--ul-pos);
   width: 3px;
   border-radius: 2px;
   background: var(--color-ink);

@@ -139,6 +139,7 @@ class UlRow(BaseModel):
     intake: str
     ul: str
     percent: str | None  # None = 無已知上限攝取量
+    percent_value: float | None = None  # 佔上限的數值（量表填色用）；舊報告沒有
     exceeded: bool
     products: list[str]
     note: str
@@ -398,6 +399,7 @@ def _ul_row(c: UlComparison, names: _Names, case: AssessmentCase) -> UlRow:
         intake=f"{_num(c.intake)} {c.unit}",
         ul=f"{_num(c.ul)} {c.unit}" if c.ul is not None else "無已知上限攝取量",
         percent=f"{_num(c.ul_percent)}%" if c.ul_percent is not None else None,
+        percent_value=c.ul_percent,
         exceeded=c.exceeded,
         products=_products_with(case, c.nutrient_code),
         note="；".join(notes),
