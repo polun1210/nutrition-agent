@@ -150,6 +150,9 @@ class Group(BaseModel):
     title: str
     tone: Literal["neutral", "warning"]
     lines: list[str]
+    # 只有摘要段落會填（#53）：前端有 count 就畫大數字卡；舊報告沒有這兩欄。
+    count: int | None = None
+    note: str | None = None
 
 
 class Section(BaseModel):
@@ -233,16 +236,31 @@ def _interaction_summary(case: AssessmentCase, assessment: Assessment, names: _N
     findings = assessment.interactions
     if not findings:
         return Group(title="交互作用", tone="neutral", lines=[_no_finding_text(case, assessment)])
-    ingredients = "、".join(names(f.ingredient_code) for f in findings)
-    text = f"{len(findings)} 項交互作用提醒，建議與醫師或藥師討論：{ingredients}"
-    return Group(title="交互作用", tone="warning", lines=[text])
+    consult = [
+        names(f.ingredient_code) for f in findings if "consult_before_combining" in f.advice
+    ]
+    note = (
+        f"其中 {len(consult)} 件，合併使用前請先問過：{'、'.join(consult)}" if consult else None
+    )
+    return Group(
+        title="交互作用",
+        tone="warning",
+        lines=[f"{len(findings)} 件事要告訴醫師或藥師"],
+        count=len(findings),
+        note=note,
+    )
 
 
 def _ul_summary(assessment: Assessment, names: _Names) -> Group:
     exceeded = [names(c.nutrient_code) for c in assessment.ul_comparisons if c.exceeded]
     if not exceeded:
-        return Group(title="上限比對", tone="neutral", lines=["沒有營養素已超過上限"])
-    return Group(title="上限比對", tone="warning", lines=[f"已超過上限：{'、'.join(exceeded)}"])
+        return Group(title="上限比對", tone="neutral", lines=["沒有營養素已超過上限"], count=0)
+    return Group(
+        title="上限比對",
+        tone="warning",
+        lines=[f"已超過上限：{'、'.join(exceeded)}"],
+        count=len(exceeded),
+    )
 
 
 def _unconfirmed_summary(case: AssessmentCase, assessment: Assessment) -> list[Group]:
@@ -253,7 +271,7 @@ def _unconfirmed_summary(case: AssessmentCase, assessment: Assessment) -> list[G
     if not count:
         return []
     text = f"{count} 項無法確認的藥或成分，未納入判定"
-    return [Group(title="無法確認", tone="warning", lines=[text])]
+    return [Group(title="無法確認", tone="warning", lines=[text], count=count)]
 
 
 def _flatten(groups: list[Group]) -> list[str]:

@@ -145,7 +145,14 @@ export type UlRow = {
   note: string;
 };
 
-export type ReportGroup = { title: string; tone: "neutral" | "warning"; lines: string[] };
+/** count / note 只有新版報告的摘要段落會有；舊報告沒有，前端退回文字卡。 */
+export type ReportGroup = {
+  title: string;
+  tone: "neutral" | "warning";
+  lines: string[];
+  count?: number | null;
+  note?: string | null;
+};
 
 export type ReportSection = {
   key: string;
@@ -185,6 +192,7 @@ export type HistoryItem = {
 export type AssessmentCase = {
   id: number;
   age: number;
+  assessed_on?: string;
   products: Product[];
   reference_versions?: Record<string, string>;
   report: {

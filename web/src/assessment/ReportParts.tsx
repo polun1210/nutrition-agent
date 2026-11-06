@@ -144,22 +144,35 @@ export function UlTable({ rows, photos }: { rows: UlRow[]; photos: PhotoMap }) {
   );
 }
 
-/** 摘要卡（#37）：報告最上方的結論，每項一列，需要注意的項目用警示底色。內容由後端模板從判定渲染。 */
+/** 摘要卡（#37、#53）：有 count 的項目畫大數字，沒有（舊報告、沒有判定的說明）畫文字。內容由後端模板從判定渲染。 */
 export function SummaryCard({ title, groups }: { title: string; groups: ReportGroup[] }) {
   return (
     <section className="summary-card" data-section="summary" data-testid="report-summary">
       <h2>{title}</h2>
-      <dl>
+      <div className="summary-tiles">
         {groups.map((g) => (
-          <div key={g.title} data-tone={g.tone}>
-            <dt>{g.title}</dt>
-            {g.lines.map((line, i) => (
-              <dd key={i}>{line}</dd>
-            ))}
-          </div>
+          <SummaryTile key={g.title} group={g} />
         ))}
-      </dl>
+      </div>
     </section>
+  );
+}
+
+function SummaryTile({ group }: { group: ReportGroup }) {
+  const hasCount = typeof group.count === "number";
+  // 顏色只代表需要注意與否（ADR-0001：沒有嚴重度）；0 項時不上警示色
+  const tone = hasCount && group.count === 0 ? "neutral" : group.tone;
+  return (
+    <div className="summary-tile" data-tone={tone} data-kind={hasCount ? "count" : "text"}>
+      <p className="summary-title">{group.title}</p>
+      {hasCount && <p className="summary-count">{group.count}</p>}
+      {group.lines.map((line, i) => (
+        <p key={i} className="summary-line">
+          {line}
+        </p>
+      ))}
+      {group.note && <p className="summary-note">{group.note}</p>}
+    </div>
   );
 }
 

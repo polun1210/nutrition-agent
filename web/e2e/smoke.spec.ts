@@ -77,6 +77,9 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   const summary = page.getByTestId("report-summary");
   await expect(summary).toContainText(/交互作用.*未命中已審定的規則.*這不表示兩者不會交互作用/);
   await expect(summary).toContainText("沒有營養素已超過上限");
+  // 沒有判定的說明維持文字卡，不會變成「0」；上限比對的 0 是數字
+  await expect(summary.locator('.summary-tile[data-kind="text"]')).toContainText("這不表示兩者不會交互作用");
+  await expect(summary.locator('.summary-tile[data-kind="count"] .summary-count')).toHaveText("0");
   await expect(summary).not.toContainText("無法確認");
   // 段落順序：摘要 → 重點 → 細節收合；沒有未評估成分時不顯示該段
   await expect(page.locator("section[data-section] h2")).toHaveText([
@@ -133,6 +136,24 @@ test("註冊後新增兩項保健食品並看到上限比對", async ({ page }) 
   await expect(page.getByTestId("reference-versions")).toContainText("dris");
 
   // 瀏覽器上一頁：報告 → 歷史列表 → 首頁，不會離開 app（#21）
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "歷史報告" })).toBeVisible();
+  // 沒有 count / note 的舊摘要格式（#53）：全部顯示文字卡，不會壞掉
+  await page.route(/\/api\/assessments\/\d+$/, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    for (const s of body.report.sections) {
+      for (const g of s.groups ?? []) {
+        delete g.count;
+        delete g.note;
+      }
+    }
+    await route.fulfill({ response, json: body });
+  });
+  await page.getByRole("button", { name: /的評估（2 項保健食品/ }).click();
+  const legacy = page.getByTestId("report-summary");
+  await expect(legacy).toContainText("沒有營養素已超過上限");
+  await expect(legacy.locator(".summary-count")).toHaveCount(0);
   await page.goBack();
   await expect(page.getByRole("heading", { name: "歷史報告" })).toBeVisible();
   await page.goBack();
@@ -257,9 +278,10 @@ test("交互作用的白話解釋附腳註，點開看到原文與來源", async
   await page.getByRole("button", { name: "下一步" }).click();
   await page.getByRole("button", { name: "送出評估" }).click();
 
-  await expect(page.getByTestId("report-summary")).toContainText(
-    "1 項交互作用提醒，建議與醫師或藥師討論：維生素 B12",
-  );
+  await expect(page.getByRole("heading", { name: "這次的評估報告" })).toBeVisible();
+  const interactionTile = page.getByTestId("report-summary").locator(".summary-tile").filter({ hasText: "交互作用" });
+  await expect(interactionTile.locator(".summary-count")).toHaveText("1");
+  await expect(interactionTile).toContainText("1 件事要告訴醫師或藥師");
 
   // 以藥為主角：先講重點，後面才是白話說明（#23）
   const card = page.getByTestId("interaction-card");

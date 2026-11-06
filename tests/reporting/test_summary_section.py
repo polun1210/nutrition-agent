@@ -4,7 +4,7 @@ import pytest
 
 from nutrition_agent.assessment import assess
 from nutrition_agent.reporting.forbidden import find_forbidden_terms
-from nutrition_agent.reporting.template import render_report
+from nutrition_agent.reporting.template import Group, render_report
 from tests.assessment.conftest import drug, line, make_case, make_rule, product, with_rules
 
 PPI = drug("Nexium", ("esomeprazole", "ppi"))
@@ -22,6 +22,7 @@ def test_without_medications_summary_says_comparison_was_skipped(fx_ref):
     items = summary(make_case(product("鈣片", [line("calcium", 500)])), fx_ref)
 
     assert items["交互作用"].lines == ["你沒有提供用藥資料，未進行交互作用比對。"]
+    assert items["交互作用"].count is None
 
 
 def test_medications_without_hits_keep_the_not_no_interaction_wording(fx_ref):
@@ -32,6 +33,7 @@ def test_medications_without_hits_keep_the_not_no_interaction_wording(fx_ref):
         text = "".join(summary(case, reference)["交互作用"].lines)
         assert wording in text
         assert "這不表示兩者不會交互作用" in text
+        assert summary(case, reference)["交互作用"].count is None
 
 
 def test_hits_are_counted_and_named_with_a_prompt_to_ask_a_provider(fx_ref):
@@ -41,7 +43,9 @@ def test_hits_are_counted_and_named_with_a_prompt_to_ask_a_provider(fx_ref):
     item = summary(case, fx_ref)["交互作用"]
 
     assert item.tone == "warning"
-    assert item.lines == ["2 項交互作用提醒，建議與醫師或藥師討論：鎂、維生素 B12"]
+    assert item.lines == ["2 件事要告訴醫師或藥師"]
+    assert item.count == 2
+    assert item.note is None
 
 
 def test_exceeded_nutrients_are_named(fx_ref):
@@ -55,6 +59,7 @@ def test_exceeded_nutrients_are_named(fx_ref):
 
     assert item.tone == "warning"
     assert item.lines == ["已超過上限：鈣、鐵"]
+    assert item.count == 2
 
 
 def test_no_exceeded_nutrient_is_stated_plainly(fx_ref):
@@ -62,6 +67,7 @@ def test_no_exceeded_nutrient_is_stated_plainly(fx_ref):
 
     assert item.tone == "neutral"
     assert item.lines == ["沒有營養素已超過上限"]
+    assert item.count == 0
 
 
 def test_unconfirmed_drugs_and_ingredients_are_counted_and_excluded(fx_ref):
@@ -76,12 +82,35 @@ def test_unconfirmed_drugs_and_ingredients_are_counted_and_excluded(fx_ref):
 
     assert item.tone == "warning"
     assert item.lines == ["2 項無法確認的藥或成分，未納入判定"]
+    assert item.count == 2
 
 
 def test_unconfirmed_item_is_omitted_when_everything_is_known(fx_ref):
     case = make_case(product("Q10", [line("coenzyme_q10", 30)]), medications=(PPI,))
 
     assert list(summary(case, fx_ref)) == ["交互作用", "上限比對"]
+
+
+def test_consult_findings_get_a_note_naming_them_in_stable_order(fx_ref):
+    # 鎂（PPI）與維生素 B12（metformin）都改成「合併使用前先諮詢」，鈣維持告知
+    rules = [
+        make_rule("r-mg", "ppi", "magnesium", condition_type="drug_class", advice="consult_before_combining"),
+        make_rule("r-b12", "metformin", "vitamin_b12", advice="consult_before_combining"),
+        make_rule("r-ca", "metformin", "calcium"),
+    ]
+    case = make_case(product("鈣片", [line("calcium", 500)]), medications=(METFORMIN, PPI))
+
+    item = summary(case, with_rules(fx_ref, *rules))["交互作用"]
+
+    assert item.count == 3
+    assert item.lines == ["3 件事要告訴醫師或藥師"]
+    assert item.note == "其中 2 件，合併使用前請先問過：鎂、維生素 B12"
+
+
+def test_legacy_group_without_count_or_note_still_loads():
+    group = Group.model_validate({"title": "交互作用", "tone": "warning", "lines": ["舊文字"]})
+
+    assert group.count is None and group.note is None
 
 
 SCENARIOS = {
