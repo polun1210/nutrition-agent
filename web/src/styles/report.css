@@ -113,42 +113,69 @@
   color: var(--color-muted);
 }
 
-/* 摘要卡：報告最上方的結論，粗框與其他段落區隔；警示項目用左側色條加底色 */
-.summary-card {
-  border: 3px solid var(--color-main);
+/* 頁首（暖色區塊，#53）：日期、標題、年齡性別慢性病，摘要卡放在裡面 */
+.report-hero .report-date {
+  font-size: var(--text-sm);
+}
+
+.report-hero h1 {
+  font-family: var(--font-head);
+  font-size: var(--text-2xl);
+  margin: var(--space-1) 0;
+}
+
+.report-hero .report-who {
+  margin-bottom: var(--space-4);
+}
+
+/* 摘要卡：有 count 的項目畫大數字；顏色只代表需要注意與否，不代表嚴重度 */
+.summary-card h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.summary-tiles {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.summary-tile {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-4) var(--space-3);
-  margin-bottom: var(--space-5);
-  background: var(--color-main-soft);
+  padding: var(--space-3) var(--space-4);
   break-inside: avoid;
 }
 
-.summary-card h2 {
-  margin: var(--space-1) 0 var(--space-2);
-}
-
-.summary-card dl {
-  margin: 0;
-}
-
-.summary-card dl div {
-  border-left: 4px solid var(--color-line);
-  padding: var(--space-1) var(--space-3);
-  margin: var(--space-2) 0;
-  background: var(--color-card);
-}
-
-.summary-card dl div[data-tone="warning"] {
-  border-left-color: var(--color-amber);
+.summary-tile[data-tone="warning"] {
+  border-left: 6px solid var(--color-amber);
   background: var(--color-amber-soft);
 }
 
-.summary-card dt {
-  font-weight: bold;
+.summary-tile p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-ink);
+  font-size: var(--text-base);
 }
 
-.summary-card dd {
+.summary-tile .summary-title {
   margin: 0;
+  color: var(--color-muted);
+}
+
+.summary-tile .summary-count {
+  font-family: var(--font-head);
+  font-size: 2.5rem;
+  line-height: 1.1;
+  color: var(--color-main);
+}
+
+.summary-tile[data-tone="warning"] .summary-count {
+  color: var(--color-amber-text);
+}
+
+.summary-tile .summary-note {
+  color: var(--color-muted);
 }
 
 /* 字卡：同一類的揭露事項 */
@@ -212,8 +239,8 @@
   }
 
   /* 摘要卡列印時保留粗框與警示底色，不靠瀏覽器的「列印背景」設定 */
-  .summary-card,
-  .summary-card dl div {
+  .report-hero,
+  .summary-tile {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

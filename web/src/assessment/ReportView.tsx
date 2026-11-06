@@ -107,13 +107,21 @@ export default function ReportView({
     .filter((s) => s.key !== "not_evaluated" || s.lines.length > 0)
     .sort((a, b) => rank(a) - rank(b));
 
+  const summary = sections.find((s) => s.key === "summary");
+  const profileLines = report.report.sections.find((s) => s.key === "profile")?.lines ?? [];
+  // 「你的資料」前三行固定是年齡、性別、慢性病；只在格式吻合時放進頁首
+  const who = profileLines.slice(0, 3).filter((l) => /^(年齡|性別|你勾選|你未勾選)/.test(l));
+
   return (
     <main className="page">
-      <h1>評估報告</h1>
+      <header className="page-hero report-hero">
+        {report.assessed_on && <p className="report-date">{report.assessed_on}</p>}
+        <h1>這次的評估報告</h1>
+        {who.length > 0 && <p className="report-who">{who.join("　")}</p>}
+        {summary && <SummaryCard title={summary.title} groups={summary.groups ?? []} />}
+      </header>
       {sections.map((s) =>
-        s.key === "summary" ? (
-          <SummaryCard key={s.key} title={s.title} groups={s.groups ?? []} />
-        ) : COLLAPSED.has(s.key) ? (
+        s.key === "summary" ? null : COLLAPSED.has(s.key) ? (
           <Collapsible key={s.key} id={s.key} title={s.title}>
             <SectionBody section={s} report={report} />
           </Collapsible>
