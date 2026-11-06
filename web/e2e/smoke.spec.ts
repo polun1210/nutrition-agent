@@ -284,7 +284,10 @@ test("交互作用的白話解釋附腳註，點開看到原文與來源", async
   await expect(page.getByRole("heading", { name: "這次的評估報告" })).toBeVisible();
   const interactionTile = page.getByTestId("report-summary").locator(".summary-tile").filter({ hasText: "交互作用" });
   await expect(interactionTile.locator(".summary-count")).toHaveText("1");
-  await expect(interactionTile).toContainText("1 件事要告訴醫師或藥師");
+  // 大數字下方的標籤不重複數字
+  await expect(interactionTile.locator(".summary-line")).toHaveText(/^件事要告訴醫師或藥師/);
+  // 頁首：年齡・性別・慢性病（結構化資料，不解析報告文字）
+  await expect(page.locator(".report-who")).toHaveText(/^\d+ 歲・(男性|女性)/);
 
   // 以藥為主角：每個營養素一張手風琴卡片，預設收合，收合時就看得到營養素與建議行動（#54）
   const card = page.getByTestId("interaction-card");
