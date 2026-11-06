@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function registerAndStartAssessment(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "還沒有帳號？註冊" }).click();
-  await page.getByLabel("Email").fill(`est-${Date.now()}@example.com`);
+  await page.getByLabel("Email").fill(`est-${crypto.randomUUID()}@example.com`);
   await page.getByLabel(/密碼/).fill("correct-horse-battery");
   await page.getByLabel("出生年").fill("1950");
   await page.getByLabel("出生月").selectOption("6");
