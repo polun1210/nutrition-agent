@@ -1,3 +1,5 @@
+import Waiting from "./Waiting";
+import { MEDICATION_PHOTO_SECONDS } from "./waitingTimes";
 import { useState } from "react";
 import { request, upload } from "../api";
 import type { DrugCandidate, MedicationInput, MedicationPackResult, ScopeStatus } from "./types";
@@ -27,12 +29,14 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [readError, setReadError] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
   const [hints, setHints] = useState<string[]>([]);
   const [replacing, setReplacing] = useState<string | null>(null);
 
   const readPhotos = async () => {
     setError(null);
+    setReadError(null);
     setHints([]);
     setReading(true);
     try {
@@ -52,7 +56,7 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
       if (added.length > 0) onChange([...medications, ...added]);
       setFiles([]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setReadError(err instanceof Error ? err.message : String(err));
     } finally {
       setReading(false);
     }
@@ -104,8 +108,16 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
           />
         </label>
         <button type="button" disabled={files.length === 0 || reading} onClick={() => void readPhotos()}>
-          {reading ? "辨識中…" : "讀取藥名"}
+          讀取藥名
         </button>
+        <Waiting
+          active={reading}
+          title="正在讀取藥名"
+          detail="系統正在辨識藥包上的藥名。"
+          expected={MEDICATION_PHOTO_SECONDS}
+          error={readError}
+          onRetry={() => void readPhotos()}
+        />
         {hints.map((h) => (
           <p key={h} role="status">
             {h}
