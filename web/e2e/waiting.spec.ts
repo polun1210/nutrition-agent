@@ -55,7 +55,7 @@ test("送出評估：等待區塊出現、按鈕停用，完成後消失並顯�
   await expect(page.getByRole("button", { name: "送出評估" })).toBeDisabled();
 
   await expect(page.getByTestId("waiting")).toHaveCount(0);
-  await expect(page.getByRole("table")).toBeVisible();
+  await expect(page.getByTestId("ul-card").first()).toBeVisible();
 });
 
 test("送出評估失敗：顯示錯誤與重試，重試後顯示報告", async ({ page }) => {
@@ -75,7 +75,7 @@ test("送出評估失敗：顯示錯誤與重試，重試後顯示報告", async
   await expect(page.getByTestId("waiting-error")).toContainText("伺服器暫時出錯");
   await page.getByRole("button", { name: "重試" }).click();
   await expect(page.getByTestId("waiting")).toBeVisible();
-  await expect(page.getByRole("table")).toBeVisible();
+  await expect(page.getByTestId("ul-card").first()).toBeVisible();
 });
 
 test("保健食品照片辨識：等待區塊出現、按鈕停用，完成後進入校對頁", async ({ page }) => {
