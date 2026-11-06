@@ -149,3 +149,62 @@ label.estimated input {
   border-left-color: var(--color-amber);
 }
 
+
+/* 等待區塊：不確定進度的動畫，不顯示百分比 */
+.waiting-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--color-main-soft);
+}
+
+.waiting-card p {
+  margin: 0;
+}
+
+.waiting-title {
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+.waiting-expected {
+  color: var(--color-muted);
+}
+
+.waiting-dots {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.waiting-dots i {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-main);
+  animation: waiting-pulse 1.2s ease-in-out infinite;
+}
+
+.waiting-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.waiting-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes waiting-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting-dots i {
+    animation: none;
+  }
+}

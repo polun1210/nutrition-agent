@@ -1,3 +1,5 @@
+import Waiting from "./Waiting";
+import { SUPPLEMENT_PHOTO_SECONDS } from "./waitingTimes";
 import { useState, type ChangeEvent } from "react";
 import { upload } from "../api";
 import { EstimateField, toIngredientLine } from "./EstimateField";
@@ -170,9 +172,16 @@ export default function PhotoProductForm({ draftId, options, compounds, onAdd }:
         <input type="file" accept="image/*" multiple onChange={onPick} />
       </label>
       <button type="button" disabled={busy || (files.length === 0 && keptIds.length === 0)} onClick={() => void recognize()}>
-        {busy ? "辨識中…" : "開始辨識"}
+        開始辨識
       </button>
-      {error && <p role="alert">{error}</p>}
+      <Waiting
+        active={busy}
+        title="正在辨識標示照片"
+        detail="系統正在讀出成分與含量，辨識完成後請你逐項校對。"
+        expected={SUPPLEMENT_PHOTO_SECONDS}
+        error={error}
+        onRetry={() => void recognize()}
+      />
       {unreadable.map((p) => (
         <p key={p.photo_id} role="alert">
           第 {p.index} 張照片：{p.hint} 請重新選擇照片後再按「開始辨識」。
