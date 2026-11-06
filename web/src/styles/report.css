@@ -1,32 +1,32 @@
-.explanations { margin-top: 1rem; }
-.explanations p { margin: 0.5rem 0; }
+.explanations { margin-top: var(--space-4); }
+.explanations p { margin: var(--space-2) 0; }
 .footnote-ref {
-  background: none; border: 0; padding: 0 0.25rem; min-height: 0;
-  color: #0b5cad; text-decoration: underline; cursor: pointer; font-size: 0.8em; vertical-align: super;
+  background: none; border: 0; padding: 0 var(--space-1); min-height: 0;
+  color: var(--color-main); text-decoration: underline; cursor: pointer; font-size: 0.8em; vertical-align: super;
 }
-.footnote-detail { border-left: 4px solid #0b5cad; padding: 0.25rem 0.75rem; margin: 0.5rem 0; font-size: 0.85em; }
-.footnote-detail blockquote { margin: 0.25rem 0; white-space: pre-wrap; }
+.footnote-detail { border-left: 4px solid var(--color-main); padding: var(--space-1) var(--space-3); margin: var(--space-2) 0; font-size: 0.85em; }
+.footnote-detail blockquote { margin: var(--space-1) 0; white-space: pre-wrap; }
 
 .interaction-card {
-  border: 1px solid #999;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
   break-inside: avoid;
 }
 
 .interaction-card h3 {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--space-1);
 }
 
 .interaction-card dl {
-  margin: 0.5rem 0;
+  margin: var(--space-2) 0;
 }
 
 .interaction-card dl div {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 0.5rem;
+  column-gap: var(--space-2);
 }
 
 .interaction-card dt {
@@ -46,25 +46,25 @@
 .card-summary {
   font-size: 1.1rem;
   font-weight: bold;
-  margin: 0.25rem 0;
+  margin: var(--space-1) 0;
 }
 
 .card-points {
   padding-left: 1.25rem;
-  margin: 0.5rem 0;
+  margin: var(--space-2) 0;
 }
 
 .card-points li {
-  margin: 0.25rem 0;
+  margin: var(--space-1) 0;
 }
 
 .card-details {
-  border-top: 1px solid #ccc;
-  margin-top: 0.75rem;
+  border-top: 1px solid var(--color-line);
+  margin-top: var(--space-3);
 }
 
 .nutrient-detail h4 {
-  margin: 0.75rem 0 0.25rem;
+  margin: var(--space-3) 0 var(--space-1);
 }
 
 /* 上限比對表格：手機寬度下欄位縮小，備註另起一列 */
@@ -83,48 +83,48 @@
 }
 
 .ul-table thead th {
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid var(--color-ink);
   font-size: 0.85rem;
 }
 
 .ul-table tbody {
-  border-bottom: 1px solid #ccc;
+  border-bottom: 1px solid var(--color-line);
   break-inside: avoid;
 }
 
 .ul-table th small {
   display: block;
   font-weight: normal;
-  color: #555;
+  color: var(--color-muted);
 }
 
 .ul-table tbody[data-exceeded="true"] {
-  background: #fdecea;
+  background: var(--color-over-soft);
 }
 
 .ul-table td strong {
   display: block;
-  color: #b00020;
+  color: var(--color-over);
 }
 
 .ul-note td {
   padding-top: 0;
   font-size: 0.8rem;
-  color: #555;
+  color: var(--color-muted);
 }
 
 /* 摘要卡：報告最上方的結論，粗框與其他段落區隔；警示項目用左側色條加底色 */
 .summary-card {
-  border: 3px solid #0b5cad;
-  border-radius: 0.75rem;
-  padding: 0.5rem 1rem 0.75rem;
-  margin-bottom: 1.5rem;
-  background: #eef5fc;
+  border: 3px solid var(--color-main);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  margin-bottom: var(--space-5);
+  background: var(--color-main-soft);
   break-inside: avoid;
 }
 
 .summary-card h2 {
-  margin: 0.25rem 0 0.5rem;
+  margin: var(--space-1) 0 var(--space-2);
 }
 
 .summary-card dl {
@@ -132,15 +132,15 @@
 }
 
 .summary-card dl div {
-  border-left: 4px solid #999;
-  padding: 0.25rem 0.75rem;
-  margin: 0.5rem 0;
-  background: #fff;
+  border-left: 4px solid var(--color-line);
+  padding: var(--space-1) var(--space-3);
+  margin: var(--space-2) 0;
+  background: var(--color-card);
 }
 
 .summary-card dl div[data-tone="warning"] {
-  border-left-color: #b8860b;
-  background: #fff4e5;
+  border-left-color: var(--color-amber);
+  background: var(--color-amber-soft);
 }
 
 .summary-card dt {
@@ -153,33 +153,33 @@
 
 /* 字卡：同一類的揭露事項 */
 .group-card {
-  border: 1px solid #ccc;
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-  margin-bottom: 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
   break-inside: avoid;
 }
 
 .group-card h3 {
-  margin: 0.25rem 0;
+  margin: var(--space-1) 0;
   font-size: 1rem;
 }
 
 .group-card ul {
   padding-left: 1.25rem;
-  margin: 0.25rem 0;
+  margin: var(--space-1) 0;
 }
 
 .group-card[data-tone="warning"] {
-  border-color: #b8860b;
-  background: #fff4e5;
+  border-color: var(--color-amber);
+  background: var(--color-amber-soft);
 }
 
 /* 預設收合的段落：整列標題都能點 */
 .collapsible summary {
   cursor: pointer;
   list-style-position: outside;
-  margin-left: 1rem;
+  margin-left: var(--space-4);
 }
 
 .collapsible summary h2 {
@@ -187,7 +187,7 @@
 }
 
 .references {
-  padding-left: 1.5rem;
+  padding-left: var(--space-5);
 }
 
 @media print {
@@ -197,8 +197,8 @@
   }
 
   body {
-    background: #fff;
-    color: #000;
+    background: var(--color-card);
+    color: var(--color-ink);
   }
 
   .page {

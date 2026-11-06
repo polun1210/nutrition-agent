@@ -32,7 +32,9 @@ export function LoginPage({ onDone, goRegister }: { onDone: () => void; goRegist
   });
   return (
     <main className="page">
-      <h1>登入</h1>
+      <header className="page-hero">
+        <h1>登入</h1>
+      </header>
       <form onSubmit={submit}>
         <label>
           Email
@@ -53,7 +55,7 @@ export function LoginPage({ onDone, goRegister }: { onDone: () => void; goRegist
           登入
         </button>
       </form>
-      <button type="button" className="link" onClick={goRegister}>
+      <button type="button" className="link account-switch" onClick={goRegister}>
         還沒有帳號？註冊
       </button>
     </main>
@@ -71,7 +73,9 @@ export function RegisterPage({ onDone, goLogin }: { onDone: () => void; goLogin:
   });
   return (
     <main className="page">
-      <h1>註冊</h1>
+      <header className="page-hero">
+        <h1>註冊</h1>
+      </header>
       <form onSubmit={submit}>
         <label>
           Email
@@ -94,7 +98,7 @@ export function RegisterPage({ onDone, goLogin }: { onDone: () => void; goLogin:
           註冊
         </button>
       </form>
-      <button type="button" className="link" onClick={goLogin}>
+      <button type="button" className="link account-switch" onClick={goLogin}>
         已有帳號？登入
       </button>
     </main>
@@ -127,40 +131,44 @@ export function HomePage({
   }, []);
   return (
     <main className="page">
-      <h1>補對了嗎？</h1>
-      <p>你好，{me.email}（{me.age} 歲）</p>
+      <header className="page-hero">
+        <h1>補對了嗎？</h1>
+        <p>你好，{me.email}（{me.age} 歲）</p>
+      </header>
       {!me.is_adult && <p role="alert">{me.underage_message}</p>}
-      {resumable && (
-        <>
-          <button type="button" onClick={() => startAssessment({ kind: "resume", draftId: resumable.id })} disabled={!me.is_adult}>
-            繼續上次未完成的評估
-          </button>
-          <p className="hint">
-            {resumable.product_count} 項保健食品、{resumable.medication_count} 項用藥，最後修改於{" "}
-            {new Date(resumable.updated_at).toLocaleString("zh-TW", { dateStyle: "medium", timeStyle: "short" })}
-          </p>
-        </>
-      )}
-      <button type="button" onClick={() => startAssessment({ kind: "new" })} disabled={!me.is_adult} title={me.is_adult ? undefined : "未滿 19 歲無法使用"}>
-        開始評估
-      </button>
-      {hasHistory && (
-        <>
-          <button type="button" className="secondary" onClick={() => startAssessment({ kind: "copy_latest" })} disabled={!me.is_adult}>
-            沿用上次的藥和保健食品
-          </button>
-          <p className="hint">帶入上次的內容，可以再新增或刪除</p>
-          <button type="button" className="secondary" onClick={goHistory}>
-            歷史報告
-          </button>
-        </>
-      )}
-      <button type="button" className="secondary" onClick={goProfile}>
-        個人資料
-      </button>
-      <button type="button" className="secondary" onClick={onLogout}>
-        登出
-      </button>
+      <div className="account-actions">
+        {resumable && (
+          <div className="card resume-card">
+            <button type="button" onClick={() => startAssessment({ kind: "resume", draftId: resumable.id })} disabled={!me.is_adult}>
+              繼續上次未完成的評估
+            </button>
+            <p className="hint">
+              {resumable.product_count} 項保健食品、{resumable.medication_count} 項用藥，最後修改於{" "}
+              {new Date(resumable.updated_at).toLocaleString("zh-TW", { dateStyle: "medium", timeStyle: "short" })}
+            </p>
+          </div>
+        )}
+        <button type="button" onClick={() => startAssessment({ kind: "new" })} disabled={!me.is_adult} title={me.is_adult ? undefined : "未滿 19 歲無法使用"}>
+          開始評估
+        </button>
+        {hasHistory && (
+          <>
+            <button type="button" className="secondary" onClick={() => startAssessment({ kind: "copy_latest" })} disabled={!me.is_adult}>
+              沿用上次的藥和保健食品
+            </button>
+            <p className="hint">帶入上次的內容，可以再新增或刪除</p>
+            <button type="button" className="secondary" onClick={goHistory}>
+              歷史報告
+            </button>
+          </>
+        )}
+        <button type="button" className="secondary" onClick={goProfile}>
+          個人資料
+        </button>
+        <button type="button" className="secondary" onClick={onLogout}>
+          登出
+        </button>
+      </div>
     </main>
   );
 }
@@ -177,7 +185,9 @@ export function ProfilePage({ me, onSaved, goHome }: { me: Me; onSaved: () => vo
   });
   return (
     <main className="page">
-      <h1>個人資料</h1>
+      <header className="page-hero">
+        <h1>個人資料</h1>
+      </header>
       <form onSubmit={submit}>
         <ProfileFields value={profile} onChange={setProfile} />
         {error && <p role="alert">{error}</p>}
