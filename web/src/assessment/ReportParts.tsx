@@ -201,6 +201,12 @@ export function SummaryCard({ title, groups }: { title: string; groups: ReportGr
   );
 }
 
+/** 大數字已經顯示件數，標籤去掉開頭重複的數字（純排版，後端文字不變）。 */
+const withoutCount = (line: string, count: number) => {
+  const prefix = `${count} `;
+  return line.startsWith(prefix) ? line.slice(prefix.length) : line;
+};
+
 function SummaryTile({ group }: { group: ReportGroup }) {
   const hasCount = typeof group.count === "number";
   // 顏色只代表需要注意與否（ADR-0001：沒有嚴重度）；0 項時不上警示色
@@ -211,7 +217,7 @@ function SummaryTile({ group }: { group: ReportGroup }) {
       {hasCount && <p className="summary-count">{group.count}</p>}
       {group.lines.map((line, i) => (
         <p key={i} className="summary-line">
-          {line}
+          {i === 0 && hasCount ? withoutCount(line, group.count!) : line}
         </p>
       ))}
       {group.note && <p className="summary-note">{group.note}</p>}

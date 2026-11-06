@@ -274,7 +274,13 @@
 
 .summary-tiles {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
+}
+
+/* 只剩一張（或最後一張落單）時佔滿一列 */
+.summary-tile:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .summary-tile {
