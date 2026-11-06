@@ -85,7 +85,7 @@ export default function ProductForm({ options, compounds, onAdd, initial, onCanc
   };
 
   return (
-    <form onSubmit={submit} aria-label="新增保健食品">
+    <form onSubmit={submit} aria-label="新增保健食品" className="product-form">
       <label>
         產品名稱
         <input required value={name} onChange={(e) => setName(e.target.value)} />
