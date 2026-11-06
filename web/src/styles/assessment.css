@@ -2,31 +2,107 @@
   display: flex;
   gap: var(--space-2);
   list-style: none;
+  margin: 0 0 var(--space-3);
   padding: 0;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .stepper li {
   flex: 1;
-  padding: var(--space-1);
-  border-bottom: 4px solid var(--color-line);
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-1);
+  text-align: center;
+  border-radius: var(--radius-md);
+  background: var(--color-line);
+  color: var(--color-muted);
 }
 
 .stepper li[aria-current="step"] {
-  border-color: var(--color-amber);
-  font-weight: bold;
+  background: var(--color-amber-soft);
+  color: var(--color-amber-text);
+  box-shadow: inset 0 0 0 2px var(--color-amber);
+  font-weight: 700;
 }
 
 .stepper li.done {
-  border-color: var(--color-main);
+  background: var(--color-main-soft);
+  color: var(--color-main);
+}
+
+.stepper li.done::before {
+  content: "✓ ";
+}
+
+/* 流程頁的標題區塊：接在步驟條下方，四邊圓角 */
+.page-hero.in-flow {
+  margin: 0 0 var(--space-4);
+  border-radius: var(--radius-lg);
+}
+
+.summary-card {
+  font-size: var(--text-lg);
+}
+
+/* 新增方式：兩個大選項 */
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.option-group button {
+  min-height: 5rem;
+  font-size: var(--text-lg);
+  font-family: var(--font-head);
+  margin: 0;
+}
+
+.option-group button:nth-child(2) {
+  background: var(--color-card);
+  color: var(--color-main);
+}
+
+.replacing-note {
+  background: var(--color-amber-soft);
+  color: var(--color-amber-text);
+}
+
+/* 手動輸入與照片校對共用的表單區塊 */
+.product-form fieldset,
+.photo-add .product-form fieldset {
+  background: var(--color-card);
+}
+
+.photo-add > label,
+.photo-add > button {
+  margin-bottom: var(--space-3);
 }
 
 .ingredient-row {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px dashed var(--color-line);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-left: 6px solid var(--color-main);
+  border-radius: var(--radius-md);
+}
+
+.ingredient-row button + button {
+  margin-top: 0;
+}
+
+/* 讀不出含量：欄位用琥珀色標出 */
+.ingredient-row[data-missing="true"] {
+  border-left-color: var(--color-amber);
+}
+
+.ingredient-row[data-missing="true"] input[type="number"] {
+  border-color: var(--color-amber);
+  background: var(--color-amber-soft);
 }
 
 /* 系統推估的數值：與使用者輸入值不同底色 */
@@ -41,8 +117,8 @@ label.estimated input {
 
 .thumbs {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
-  margin-left: var(--space-2);
   vertical-align: middle;
 }
 
@@ -51,6 +127,7 @@ label.estimated input {
   height: 3rem;
   object-fit: cover;
   border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
 }
 
 .thumb-missing {
@@ -69,5 +146,6 @@ label.estimated input {
 /* 系統認不出的名稱：可能是營養素的其他寫法，提醒使用者看一下 */
 .ingredient-row[data-unknown="true"] {
   background: var(--color-amber-soft);
+  border-left-color: var(--color-amber);
 }
 

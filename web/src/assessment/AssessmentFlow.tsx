@@ -138,8 +138,10 @@ export default function AssessmentFlow({ source, me, onProfileSaved, goHome }: P
       {error && <p role="alert">{error}</p>}
       {step === "profile" && (
         <section>
-          <h1>確認個人資料</h1>
-          <p>本次評估使用以下資料，需要的話可以直接修改。</p>
+          <div className="page-hero in-flow">
+            <h1>確認個人資料</h1>
+            <p>本次評估使用以下資料，需要的話可以直接修改。</p>
+          </div>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -158,12 +160,17 @@ export default function AssessmentFlow({ source, me, onProfileSaved, goHome }: P
       )}
       {step === "supplements" && supplementView.kind === "list" && (
         <section>
-          <h1>保健食品</h1>
-          <ul>
+          <div className="page-hero in-flow">
+            <h1>保健食品</h1>
+          </div>
+          <ul className="card-list">
             {products.map((p, i) => (
-              <li key={i}>
-                {p.name}
-                <PhotoThumbs name={p.name} photoIds={p.photo_ids} />
+              <li key={i} className="card">
+                <div className="card-title">
+                  <strong>{p.name}</strong>
+                  <PhotoThumbs name={p.name} photoIds={p.photo_ids} />
+                </div>
+                <div className="card-actions">
                 <button
                   type="button"
                   className="secondary"
@@ -180,9 +187,10 @@ export default function AssessmentFlow({ source, me, onProfileSaved, goHome }: P
                 >
                   刪除 {p.name}
                 </button>
+                </div>
               </li>
             ))}
-            {products.length === 0 && <li>尚未加入任何保健食品</li>}
+            {products.length === 0 && <li className="card empty-card">尚未加入任何保健食品</li>}
           </ul>
           <button type="button" disabled={busy || !draft} onClick={() => setSupplementView({ kind: "add", method: null })}>
             新增一項
@@ -197,9 +205,11 @@ export default function AssessmentFlow({ source, me, onProfileSaved, goHome }: P
       )}
       {step === "supplements" && supplementView.kind === "add" && draft && (
         <section>
-          <h1>新增一項保健食品</h1>
+          <div className="page-hero in-flow">
+            <h1>新增一項保健食品</h1>
+          </div>
           {supplementView.method === null && (
-            <div role="group" aria-label="新增方式">
+            <div role="group" aria-label="新增方式" className="option-group">
               <button type="button" onClick={() => setSupplementView({ kind: "add", method: "photo" })}>
                 用照片新增
               </button>
@@ -221,7 +231,9 @@ export default function AssessmentFlow({ source, me, onProfileSaved, goHome }: P
       )}
       {step === "supplements" && supplementView.kind === "edit" && products[supplementView.index] && (
         <section>
-          <h1>修改保健食品</h1>
+          <div className="page-hero in-flow">
+            <h1>修改保健食品</h1>
+          </div>
           <ProductForm
             key={supplementView.index}
             options={options}
@@ -248,8 +260,10 @@ export default function AssessmentFlow({ source, me, onProfileSaved, goHome }: P
       )}
       {step === "submit" && (
         <section>
-          <h1>送出評估</h1>
-          <p>共 {products.length} 項保健食品、{medications.length} 項用藥。送出後會產生報告，且評估內容無法再修改。</p>
+          <div className="page-hero in-flow">
+            <h1>送出評估</h1>
+          </div>
+          <p className="card summary-card">共 {products.length} 項保健食品、{medications.length} 項用藥。送出後會產生報告，且評估內容無法再修改。</p>
           <button type="button" disabled={busy} onClick={() => void submit()}>
             {busy ? "計算中…" : "送出評估"}
           </button>

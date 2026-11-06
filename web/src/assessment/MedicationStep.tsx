@@ -8,6 +8,9 @@ const SCOPE_TEXT = {
   unconfirmed: "無法確認",
 } as const;
 
+const scopeTagClass = (s: ScopeStatus) =>
+  `tag ${s === "out_of_scope" ? "out-of-scope" : s === "unconfirmed" ? "undetermined-tag" : ""}`;
+
 type Props = {
   draftId: number;
   medications: MedicationInput[];
@@ -85,10 +88,12 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
 
   return (
     <section>
-      <h1>用藥</h1>
-      <p>拍藥包讓系統讀出藥名，或搜尋你正在吃的藥（中文名、商品名或學名皆可），從候選中加入。</p>
+      <div className="page-hero in-flow">
+        <h1>用藥</h1>
+        <p>拍藥包讓系統讀出藥名，或搜尋你正在吃的藥（中文名、商品名或學名皆可），從候選中加入。</p>
+      </div>
       {error && <p role="alert">{error}</p>}
-      <div role="group" aria-label="拍藥包">
+      <div role="group" aria-label="拍藥包" className="card">
         <label>
           藥包照片
           <input
@@ -108,7 +113,7 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
         ))}
       </div>
       {replacing !== null && (
-        <p role="status">
+        <p role="status" className="card replacing-note">
           正在修改「{replacing}」：請在下方搜尋並選擇正確的藥名。
           <button type="button" className="secondary" onClick={() => setReplacing(null)}>
             取消修改
@@ -117,6 +122,7 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
       )}
       <form
         aria-label="搜尋藥名"
+        className="card"
         onSubmit={(e) => {
           e.preventDefault();
           void search();
@@ -131,12 +137,13 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
         </button>
       </form>
       {searched && (
-        <div aria-label="搜尋結果">
+        <div aria-label="搜尋結果" className="results">
           {candidates.length === 0 && <p>找不到符合的藥名。</p>}
-          <ul>
+          <ul className="card-list">
             {candidates.map((c) => (
-              <li key={c.name}>
-                <strong>{c.name}</strong>（{SCOPE_TEXT[c.scope_status]}）
+              <li key={c.name} className="card">
+                <strong>{c.name}</strong>
+                <span className={scopeTagClass(c.scope_status)}>（{SCOPE_TEXT[c.scope_status]}）</span>
                 {c.ingredients.length > 0 && (
                   <div>
                     有效成分：{c.ingredients.map((i) => `${i.name_zh} ${i.name_en}`).join("、")}
@@ -149,7 +156,7 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
               </li>
             ))}
           </ul>
-          <p>
+          <p className="card">
             都不是？
             <button type="button" className="secondary" onClick={() => add(query)}>
               以「{query.trim()}」自行輸入加入
@@ -159,11 +166,14 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
         </div>
       )}
       <h2>已加入的用藥</h2>
-      <ul>
+      <ul className="card-list">
         {medications.map((m) => (
-          <li key={m.name}>
-            {m.name}
-            {m.scope_status && <span>（{SCOPE_TEXT[m.scope_status]}）</span>}
+          <li key={m.name} className="card">
+            <div className="card-title">
+              <strong>{m.name}</strong>
+              {m.scope_status && <span className={scopeTagClass(m.scope_status)}>（{SCOPE_TEXT[m.scope_status]}）</span>}
+            </div>
+            <div className="card-actions">
             <button
               type="button"
               className="secondary"
@@ -183,9 +193,10 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
             >
               刪除 {m.name}
             </button>
+            </div>
           </li>
         ))}
-        {medications.length === 0 && <li>尚未加入任何藥</li>}
+        {medications.length === 0 && <li className="card empty-card">尚未加入任何藥</li>}
       </ul>
       <button type="button" disabled={busy} onClick={onNext}>
         {medications.length === 0 ? "我沒有用藥" : "下一步"}
