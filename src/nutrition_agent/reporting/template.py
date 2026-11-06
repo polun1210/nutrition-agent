@@ -29,6 +29,7 @@ from nutrition_agent.assessment import (
     Medication,
     IngredientLine,
     Product,
+    ProfileSnapshot,
     SourceKind,
     UlComparison,
 )
@@ -302,6 +303,14 @@ def _compound_name(ref: ReferenceData, code: str | None) -> str:
 
 def _num(value: float) -> str:
     return f"{round(value, 1):g}"
+
+
+def profile_labels(profile: ProfileSnapshot) -> dict:
+    """報告頁首用的中文標籤（性別、慢性病）；舊個案從快照的個人資料即時對照。"""
+    return {
+        "sex": SEX_LABELS[profile.sex],
+        "conditions": [CONDITION_LABELS[c] for c in profile.conditions if c != NO_CONDITION],
+    }
 
 
 def _profile_lines(case: AssessmentCase, names: _Names, ref: ReferenceData) -> list[str]:

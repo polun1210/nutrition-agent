@@ -51,3 +51,9 @@ def test_no_approved_rules_gives_no_cards_and_no_claim_of_no_interaction(ref):
     text = "\n".join(section.lines)
     assert "尚無已審定的交互作用規則" in text
     assert "沒有交互作用" not in text and "無交互作用" not in text
+
+
+def test_card_carries_advice_codes_for_the_frontend(fx_ref):
+    section = interaction_section(make_case(medications=(METFORMIN,)), fx_ref)
+
+    assert section.cards[0].advice_codes == ["inform_provider"]

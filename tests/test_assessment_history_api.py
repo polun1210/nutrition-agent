@@ -179,3 +179,21 @@ def test_expired_photos_do_not_affect_case_report_or_history(login_as, gateway, 
     assert case.json() == before  # 個案與報告內容不因照片過期而改變
     assert case.json()["products"][0]["photo_ids"] == [photo_id]
     assert [i["id"] for i in client.get(LIST).json()] == [case_id]
+
+
+def test_case_carries_profile_labels_for_the_report_header(login_as):
+    client = login_as(sex="female", conditions=["hypertension", "type2_diabetes"])
+    case_id = submit_case(client, [supplement()])
+
+    labels = client.get(f"/api/assessments/{case_id}").json()["profile_labels"]
+
+    assert labels == {"sex": "女性", "conditions": ["高血壓", "第二型糖尿病"]}
+
+
+def test_case_profile_labels_leave_out_the_no_condition_marker(login_as):
+    client = login_as(conditions=["none"])
+    case_id = submit_case(client, [supplement()])
+
+    labels = client.get(f"/api/assessments/{case_id}").json()["profile_labels"]
+
+    assert labels["conditions"] == []

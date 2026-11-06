@@ -192,6 +192,8 @@ export type HistoryItem = {
 export type AssessmentCase = {
   id: number;
   age: number;
+  /** 頁首用的中文標籤，後端從個案快照的個人資料對照；沒勾慢性病時 conditions 為空。 */
+  profile_labels?: { sex: string; conditions: string[] };
   assessed_on?: string;
   products: Product[];
   reference_versions?: Record<string, string>;

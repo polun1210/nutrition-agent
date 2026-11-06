@@ -30,7 +30,7 @@ from nutrition_agent.reference import IngredientCategory, ReferenceData, load_re
 from nutrition_agent.reference.drug_names import DrugNameTable, load_drug_names
 from nutrition_agent.gateway import ModelGateway
 from nutrition_agent.reporting.explanation import build_explanations
-from nutrition_agent.reporting.template import render_report
+from nutrition_agent.reporting.template import profile_labels, render_report
 
 router = APIRouter(prefix="/api/assessments")
 
@@ -396,6 +396,7 @@ def get_case(
     return {
         "id": row[0],
         **snapshot,  # profile、age、assessed_on、products
+        "profile_labels": profile_labels(ProfileSnapshot.model_validate(snapshot["profile"])),
         "assessment": row[2],
         "report": row[3],
         "reference_versions": row[4],
