@@ -211,7 +211,7 @@ def estimate(
 
 @router.get("")
 def list_cases(
-    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection)
+    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection, scope="function")
 ) -> list[dict]:
     """歷史列表：只含自己的個案，新的在前。每筆帶當時的參考資料版本。"""
     rows = conn.execute(
@@ -238,7 +238,7 @@ def list_cases(
 def create_draft(
     copy_from: Literal["latest"] | None = None,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
@@ -276,7 +276,7 @@ def create_draft(
 # 必須排在 /drafts/{draft_id} 之前，否則 "resumable" 會被當成草稿 id。
 @router.get("/drafts/resumable")
 def resumable_draft(
-    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection)
+    user: User = Depends(current_user), conn: psycopg.Connection = Depends(get_connection, scope="function")
 ) -> dict:
     """可接續的草稿：自己的、尚未送出、至少一項保健食品或用藥，取最近修改的那一份。"""
     row = conn.execute(
@@ -300,7 +300,7 @@ def resumable_draft(
 def get_draft(
     draft_id: int,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
@@ -312,7 +312,7 @@ def save_draft(
     draft_id: int,
     body: DraftBody,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
 ) -> dict:
@@ -336,7 +336,7 @@ def save_draft(
 def submit_draft(
     draft_id: int,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
     gateway: ModelGateway = Depends(get_gateway),
@@ -383,7 +383,7 @@ def submit_draft(
 def get_case(
     case_id: int,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
 ) -> dict:
     row = conn.execute(
         "SELECT id, snapshot, assessment, report, reference_versions, created_at "

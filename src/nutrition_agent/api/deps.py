@@ -25,7 +25,9 @@ TAIPEI = ZoneInfo("Asia/Taipei")
 
 def get_connection() -> Iterator[psycopg.Connection]:
     with psycopg.connect(get_settings().database_url) as conn:
-        yield conn  # 離開 with 時自動 commit
+        # 離開 with 時自動 commit。使用處必須寫 Depends(get_connection, scope="function")：
+        # 預設 scope 會在回應送出「之後」才收尾，用戶端可能在 commit 前就發出下一個請求而讀不到剛寫入的資料。
+        yield conn
 
 
 @lru_cache

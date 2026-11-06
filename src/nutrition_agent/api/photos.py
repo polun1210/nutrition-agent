@@ -54,7 +54,7 @@ def recognize_photos(
     files: list[UploadFile] = File(default_factory=list),
     photo_ids: list[int] = Form(default_factory=list),
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     gateway: ModelGateway = Depends(get_gateway),
     store: PhotoStore = Depends(get_photo_store),
     ref: ReferenceData = Depends(get_reference),
@@ -85,7 +85,7 @@ def recognize_photos(
 def get_photo(
     photo_id: int,
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     store: PhotoStore = Depends(get_photo_store),
 ) -> RedirectResponse:
     """確認是本人的照片後，302 導向短效 presigned URL，讓瀏覽器直接向物件儲存取圖。"""

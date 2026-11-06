@@ -43,7 +43,7 @@ def recognize_medication_photos(
     draft_id: int,
     files: list[UploadFile] = File(default_factory=list),
     user: User = Depends(current_user),
-    conn: psycopg.Connection = Depends(get_connection),
+    conn: psycopg.Connection = Depends(get_connection, scope="function"),
     gateway: ModelGateway = Depends(get_gateway),
     ref: ReferenceData = Depends(get_reference),
     table: DrugNameTable = Depends(get_drug_names),
