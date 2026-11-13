@@ -1,5 +1,6 @@
 import { Fragment, useEffect, type ReactNode } from "react";
 import { useFootnoteState, type FootnoteState } from "./Explanations";
+import ReportChat from "./ReportChat";
 import { DrugCard, GroupCards, LegacyCard, Lines, SummaryCard, UlCards } from "./ReportParts";
 import type { AssessmentCase, ReportSection } from "./types";
 
@@ -157,6 +158,7 @@ export default function ReportView({
         ),
       )}
       <References report={report} />
+      <ReportChat caseId={report.id} />
       <div className="report-bar no-print">
         <div className="report-bar-inner">
           <button type="button" onClick={() => window.print()}>
