@@ -35,4 +35,4 @@ endpoint 分成兩個設定：
 - 刪除與標記要成對：程式先刪物件再標記列，刪除失敗就不標記、下次重跑；已標記的列跳過、物件已不存在也算成功，所以可以安全重複執行。lifecycle 刪除是儲存端在背景自己做，程式沒有可靠的時機去標記資料庫。
 - 可攜與可測：lifecycle 在 SeaweedFS、AWS S3、R2 之間支援程度不一（SeaweedFS 這部分沒實測過），換儲存就得重設、重驗；程式清理只用基本的 delete_object，在 `tests/` 可以用真的測試 DB＋moto 驗證，並支援 `--dry-run` 先看會刪多少。
 
-代價是要另外排程（README 有 cron 與 Windows 工作排程器範例）；忘了排程，照片就不會過期。
+代價是要另外排程（`docs/photo-operations.md` 有 cron 與 Windows 工作排程器範例）；忘了排程，照片就不會過期。
