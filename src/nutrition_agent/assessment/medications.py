@@ -3,20 +3,28 @@
 兩個入口：`search_drugs`（使用者輸入時的候選）與 `resolve_medication`（照片讀到的藥名、送出時以原文重新對照）。
 TFDA 品名帶劑量與劑型（「Crestor 5mg Film-Coated Tablets」），照片與自由輸入通常只有商品名或學名，
 所以 `resolve_medication` 逐字比對不到時改用部分比對，候選的成分都相同才帶入；不同就無法確認，交給使用者從搜尋選。
+處方箋多半直接寫學名（「VALSARTAN80」），學名用成分對照表對照（#59）。
+TFDA 有一批品名就是學名、沒有處方成分資料的許可證，匯出後成分兩欄都空白：這種條目是「成分不明」，
+不能據此判成範圍外，對照時略過。
 對照只看藥名表，不看使用者的個人資料（慢性病不會過濾藥名）。
 """
 
 from __future__ import annotations
 
 import re
+from functools import cache
 
 from nutrition_agent.assessment.models import Frozen, Medication, MedicationIngredient, ScopeStatus
 from nutrition_agent.reference.drug_names import DrugNameEntry, DrugNameTable, normalize_name
 from nutrition_agent.reference.drugs import DrugCatalog
+from nutrition_agent.reference.tfda_export import load_aliases
 
 MAX_CANDIDATES = 20
 # TFDA 品名用引號標廠商簡稱（例如 "C.M."），拆開對照時不算藥名
 QUOTED = re.compile(r'"[^"]*"|“[^”]*”|「[^」]*」')
+# 處方箋常把劑量接在學名後面（「VALSARTAN80」「Amlodipine 5mg」）
+TRAILING_STRENGTH = re.compile(r"\s*\d+(?:\.\d+)?\s*(?:mg|毫克)?\s*$", re.IGNORECASE)
+_aliases = cache(load_aliases)
 MIN_PARTIAL_LENGTH = 2  # 正規化後少於兩個字不做部分比對，避免單一字母或單字誤配
 MAX_BRAND_NAMES = 6
 
@@ -49,8 +57,15 @@ def _ingredients(entry: DrugNameEntry, catalog: DrugCatalog) -> list[MedicationI
     return found
 
 
+def _is_known(entry: DrugNameEntry) -> bool:
+    """成分兩欄都空白的條目成分不明（沒有處方成分資料的許可證）。"""
+    return bool(entry.ingredients or entry.out_of_scope)
+
+
 def _scope_status(entry: DrugNameEntry) -> ScopeStatus:
-    return "in_scope" if entry.ingredients else "out_of_scope"
+    if entry.ingredients:
+        return "in_scope"
+    return "out_of_scope" if entry.out_of_scope else "unconfirmed"
 
 
 def _name_zh(entry: DrugNameEntry, ingredients: list[MedicationIngredient]) -> str | None:
@@ -77,14 +92,37 @@ def _same_ingredients(entries: list[DrugNameEntry]) -> list[DrugNameEntry] | Non
     return entries
 
 
-def _match(name: str, table: DrugNameTable) -> list[DrugNameEntry] | None:
+def _known_lookup(name: str, table: DrugNameTable) -> DrugNameEntry | None:
     entry = table.lookup(name)
+    return entry if entry is not None and _is_known(entry) else None
+
+
+def _match(name: str, table: DrugNameTable) -> list[DrugNameEntry] | None:
+    entry = _known_lookup(name, table)
     if entry is not None:
         return [entry]
     if len(normalize_name(name)) < MIN_PARTIAL_LENGTH:
         return None
     # 開頭符合的優先：「脈優」不該被「脂脈優」「舒脈優」這類複方拖成無法確認（#20）
-    return _same_ingredients(table.starting_with(name) or table.containing(name))
+    starting = [e for e in table.starting_with(name) if _is_known(e)]
+    return _same_ingredients(starting or [e for e in table.containing(name) if _is_known(e)])
+
+
+def _generic_keys(raw_name: str) -> list[str]:
+    return [normalize_name(raw_name), normalize_name(TRAILING_STRENGTH.sub("", raw_name))]
+
+
+def _generic_medication(raw_name: str, table: DrugNameTable, catalog: DrugCatalog) -> Medication | None:
+    """把藥名當學名：對到成分對照表是範圍內；是藥名表登記的範圍外成分就是範圍外。"""
+    keys = _generic_keys(raw_name)
+    code = next((c for k in keys if (c := _aliases().get(k))), None)
+    if code is not None:
+        return _medication(raw_name, DrugNameEntry(name=raw_name, lang="en", ingredients=(code,)), catalog)
+    outside = next((k for k in keys if any(k in e.out_of_scope for e in table.entries)), None)
+    if outside is not None:
+        entry = DrugNameEntry(name=raw_name, lang="en", ingredients=(), out_of_scope=(outside,))
+        return _medication(raw_name, entry, catalog)
+    return None
 
 
 def _match_parts(raw_name: str, table: DrugNameTable) -> list[DrugNameEntry] | None:
@@ -110,10 +148,13 @@ def _partial_medication(raw_name: str, entries: list[DrugNameEntry], catalog: Dr
 
 
 def resolve_medication(raw_name: str, table: DrugNameTable, catalog: DrugCatalog) -> Medication:
-    """以原文對照藥名表：逐字相符 → 部分比對 → 拆開各自對照；都對不到就是「無法確認」。"""
-    entry = table.lookup(raw_name)
+    """以原文對照藥名表：逐字相符 → 當學名對照 → 部分比對 → 拆開各自對照；都對不到就是「無法確認」。"""
+    entry = _known_lookup(raw_name, table)
     if entry is not None:
         return _medication(raw_name, entry, catalog)
+    generic = _generic_medication(raw_name, table, catalog)
+    if generic is not None:
+        return generic
     entries = _match(raw_name, table) or _match_parts(raw_name, table)
     if entries is not None:
         return _partial_medication(raw_name, entries, catalog)
@@ -146,7 +187,8 @@ def search_drugs(
     ranked.sort(key=lambda pair: (pair[0], normalize_name(pair[1].name)))
     candidates = []
     for _, entry in ranked[:limit]:
-        medication = _medication(entry.name, entry, catalog)
+        generic = None if _is_known(entry) else _generic_medication(entry.name, table, catalog)
+        medication = generic or _medication(entry.name, entry, catalog)
         siblings = [
             e.name
             for e in table.entries
