@@ -307,6 +307,14 @@ def _num(value: float) -> str:
     return f"{round(value, 1):g}"
 
 
+# 目錄單位代碼 → 報告顯示名稱；其餘代碼（mg、g、IU、kcal）原樣顯示
+_UNIT_LABELS = {"ug": "µg", "mg_alpha_te": "mg α-TE", "mg_ne": "mg NE", "ug_dfe": "µg DFE"}
+
+
+def _unit(code: str) -> str:
+    return _UNIT_LABELS.get(code, code)
+
+
 def profile_labels(profile: ProfileSnapshot) -> dict:
     """報告頁首用的中文標籤（性別、慢性病）；舊個案從快照的個人資料即時對照。"""
     return {
@@ -347,7 +355,7 @@ def _medication_line(m: Medication) -> str:
 
 
 def _ingredient_text(item: IngredientLine, names: _Names, ref: ReferenceData) -> str:
-    amount = f"{_num(item.amount)} {item.unit}"
+    amount = f"{_num(item.amount)} {_unit(item.unit)}"
     if item.basis is Basis.LABELED:
         return f"{names(item.ingredient_code)} {amount}"
     compound = _compound_name(ref, item.compound_code) if item.compound_code else "化合物未確定"
@@ -389,15 +397,15 @@ def _ul_lines(assessment: Assessment, notes: list[str], names: _Names) -> list[s
 def _ul_row(c: UlComparison, names: _Names, case: AssessmentCase) -> UlRow:
     notes = []
     if c.non_daily:
-        notes.append(f"非每天服用：數值是服用當日的量，平均每日 {_num(c.average_intake)} {c.unit}")
+        notes.append(f"非每天服用：數值是服用當日的量，平均每日 {_num(c.average_intake)} {_unit(c.unit)}")
     if c.ul is not None:
         notes.append(UL_SCOPE_TEXT[c.ul_scope] + UL_EXTRA_NOTE.get(c.nutrient_code, ""))
     if c.estimated:
         notes.append(ESTIMATE_NOTE)
     return UlRow(
         nutrient=names(c.nutrient_code),
-        intake=f"{_num(c.intake)} {c.unit}",
-        ul=f"{_num(c.ul)} {c.unit}" if c.ul is not None else "無已知上限攝取量",
+        intake=f"{_num(c.intake)} {_unit(c.unit)}",
+        ul=f"{_num(c.ul)} {_unit(c.unit)}" if c.ul is not None else "無已知上限攝取量",
         percent=f"{_num(c.ul_percent)}%" if c.ul_percent is not None else None,
         percent_value=c.ul_percent,
         exceeded=c.exceeded,
@@ -410,11 +418,11 @@ def _comparison_line(c: UlComparison, names: _Names) -> str:
     # 上限比對一律用服用當日的峰值；非每日服用時，措辭明講是「服用當日」，平均只當參考。
     if c.non_daily:
         head = (
-            f"{names(c.nutrient_code)}：服用當日來自補充劑的攝取量 {_num(c.intake)} {c.unit}"
-            f"（平均每日 {_num(c.average_intake)} {c.unit}）"
+            f"{names(c.nutrient_code)}：服用當日來自補充劑的攝取量 {_num(c.intake)} {_unit(c.unit)}"
+            f"（平均每日 {_num(c.average_intake)} {_unit(c.unit)}）"
         )
     else:
-        head = f"{names(c.nutrient_code)}：來自補充劑的每日攝取量 {_num(c.intake)} {c.unit}"
+        head = f"{names(c.nutrient_code)}：來自補充劑的每日攝取量 {_num(c.intake)} {_unit(c.unit)}"
     if c.ul is None:
         note = f"（{ESTIMATE_NOTE}）" if c.estimated else ""
         return f"{head}；無已知上限攝取量{note}"
@@ -424,9 +432,9 @@ def _comparison_line(c: UlComparison, names: _Names) -> str:
     if c.non_daily:
         return (
             f"{head}；你服用當日來自補充劑的攝取量已達上限的 "
-            f"{_num(c.ul_percent)}%{flag}（上限 {_num(c.ul)} {c.unit}；{scope}）{note}"
+            f"{_num(c.ul_percent)}%{flag}（上限 {_num(c.ul)} {_unit(c.unit)}；{scope}）{note}"
         )
-    return f"{head}；佔上限 {_num(c.ul)} {c.unit} 的 {_num(c.ul_percent)}%{flag}（{scope}）{note}"
+    return f"{head}；佔上限 {_num(c.ul)} {_unit(c.unit)} 的 {_num(c.ul_percent)}%{flag}（{scope}）{note}"
 
 
 def _interaction_lines(
@@ -497,15 +505,15 @@ def _card_values(f: InteractionFinding) -> list[CardValue]:
     if f.unit is None:
         return []
     intake = (
-        f"{_num(f.supplement_intake)} {f.unit}" if f.supplement_intake is not None else "無法判定"
+        f"{_num(f.supplement_intake)} {_unit(f.unit)}" if f.supplement_intake is not None else "無法判定"
     )
     total = (
-        f"{_num(f.recommended_total.value)} {f.recommended_total.unit}"
+        f"{_num(f.recommended_total.value)} {_unit(f.recommended_total.unit)}"
         f"（{f.recommended_total.kind}）"
         if f.recommended_total
         else "無"
     )
-    ul = f"{_num(f.ul)} {f.unit}" if f.ul is not None else "無已知上限攝取量"
+    ul = f"{_num(f.ul)} {_unit(f.unit)}" if f.ul is not None else "無已知上限攝取量"
     return [
         CardValue(label="來自補充劑", text=intake),
         CardValue(label="建議總攝取量（含飲食）", text=total),

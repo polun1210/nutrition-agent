@@ -10,6 +10,10 @@ import type { AssessmentCase, ReportSection } from "./types";
 const ORDER = ["summary", "interaction", "ul_comparison", "not_evaluated", "profile", "scope"];
 const COLLAPSED = new Set(["profile", "scope"]);
 
+/** 未評估成分平常收合（使用者想看再展開）；有「無法確認的成分」警示時照常展開，不把提醒藏起來。 */
+const isCollapsed = (s: ReportSection) =>
+  COLLAPSED.has(s.key) || (s.key === "not_evaluated" && !(s.groups ?? []).some((g) => g.tone === "warning"));
+
 /** 各段落標題下的操作提示；純說明怎麼看，不改判定文字。 */
 const HINTS: Record<string, string> = {
   interaction: "點開每一項，看原因、數字和資料出處。",
@@ -123,7 +127,7 @@ export default function ReportView({
     .filter((s) => s.key !== "not_evaluated" || s.lines.length > 0)
     .sort((a, b) => rank(a) - rank(b));
 
-  const firstCollapsed = sections.find((s) => COLLAPSED.has(s.key))?.key;
+  const firstCollapsed = sections.find(isCollapsed)?.key;
   const summary = sections.find((s) => s.key === "summary");
   const labels = report.profile_labels;
   const who = labels ? [`${report.age} 歲`, labels.sex, labels.conditions.join("、")].filter(Boolean).join("・") : "";
@@ -137,7 +141,7 @@ export default function ReportView({
         {summary && <SummaryCard title={summary.title} groups={summary.groups ?? []} />}
       </header>
       {sections.map((s) =>
-        s.key === "summary" ? null : COLLAPSED.has(s.key) ? (
+        s.key === "summary" ? null : isCollapsed(s) ? (
           <Fragment key={s.key}>
             {s.key === firstCollapsed && <p className="hint more-hint">下面的資料預設收合，點標題展開。</p>}
             <Collapsible id={s.key} title={s.title}>

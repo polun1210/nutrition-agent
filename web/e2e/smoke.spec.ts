@@ -257,8 +257,10 @@ test("用一張照片新增保健食品：辨識 → 整瓶確認一次 → 送�
   // 每份（3 錠）含鈣 360 mg，每次 1 錠 = 120 mg
   await expect(page.getByTestId("ul-card").filter({ hasText: "鈣" })).toContainText("4.8%");
   await expect(thumb).toHaveText("照片已超過保存期限");
-  // 校對頁隱藏的範圍外成分仍保存，報告照實揭露
+  // 校對頁隱藏的範圍外成分仍保存，報告照實揭露。
+  // 這份有無法確認的成分（豬軟骨素硫酸鈉）警示，所以未評估段落照常展開，不必點開
   await expect(page.getByText(/維生素 ?B1」：不在本系統評估範圍/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "無法確認的成分" })).toBeVisible();
 });
 
 // 後端以假回應：規則用夾具的審定規則（metformin × 維生素 B12），解釋引用一筆種進資料庫的證據段落。

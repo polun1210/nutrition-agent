@@ -2,7 +2,7 @@
 
 import pytest
 
-from nutrition_agent.assessment.medications import resolve_medication
+from nutrition_agent.assessment.medications import resolve_medication, search_drugs
 from nutrition_agent.reference import load_reference_data
 from nutrition_agent.reference.drug_names import DrugNameEntry, DrugNameTable
 
@@ -27,6 +27,11 @@ ENTRIES = [
     ("B Complex Tablets", "en", (), ("thiamine",)),
     ('SWELLIN TABLET "C.M."', "en", ("aluminum_hydroxide",), ()),
     ('"C.M." VIT. ANTI-COLD CAPSULES', "en", ("acetaminophen",), ()),
+    # 品名就是學名、沒有處方成分資料的許可證（推測是原料藥），匯出後成分兩欄都空白（#59）
+    ("Valsartan", "en", (), ()),
+    ("Amlodipine Besilate", "en", (), ()),
+    ("Pitavastatin calcium", "en", (), ()),
+    ("Livalo Tablets 2mg", "en", (), ("pitavastatin calcium",)),
 ]
 
 
@@ -134,3 +139,48 @@ def test_查不到就是無法確認(table, catalog):
 def test_商標符號不影響對照(table, catalog, name):
     # 模型常照包裝把 ® 一起抄進來（實拍藥包 m32「Pantyl®」）
     assert codes(resolve_medication(name, table, catalog)) == ["rosuvastatin"]
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("VALSARTAN", ["valsartan"]),
+        ("Valsartan 80", ["valsartan"]),
+        ("VALSARTAN80", ["valsartan"]),
+        ("Amlodipine", ["amlodipine"]),
+        ("Amlodipine5", ["amlodipine"]),
+        ("AMLODIPINE BESILATE", ["amlodipine"]),
+    ],
+)
+def test_處方箋寫學名時以成分對照表對到有效成分(table, catalog, name, expected):
+    # 處方箋多半直接寫學名；藥名表裡同名的條目沒有成分資料，不能據此判成範圍外（#59）
+    medication = resolve_medication(name, table, catalog)
+
+    assert medication.scope_status == "in_scope"
+    assert codes(medication) == expected
+    assert medication.raw_name == name
+
+
+def test_學名對到時中文名用目錄的成分中文名(table, catalog):
+    assert resolve_medication("VALSARTAN", table, catalog).name_zh == "纈沙坦"
+
+
+def test_成分不明的條目不判成範圍外(table, catalog):
+    # 「Pitavastatin calcium」條目成分不明；略過它之後，部分比對到的品名都是範圍外
+    medication = resolve_medication("PITAVASTATIN CALCIUM", table, catalog)
+
+    assert medication.scope_status == "out_of_scope"
+    assert medication.out_of_scope_names == ["pitavastatin calcium"]
+
+
+def test_只對到成分不明的條目就是無法確認(catalog):
+    table = DrugNameTable(version="test", entries=[DrugNameEntry(name="Foozatan", lang="en", ingredients=())])
+
+    assert resolve_medication("Foozatan", table, catalog).scope_status == "unconfirmed"
+
+
+def test_搜尋候選裡成分不明的學名條目以成分對照表對照(table, catalog):
+    found = {c.name: c for c in search_drugs("Valsartan", table, catalog)}
+
+    assert found["Valsartan"].scope_status == "in_scope"
+    assert [i.code for i in found["Valsartan"].ingredients] == ["valsartan"]
