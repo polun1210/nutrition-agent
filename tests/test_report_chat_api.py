@@ -5,6 +5,7 @@ from langchain_core.messages import AIMessage, ToolMessage
 
 from nutrition_agent.api.assessments import get_reference
 from tests.assessment.conftest import fx_ref, ref  # noqa: F401
+from nutrition_agent.report_chat.agent import answer_question
 from tests.fakes import FakeChatModel, tool_call
 from tests.reporting.test_explanation import seed_evidence
 from tests.test_assessments_api import submit, supplement
@@ -177,3 +178,24 @@ def test_findings_list_the_codes_the_model_may_search(login_as, chat_model):
 
     (findings,) = tool_results(chat_model)
     assert '"vitamin_b12"' in findings and '"metformin"' in findings
+
+
+def test_answer_reports_tool_calls_in_order(login_as, db, chat_model):
+    client = login_as()
+    case_id = submit_with_metformin(client)
+    report, assessment = db.execute(
+        "SELECT report, assessment FROM assessment_cases WHERE id = %s", (case_id,)
+    ).fetchone()
+    chat_model.script = [
+        tool_call("get_findings", "call-1"),
+        search("call-2", drug_ingredient_codes=["metformin"]),
+        AIMessage(content="好"),
+    ]
+
+    result = answer_question(chat_model, report, assessment, "問", [], lambda code, drugs: [])
+
+    assert result.answer == "好"
+    assert [(c.name, c.args) for c in result.tool_calls] == [
+        ("get_findings", {}),
+        ("search_evidence", {"ingredient_code": "vitamin_b12", "drug_ingredient_codes": ["metformin"]}),
+    ]

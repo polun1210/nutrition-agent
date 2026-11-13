@@ -9,7 +9,7 @@ from typing import Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
 from nutrition_agent.report_chat.findings import build_findings
 from nutrition_agent.reporting.explanation import SOURCE_LABELS
@@ -50,15 +50,23 @@ class Source:
     text: str
 
 
-def answer_question(
-    model: BaseChatModel,
-    report: dict,
-    assessment: dict,
-    question: str,
-    history: list[ChatTurn],
-    retrieve: Retriever,
-) -> tuple[str, list[Source]]:
-    sources: dict[str, Source] = {}  # 以證據 ID 去重，保留第一次出現的順序
+@dataclass(frozen=True)
+class ToolCall:
+    name: str
+    args: dict
+
+
+@dataclass(frozen=True)
+class ChatAnswer:
+    answer: str
+    sources: list[Source]
+    tool_calls: list[ToolCall]  # 模型依序呼叫的工具（eval 用來看模型怎麼取證）
+
+
+def _make_tools(
+    report: dict, assessment: dict, retrieve: Retriever, sources: dict[str, Source]
+) -> list:
+    """建立綁定這份個案的兩個工具；search_evidence 檢索到的段落會累積進 sources。"""
 
     @tool
     def get_findings() -> str:
@@ -69,21 +77,47 @@ def answer_question(
     def search_evidence(ingredient_code: str, drug_ingredient_codes: list[str] | None = None) -> str:
         """檢索系統語料的證據段落。ingredient_code 是一個成分代碼；drug_ingredient_codes 是選填的藥物有效成分代碼。可用的代碼見 get_findings 的 searchable_evidence。"""
         evidence = retrieve(ingredient_code, drug_ingredient_codes or [])
-        for e in evidence:
-            sources.setdefault(e.id, _source(e))
         if not evidence:
             return "沒有找到相關的證據段落。"
+        found = [(e, _source(e)) for e in evidence]
+        for e, source in found:
+            sources.setdefault(e.id, source)
         return "\n\n".join(
-            f"[{_source(e).source_label}｜{e.document_name}｜{e.section}]\n{e.text}"
-            for e in evidence
+            f"[{src.source_label}｜{e.document_name}｜{e.section}]\n{e.text}" for e, src in found
         )
 
-    agent = create_react_agent(model, [get_findings, search_evidence], prompt=SYSTEM_PROMPT)
+    return [get_findings, search_evidence]
+
+
+def answer_question(
+    model: BaseChatModel,
+    report: dict,
+    assessment: dict,
+    question: str,
+    history: list[ChatTurn],
+    retrieve: Retriever,
+) -> ChatAnswer:
+    sources: dict[str, Source] = {}  # 以證據 ID 去重，保留第一次出現的順序
+    tools = _make_tools(report, assessment, retrieve, sources)
+
+    agent = create_agent(model, tools, system_prompt=SYSTEM_PROMPT)
     messages = [
         (turn.role, turn.content) for turn in history[-MAX_HISTORY_MESSAGES:]
     ] + [("user", question)]
     result = agent.invoke({"messages": messages})
-    return _text(result["messages"][-1].content), list(sources.values())
+    return ChatAnswer(
+        answer=_text(result["messages"][-1].content),
+        sources=list(sources.values()),
+        tool_calls=_tool_calls(result["messages"]),
+    )
+
+
+def _tool_calls(messages: list) -> list[ToolCall]:
+    return [
+        ToolCall(c["name"], c["args"])
+        for m in messages
+        for c in getattr(m, "tool_calls", None) or []
+    ]
 
 
 def _source(e: Evidence) -> Source:

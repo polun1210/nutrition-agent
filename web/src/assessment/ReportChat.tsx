@@ -5,6 +5,7 @@ type Source = { source_label: string; document_name: string; section: string; te
 type Message = { role: "user" | "assistant"; content: string; sources?: Source[] };
 
 const MAX_QUESTION_CHARS = 500;
+const COUNTER_WARN_AT = 450;
 const FALLBACK_ERROR = "問答暫時無法使用，請稍後再試。";
 
 function SourceList({ sources }: { sources: Source[] }) {
@@ -48,20 +49,20 @@ export default function ReportChat({ caseId }: { caseId: number }) {
   async function send(e: FormEvent) {
     e.preventDefault();
     if (!canSend) return;
+    const history = messages.map(({ role, content }) => ({ role, content }));
+    setMessages([...messages, { role: "user", content: question }]);
+    setDraft("");
     setPending(true);
     setError(null);
     try {
       const res = await request<{ answer: string; sources: Source[] }>("POST", `/api/assessments/${caseId}/chat`, {
         question,
-        history: messages.map(({ role, content }) => ({ role, content })),
+        history,
       });
-      setMessages([
-        ...messages,
-        { role: "user", content: question },
-        { role: "assistant", content: res.answer, sources: res.sources },
-      ]);
-      setDraft("");
+      setMessages((prev) => [...prev, { role: "assistant", content: res.answer, sources: res.sources }]);
     } catch (err) {
+      setMessages((prev) => prev.slice(0, -1)); // 失敗：移除這則提問，輸入內容還給使用者
+      setDraft(question);
       setError(err instanceof Error && err.message ? err.message : FALLBACK_ERROR);
     } finally {
       setPending(false);
@@ -107,6 +108,13 @@ export default function ReportChat({ caseId }: { caseId: number }) {
               placeholder="輸入你的問題"
               aria-label="問題"
             />
+            <span
+              className={`chat-counter${draft.length >= COUNTER_WARN_AT ? " near-limit" : ""}`}
+              role={draft.length >= MAX_QUESTION_CHARS ? "status" : undefined}
+            >
+              {draft.length}/{MAX_QUESTION_CHARS}
+              {draft.length >= MAX_QUESTION_CHARS && "（已達上限）"}
+            </span>
             <button type="submit" disabled={!canSend}>
               {pending ? "思考中…" : "送出"}
             </button>

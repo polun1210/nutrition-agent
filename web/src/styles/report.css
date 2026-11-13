@@ -596,6 +596,18 @@
   border-radius: var(--radius-md);
 }
 
+.chat-counter {
+  align-self: center;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.chat-counter.near-limit {
+  color: var(--color-over);
+  font-weight: 600;
+}
+
 .chat-form button {
   width: auto;
   margin: 0;
