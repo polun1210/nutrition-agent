@@ -9,7 +9,7 @@ from typing import Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
 from nutrition_agent.report_chat.findings import build_findings
 from nutrition_agent.reporting.explanation import SOURCE_LABELS
@@ -78,7 +78,7 @@ def answer_question(
             for e in evidence
         )
 
-    agent = create_react_agent(model, [get_findings, search_evidence], prompt=SYSTEM_PROMPT)
+    agent = create_agent(model, [get_findings, search_evidence], system_prompt=SYSTEM_PROMPT)
     messages = [
         (turn.role, turn.content) for turn in history[-MAX_HISTORY_MESSAGES:]
     ] + [("user", question)]

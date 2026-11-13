@@ -85,14 +85,14 @@ def _ask(model, report, assessment, q, history, retrieve):
     from nutrition_agent.report_chat import agent as report_agent
 
     captured: dict = {}
-    real_create = report_agent.create_react_agent
-    report_agent.create_react_agent = lambda *a, **k: _RecordingAgent(real_create(*a, **k), captured)
+    real_create = report_agent.create_agent
+    report_agent.create_agent = lambda *a, **k: _RecordingAgent(real_create(*a, **k), captured)
     try:
         answer, sources = report_agent.answer_question(
             model, report, assessment, q["question"], history, retrieve
         )
     finally:
-        report_agent.create_react_agent = real_create
+        report_agent.create_agent = real_create
     return answer, sources, _tool_calls(captured.get("messages", []))
 
 
