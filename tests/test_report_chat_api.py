@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage, ToolMessage
 from nutrition_agent.api.assessments import get_reference
 from tests.assessment.conftest import fx_ref, ref  # noqa: F401
 from tests.fakes import FakeChatModel, tool_call
+from tests.reporting.test_explanation import seed_evidence
 from tests.test_assessments_api import submit, supplement
 from tests.test_explanation_api import submit_with_metformin
 
@@ -119,3 +120,60 @@ def test_model_failure_returns_502_with_friendly_message(login_as, chat_model):
 
     assert response.status_code == 502
     assert response.json()["detail"] == "問答服務暫時無法使用，請稍後再試"
+
+
+def search(call_id="call-1", **args):
+    return tool_call("search_evidence", call_id, ingredient_code="vitamin_b12", **args)
+
+
+def test_search_evidence_feeds_chunk_text_to_model_and_lists_sources(login_as, db, chat_model):
+    seed_evidence(db)
+    client = login_as()
+    case_id = submit_with_metformin(client)
+    chat_model.script = [
+        search(drug_ingredient_codes=["metformin"]),
+        AIMessage(content="依 NIH ODS，Metformin 會降低吸收。"),
+    ]
+
+    response = ask(client, case_id)
+
+    assert response.status_code == 200, response.text
+    (result,) = tool_results(chat_model)
+    assert "Metformin might reduce the absorption of vitamin B12." in result
+    assert response.json()["sources"] == [
+        {
+            "source_label": "NIH ODS",
+            "document_name": "VitaminB12-HealthProfessional.md",
+            "section": "Interactions with Medications",
+            "text": "Metformin might reduce the absorption of vitamin B12.",
+        }
+    ]
+
+
+def test_same_chunk_retrieved_twice_appears_once_in_sources(login_as, db, chat_model):
+    seed_evidence(db)
+    client = login_as()
+    case_id = submit_with_metformin(client)
+    chat_model.script = [search("call-1"), search("call-2"), AIMessage(content="好")]
+
+    assert len(ask(client, case_id).json()["sources"]) == 1
+
+
+def test_sources_are_empty_when_search_was_not_called(login_as, db, chat_model):
+    seed_evidence(db)
+    client = login_as()
+    case_id = submit_with_metformin(client)
+    chat_model.script = [tool_call("get_findings"), AIMessage(content="好")]
+
+    assert ask(client, case_id).json()["sources"] == []
+
+
+def test_findings_list_the_codes_the_model_may_search(login_as, chat_model):
+    client = login_as()
+    case_id = submit_with_metformin(client)
+    chat_model.script = [tool_call("get_findings"), AIMessage(content="好")]
+
+    ask(client, case_id)
+
+    (findings,) = tool_results(chat_model)
+    assert '"vitamin_b12"' in findings and '"metformin"' in findings
