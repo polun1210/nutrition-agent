@@ -53,3 +53,21 @@ def test_ul_row_without_known_ul_has_no_numeric_percent(ref):
     row = next(r for r in rows if r.percent is None)
 
     assert row.percent_value is None
+
+
+def ul_row(ref, *lines):
+    case = make_case(product("綜合", list(lines)))
+    report = render_report(case, assess(case, ref), ref)
+    section = next(s for s in report.sections if s.key == "ul_comparison")
+    return section, report
+
+
+def test_報告的單位用顯示名稱不露出內部代碼(ref):
+    section, report = ul_row(ref, line("vitamin_e", 33.5, "mg_alpha_te"), line("selenium", 55, "ug"))
+    rows = {r.intake: r for r in section.table}
+
+    assert "33.5 mg α-TE" in rows
+    assert rows["33.5 mg α-TE"].ul == "1000 mg α-TE"
+    assert "55 µg" in rows
+    texts = [t for s in report.sections for t in s.lines] + [r.intake for r in section.table]
+    assert not any("mg_alpha_te" in t or " ug" in t for t in texts)

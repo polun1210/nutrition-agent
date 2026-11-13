@@ -22,7 +22,7 @@ def test_each_finding_is_one_card_with_the_five_parts(fx_ref):
     assert "這個藥可能影響體內這項維生素的狀態。" in card.reasons
     assert card.advice == ["告知你的醫師或藥師"]
     assert [v.label for v in card.values] == ["來自補充劑", "建議總攝取量（含飲食）", "上限"]
-    assert card.values[0].text == "0 ug"
+    assert card.values[0].text == "0 µg"
     assert card.values[2].text == "無已知上限攝取量"
 
 
