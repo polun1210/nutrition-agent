@@ -1,6 +1,7 @@
 """報告問答 API：對自己的評估個案發問；對話不保存。"""
 
 import logging
+from dataclasses import asdict
 from typing import Annotated, Literal
 
 import psycopg
@@ -8,7 +9,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel, StringConstraints
 
-from nutrition_agent.api.deps import User, current_user, get_chat_model, get_connection
+from nutrition_agent.api.assessments import get_reference
+from nutrition_agent.api.deps import (
+    User,
+    current_user,
+    get_chat_model,
+    get_connection,
+    get_gateway,
+)
+from nutrition_agent.gateway import ModelGateway
+from nutrition_agent.reference import ReferenceData
+from nutrition_agent.retrieval.search import retrieve_evidence
 from nutrition_agent.report_chat.agent import ChatTurn, answer_question
 
 router = APIRouter(prefix="/api/assessments")
@@ -38,17 +49,25 @@ def chat(
     user: User = Depends(current_user),
     conn: psycopg.Connection = Depends(get_connection, scope="function"),
     model: BaseChatModel = Depends(get_chat_model),
+    gateway: ModelGateway = Depends(get_gateway),
+    ref: ReferenceData = Depends(get_reference),
 ) -> dict:
     row = conn.execute(
-        "SELECT report FROM assessment_cases WHERE id = %s AND user_id = %s",
+        "SELECT report, assessment FROM assessment_cases WHERE id = %s AND user_id = %s",
         (case_id, user.id),
     ).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="找不到這份評估")
     history = [ChatTurn(m.role, m.content) for m in body.history]
+
+    def retrieve(ingredient_code, drug_codes):
+        return retrieve_evidence(conn, gateway, ref, ingredient_code, drug_codes)
+
     try:
-        answer = answer_question(model, row[0], body.question, history)
+        answer, sources = answer_question(
+            model, row[0], row[1], body.question, history, retrieve
+        )
     except Exception:
         logger.exception("報告問答的模型呼叫失敗（個案 %s）", case_id)
         raise HTTPException(status_code=502, detail=MODEL_UNAVAILABLE) from None
-    return {"answer": answer, "sources": []}
+    return {"answer": answer, "sources": [asdict(s) for s in sources]}
