@@ -16,10 +16,11 @@ from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
 from nutrition_agent.api.assessments import get_drug_names
+from nutrition_agent.api.deps import get_chat_model
 from nutrition_agent.config import Settings, to_sqlalchemy_url
 from nutrition_agent.photos import PhotoStore, make_s3_client
 from nutrition_agent.reference.drug_names import load_sample_drug_names
-from tests.fakes import FakeGateway
+from tests.fakes import FakeChatModel, FakeGateway
 
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -96,6 +97,11 @@ def gateway() -> FakeGateway:
 
 
 @pytest.fixture
+def chat_model() -> FakeChatModel:
+    return FakeChatModel()
+
+
+@pytest.fixture
 def s3(monkeypatch: pytest.MonkeyPatch) -> Iterator[BaseClient]:
     """moto 模擬的 S3：照真實組態走自訂 internal endpoint，不連外。"""
     monkeypatch.setenv("MOTO_S3_CUSTOM_ENDPOINTS", TEST_S3_ENDPOINT)
@@ -130,11 +136,17 @@ def fail_storage(s3: BaseClient, operation: str, after: int = 0) -> None:
 
 
 @pytest.fixture
-def app(db: psycopg.Connection, gateway: FakeGateway, photo_store: PhotoStore) -> FastAPI:
+def app(
+    db: psycopg.Connection,
+    gateway: FakeGateway,
+    photo_store: PhotoStore,
+    chat_model: FakeChatModel,
+) -> FastAPI:
     app = create_app(connection_provider=lambda: db, gateway=gateway, photo_store=photo_store)
     # 藥名用 repo 內的夾具，測試結果不受完整匯出檔（drug_names.csv）影響。
     sample = load_sample_drug_names()
     app.dependency_overrides[get_drug_names] = lambda: sample
+    app.dependency_overrides[get_chat_model] = lambda: chat_model
     return app
 
 
