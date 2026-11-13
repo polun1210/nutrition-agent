@@ -7,7 +7,14 @@ import psycopg
 from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
-from nutrition_agent.api import assessments, auth, health, medication_photos, photos
+from nutrition_agent.api import (
+    assessments,
+    auth,
+    health,
+    medication_photos,
+    photos,
+    report_chat,
+)
 from nutrition_agent.api.deps import (
     get_connection,
     get_gateway,
@@ -56,6 +63,7 @@ def create_app(
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(assessments.router)
+    app.include_router(report_chat.router)
     app.include_router(photos.router)
     app.include_router(medication_photos.router)
     return app

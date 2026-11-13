@@ -24,6 +24,8 @@ dependencies = [
     "boto3>=1.43.116",
     "tzdata>=2026.5",
     "pillow>=13.0.0",
+    "langgraph>=1.2.21",
+    "langchain-openai>=1.7.4",
 ]
 
 [dependency-groups]

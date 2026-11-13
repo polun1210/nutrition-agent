@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     vlm_model: str = ""
     llm_model: str = ""
     embedding_model: str = ""
+    # 報告問答（ADR-0008）用的聊天模型，經 langchain-openai 指向 OpenRouter。
+    chat_model: str = "anthropic/claude-haiku-5.5"
     # 只給 eval 用：RAG 忠實度評審的模型（evals/rag/run.py --judge），建議和 LLM_MODEL 不同。
     eval_judge_model: str = ""
 
