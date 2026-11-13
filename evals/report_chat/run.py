@@ -88,6 +88,7 @@ def _live(data: dict, only: str | None) -> int:
         def retrieve(code, drug_codes):
             return retrieve_evidence(conn, gateway, ref, code, drug_codes)
 
+        failed = 0
         for q in data["questions"]:
             if only and q["id"] != only:
                 continue
@@ -97,6 +98,7 @@ def _live(data: dict, only: str | None) -> int:
                 result = answer_question(model, report, assessment_json, q["question"], history, retrieve)
             except Exception as err:  # 人工判讀用：單題失敗不中斷其他題
                 print(f"失敗：{type(err).__name__}: {err}")
+                failed += 1
                 continue
             tools = [
                 f"{c.name}({', '.join(f'{k}={v}' for k, v in c.args.items())})"
@@ -107,7 +109,9 @@ def _live(data: dict, only: str | None) -> int:
             print(f"來源 {len(result.sources)} 筆：")
             for s in result.sources:
                 print(f"  - {s.source_label}｜{s.document_name}｜{s.section}")
-    return 0
+    if failed:
+        print(f"\n有 {failed} 題失敗")
+    return 1 if failed else 0
 
 
 def main(argv: list[str] | None = None) -> int:
