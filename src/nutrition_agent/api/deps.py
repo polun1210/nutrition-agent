@@ -12,6 +12,9 @@ from zoneinfo import ZoneInfo
 
 import psycopg
 from fastapi import Depends, HTTPException, Request
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 from nutrition_agent.config import get_settings
 from nutrition_agent.gateway import ModelGateway, OpenRouterGateway
@@ -21,6 +24,8 @@ from nutrition_agent.profile import Profile
 SESSION_KEY = "user_id"
 USER_COLUMNS = "id, email, birth_year, birth_month, sex, conditions"
 TAIPEI = ZoneInfo("Asia/Taipei")
+CHAT_TIMEOUT_SECONDS = 60
+CHAT_MAX_RETRIES = 2
 
 
 def get_connection() -> Iterator[psycopg.Connection]:
@@ -34,6 +39,19 @@ def get_connection() -> Iterator[psycopg.Connection]:
 def get_gateway() -> ModelGateway:
     # httpx.Client 帶連線池且執行緒安全，整個行程共用一個，不必每個請求新建。
     return OpenRouterGateway.from_settings(get_settings())
+
+
+@lru_cache
+def get_chat_model() -> BaseChatModel:
+    # 報告問答專用（ADR-0008），不經過模型閘道；行程內共用一個。
+    settings = get_settings()
+    return ChatOpenAI(
+        model=settings.chat_model,
+        api_key=SecretStr(settings.openrouter_api_key),
+        base_url=settings.openrouter_base_url,
+        timeout=CHAT_TIMEOUT_SECONDS,
+        max_retries=CHAT_MAX_RETRIES,
+    )
 
 
 @lru_cache
