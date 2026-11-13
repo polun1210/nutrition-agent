@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import type { FindingExplanation, Footnote } from "./types";
 
-const TEMPLATE_NOTE = "AI 白話解釋暫時無法提供，上方為已審定的說明文字。";
+const TEMPLATE_NOTE = "AI 詳細說明暫時無法提供，上方為已審定的說明文字。";
 
 /** 報告層的出處展開狀態：同一時間只展開一則，key 是「成分:句子:編號」。 */
 export type FootnoteState = { open: string | null; toggle: (key: string) => void };
@@ -57,7 +57,7 @@ export default function Explanations({
   if (explanations.length === 0) return null;
   return (
     <div className="talk" data-testid="explanations">
-      <b>白話解釋</b>
+      <b>詳細說明</b>
       {explanations.map((e) =>
         e.source === "template" ? (
           <p key={e.ingredient_code}>{TEMPLATE_NOTE}</p>
