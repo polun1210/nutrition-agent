@@ -64,10 +64,10 @@ def chat(
         return retrieve_evidence(conn, gateway, ref, ingredient_code, drug_codes)
 
     try:
-        answer, sources = answer_question(
+        result = answer_question(
             model, row[0], row[1], body.question, history, retrieve
         )
     except Exception:
         logger.exception("報告問答的模型呼叫失敗（個案 %s）", case_id)
         raise HTTPException(status_code=502, detail=MODEL_UNAVAILABLE) from None
-    return {"answer": answer, "sources": [asdict(s) for s in sources]}
+    return {"answer": result.answer, "sources": [asdict(s) for s in result.sources]}

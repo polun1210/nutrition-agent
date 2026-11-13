@@ -50,6 +50,19 @@ class Source:
     text: str
 
 
+@dataclass(frozen=True)
+class ToolCall:
+    name: str
+    args: dict
+
+
+@dataclass(frozen=True)
+class ChatAnswer:
+    answer: str
+    sources: list[Source]
+    tool_calls: list[ToolCall]  # 模型依序呼叫的工具（eval 用來看模型怎麼取證）
+
+
 def answer_question(
     model: BaseChatModel,
     report: dict,
@@ -57,7 +70,7 @@ def answer_question(
     question: str,
     history: list[ChatTurn],
     retrieve: Retriever,
-) -> tuple[str, list[Source]]:
+) -> ChatAnswer:
     sources: dict[str, Source] = {}  # 以證據 ID 去重，保留第一次出現的順序
 
     @tool
@@ -83,7 +96,19 @@ def answer_question(
         (turn.role, turn.content) for turn in history[-MAX_HISTORY_MESSAGES:]
     ] + [("user", question)]
     result = agent.invoke({"messages": messages})
-    return _text(result["messages"][-1].content), list(sources.values())
+    return ChatAnswer(
+        answer=_text(result["messages"][-1].content),
+        sources=list(sources.values()),
+        tool_calls=_tool_calls(result["messages"]),
+    )
+
+
+def _tool_calls(messages: list) -> list[ToolCall]:
+    return [
+        ToolCall(c["name"], c["args"])
+        for m in messages
+        for c in getattr(m, "tool_calls", None) or []
+    ]
 
 
 def _source(e: Evidence) -> Source:

@@ -60,42 +60,6 @@ def _dry_run(data: dict) -> int:
     return 0 if assessment.interactions else 1
 
 
-def _tool_calls(messages) -> list[str]:
-    calls = []
-    for m in messages:
-        for c in getattr(m, "tool_calls", None) or []:
-            args = ", ".join(f"{k}={v}" for k, v in c["args"].items())
-            calls.append(f"{c['name']}({args})")
-    return calls
-
-
-class _RecordingAgent:
-    """包住 agent graph，記下最後一次 invoke 的所有訊息，供印出工具呼叫順序。"""
-
-    def __init__(self, graph, captured: dict):
-        self._graph, self._captured = graph, captured
-
-    def invoke(self, *args, **kwargs):
-        result = self._graph.invoke(*args, **kwargs)
-        self._captured["messages"] = result["messages"]
-        return result
-
-
-def _ask(model, report, assessment, q, history, retrieve):
-    from nutrition_agent.report_chat import agent as report_agent
-
-    captured: dict = {}
-    real_create = report_agent.create_agent
-    report_agent.create_agent = lambda *a, **k: _RecordingAgent(real_create(*a, **k), captured)
-    try:
-        answer, sources = report_agent.answer_question(
-            model, report, assessment, q["question"], history, retrieve
-        )
-    finally:
-        report_agent.create_agent = real_create
-    return answer, sources, _tool_calls(captured.get("messages", []))
-
-
 def _live(data: dict, only: str | None) -> int:
     import psycopg
 
@@ -104,7 +68,7 @@ def _live(data: dict, only: str | None) -> int:
     from nutrition_agent.gateway import OpenRouterGateway
     from nutrition_agent.reference import load_reference_data
     from nutrition_agent.reference.drug_names import load_drug_names
-    from nutrition_agent.report_chat.agent import ChatTurn
+    from nutrition_agent.report_chat.agent import ChatTurn, answer_question
     from nutrition_agent.reporting.explanation import build_explanations
     from nutrition_agent.reporting.template import render_report
     from nutrition_agent.retrieval.search import retrieve_evidence
@@ -130,14 +94,18 @@ def _live(data: dict, only: str | None) -> int:
             history = [ChatTurn(m["role"], m["content"]) for m in q["history"]]
             print(f"\n=== {q['id']}（{q.get('covers', '')}）===\n問：{q['question']}")
             try:
-                answer, sources, tools = _ask(model, report, assessment_json, q, history, retrieve)
+                result = answer_question(model, report, assessment_json, q["question"], history, retrieve)
             except Exception as err:  # 人工判讀用：單題失敗不中斷其他題
                 print(f"失敗：{type(err).__name__}: {err}")
                 continue
+            tools = [
+                f"{c.name}({', '.join(f'{k}={v}' for k, v in c.args.items())})"
+                for c in result.tool_calls
+            ]
             print(f"工具呼叫順序：{' -> '.join(tools) or '（無）'}")
-            print(f"答：{answer}")
-            print(f"來源 {len(sources)} 筆：")
-            for s in sources:
+            print(f"答：{result.answer}")
+            print(f"來源 {len(result.sources)} 筆：")
+            for s in result.sources:
                 print(f"  - {s.source_label}｜{s.document_name}｜{s.section}")
     return 0
 
