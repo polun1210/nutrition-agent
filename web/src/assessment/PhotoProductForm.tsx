@@ -165,10 +165,8 @@ export default function PhotoProductForm({ draftId, options, compounds, onAdd }:
 
   return (
     <section aria-label="用照片新增" className="photo-add">
-      <h2>用照片新增</h2>
-      <p>請拍成分欄與營養標示，同一項產品可以選多張。</p>
       <label>
-        標示照片
+        成分欄與營養標示照片（可多張）
         <input type="file" accept="image/*" multiple onChange={onPick} />
       </label>
       <button type="button" disabled={busy || (files.length === 0 && keptIds.length === 0)} onClick={() => void recognize()}>
@@ -177,7 +175,6 @@ export default function PhotoProductForm({ draftId, options, compounds, onAdd }:
       <Waiting
         active={busy}
         title="正在辨識標示照片"
-        detail="系統正在讀出成分與含量，辨識完成後請你逐項校對。"
         expected={SUPPLEMENT_PHOTO_SECONDS}
         error={error}
         onRetry={() => void recognize()}
@@ -196,7 +193,7 @@ export default function PhotoProductForm({ draftId, options, compounds, onAdd }:
             add();
           }}
         >
-          <p>以下是照片上讀到的營養素，請對照包裝看過一遍，有錯就直接修改，最後按下方按鈕確認。</p>
+          <p>請對照包裝校對。</p>
           <PhotoThumbs name={review.name || "這項產品"} photoIds={review.photos.map((p) => p.photo_id)} />
           <label>
             產品名稱

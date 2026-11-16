@@ -45,9 +45,6 @@ export default function IntakeFields({ value, onChange, doseUnit }: Props) {
           ))}
         </select>
       </label>
-      <p className="hint">
-        「需要時才吃」無法量化每日攝取量，所以不提供這個選項；請依你實際的規律選最接近的頻率。
-      </p>
       {value.frequency === "weekly_days" && (
         <label>
           每週服用幾天

@@ -142,7 +142,6 @@ export default function AssessmentFlow({ source, me, onProfileSaved, goHome }: P
         <section>
           <div className="page-hero in-flow">
             <h1>確認個人資料</h1>
-            <p>本次評估使用以下資料，需要的話可以直接修改。</p>
           </div>
           <form
             onSubmit={(e) => {
@@ -272,7 +271,6 @@ export default function AssessmentFlow({ source, me, onProfileSaved, goHome }: P
           <Waiting
             active={busy}
             title="正在計算評估報告"
-            detail="系統正在比對你的用藥與保健食品。"
             expected={SUBMIT_SECONDS}
             error={error}
             onRetry={() => void submit()}
