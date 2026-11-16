@@ -2,7 +2,8 @@
 
 用法（由 web/playwright.config.ts 呼叫）：
     uv run python scripts/e2e_server.py [port]
-資料庫連線取自 E2E_DATABASE_URL，預設 nutrition_e2e（需要本機 db 已啟動：docker compose up -d db）。
+資料庫連線取自 E2E_DATABASE_URL；沒設時沿用 DATABASE_URL（含 .env）的主機與埠，資料庫改成 nutrition_e2e
+（需要本機 db 已啟動：docker compose up -d db）。
 """
 
 import json
@@ -10,6 +11,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 os.environ.setdefault("APP_ENV", "development")  # 須在 import app 之前
 
@@ -97,7 +99,7 @@ class RecordedVlmGateway:
     def embed(self, texts: list[str]) -> list[list[float]]:
         return [[0.0] * 4 for _ in texts]
 
-DEFAULT_URL = "postgresql://nutrition:nutrition@127.0.0.1:55432/nutrition_e2e"
+E2E_DATABASE_NAME = "nutrition_e2e"
 # 煙霧測試不需要真的 SeaweedFS：照片物件存在 moto 的記憶體 S3。
 E2E_S3_ENDPOINT = "http://seaweedfs.e2e:8333"
 
@@ -108,6 +110,11 @@ def check_database_name(url: str) -> str:
     if "_e2e" not in name and not name.startswith("nutrition_e2e"):
         raise SystemExit(f"拒絕重建資料庫 {name!r}：e2e 專用資料庫名稱須含 _e2e")
     return name
+
+
+def default_e2e_url(database_url: str) -> str:
+    """沿用開發資料庫的主機與埠（本機 DB_PORT 可能因 Windows 保留埠而改過），只換資料庫名稱。"""
+    return urlsplit(database_url)._replace(path=f"/{E2E_DATABASE_NAME}").geturl()
 
 
 def recreate_database(url: str) -> None:
@@ -122,7 +129,7 @@ def recreate_database(url: str) -> None:
 
 def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8001
-    url = os.environ.get("E2E_DATABASE_URL", DEFAULT_URL)
+    url = os.environ.get("E2E_DATABASE_URL") or default_e2e_url(get_settings().database_url)
     recreate_database(url)
     os.environ["DATABASE_URL"] = url
     get_settings.cache_clear()  # import app 時已用預設連線建立過設定
