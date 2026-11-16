@@ -26,3 +26,8 @@ def test_refuses_non_e2e_database(e2e_server, name: str) -> None:
 @pytest.mark.parametrize("name", ["nutrition_e2e", "nutrition_e2e_review", "my_e2e_db"])
 def test_accepts_e2e_database_name(e2e_server, name: str) -> None:
     e2e_server.check_database_name(f"postgresql://u:p@127.0.0.1:55432/{name}")
+
+
+def test_default_url_follows_database_url_host_and_port(e2e_server) -> None:
+    url = e2e_server.default_e2e_url("postgresql://u:p@127.0.0.1:55532/nutrition")
+    assert url == "postgresql://u:p@127.0.0.1:55532/nutrition_e2e"
