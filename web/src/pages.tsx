@@ -133,7 +133,6 @@ export function HomePage({
     <main className="page">
       <header className="page-hero">
         <h1>補對了嗎？</h1>
-        <p>你好，{me.email}（{me.age} 歲）</p>
       </header>
       {!me.is_adult && <p role="alert">{me.underage_message}</p>}
       <div className="account-actions">
@@ -156,7 +155,6 @@ export function HomePage({
             <button type="button" className="secondary" onClick={() => startAssessment({ kind: "copy_latest" })} disabled={!me.is_adult}>
               沿用上次的藥和保健食品
             </button>
-            <p className="hint">帶入上次的內容，可以再新增或刪除</p>
             <button type="button" className="secondary" onClick={goHistory}>
               歷史報告
             </button>

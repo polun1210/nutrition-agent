@@ -94,7 +94,6 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
     <section>
       <div className="page-hero in-flow">
         <h1>用藥</h1>
-        <p>拍藥包讓系統讀出藥名，或搜尋你正在吃的藥（中文名、商品名或學名皆可），從候選中加入。</p>
       </div>
       {error && <p role="alert">{error}</p>}
       <div role="group" aria-label="拍藥包" className="card">
@@ -113,7 +112,6 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
         <Waiting
           active={reading}
           title="正在讀取藥名"
-          detail="系統正在辨識藥包上的藥名。"
           expected={MEDICATION_PHOTO_SECONDS}
           error={readError}
           onRetry={() => void readPhotos()}
@@ -142,7 +140,7 @@ export default function MedicationStep({ draftId, medications, busy, onChange, o
       >
         <label>
           藥名
-          <input value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input value={query} placeholder="中文名、商品名或學名" onChange={(e) => setQuery(e.target.value)} />
         </label>
         <button type="submit" disabled={!query.trim()}>
           搜尋

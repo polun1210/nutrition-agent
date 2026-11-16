@@ -157,6 +157,7 @@ export function UlCards({ rows, photos }: { rows: UlRow[]; photos: PhotoMap }) {
             >
               <i style={{ width: `${gaugeFill(r)}%` }} />
               <span className="gauge-limit" />
+              <span className="gauge-limit-label">上限</span>
             </div>
           ) : null}
           <dl className="ul-figures">
