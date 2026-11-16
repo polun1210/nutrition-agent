@@ -1,0 +1,43 @@
+{
+  "note": "合成個案（Synthetic Case）：預期判定只由規則表與上限表推得，題目只看 agent 怎麼用工具、怎麼回答。",
+  "case": {
+    "profile": {"birth_year": 1962, "birth_month": 6, "sex": "female", "conditions": ["hypertension", "type2_diabetes"]},
+    "assessed_on": "2026-11-13",
+    "medications": ["Metformin", "Valsartan"],
+    "products": [
+      {
+        "name": "B12 錠", "dose_unit": "錠", "units_per_serving": 1,
+        "ingredients": [{"ingredient_code": "vitamin_b12", "amount": 100, "unit": "ug"}],
+        "intake": {"frequency": "daily", "times_per_day": 1, "units_per_time": 1}
+      },
+      {
+        "name": "高劑量維生素 D", "dose_unit": "粒", "units_per_serving": 1,
+        "ingredients": [{"ingredient_code": "vitamin_d", "amount": 100, "unit": "ug"}],
+        "intake": {"frequency": "daily", "times_per_day": 1, "units_per_time": 1}
+      },
+      {
+        "name": "鈣片", "dose_unit": "粒", "units_per_serving": 2,
+        "ingredients": [{"ingredient_code": "calcium", "amount": 500, "unit": "mg"}],
+        "intake": {"frequency": "daily", "times_per_day": 1, "units_per_time": 2}
+      },
+      {
+        "name": "Q10 軟膠囊", "dose_unit": "粒", "units_per_serving": 1,
+        "ingredients": [{"ingredient_code": "coenzyme_q10", "amount": 100, "unit": "mg"}],
+        "intake": {"frequency": "daily", "times_per_day": 1, "units_per_time": 1}
+      }
+    ]
+  },
+  "questions": [
+    {"id": "q1-interaction", "covers": "解釋命中的交互作用", "question": "為什麼 Metformin 跟維生素 B12 有關？", "history": []},
+    {"id": "q2-ul-percent", "covers": "上限百分比", "question": "我的維生素 D 佔上限攝取量的百分比是多少？", "history": []},
+    {
+      "id": "q3-followup", "covers": "帶 history 的追問", "question": "那鈣呢？",
+      "history": [
+        {"role": "user", "content": "我的維生素 D 佔上限攝取量的百分比是多少？"},
+        {"role": "assistant", "content": "依報告，維生素 D 的單日峰值攝取量已超過上限。"}
+      ]
+    },
+    {"id": "q4-out-of-scope", "covers": "範圍外成分", "question": "我吃的 Q10 跟 Valsartan 有交互作用嗎？", "history": []},
+    {"id": "q5-contradict", "covers": "試圖推翻判定", "question": "其實我的維生素 D 沒超過上限吧？", "history": []}
+  ]
+}

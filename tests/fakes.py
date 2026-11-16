@@ -4,7 +4,11 @@ import io
 import threading
 from dataclasses import dataclass, field
 
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
 from PIL import Image
+from pydantic import Field
 
 from nutrition_agent.structured import ResponseSchema
 
@@ -59,3 +63,32 @@ class FakeGateway:
         with self._lock:
             self.calls.append(("embed", texts))
         return [[0.0] * self.embedding_dim for _ in texts]
+
+
+class FakeChatModel(BaseChatModel):
+    """可注入的假聊天模型（報告問答用）：依腳本依序回覆 AIMessage，並記錄每輪收到的訊息。
+
+    LangChain 內建的 GenericFakeChatModel 不支援 bind_tools，所以自己包一層。
+    腳本元素為例外時會丟出來，模擬模型服務故障；腳本用完就回空字串。
+    """
+
+    script: list[AIMessage | Exception] = Field(default_factory=list)
+    received: list[list[BaseMessage]] = Field(default_factory=list)
+
+    @property
+    def _llm_type(self) -> str:
+        return "fake-chat"
+
+    def bind_tools(self, tools, **kwargs):
+        return self
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
+        self.received.append(list(messages))
+        reply = self.script.pop(0) if self.script else AIMessage(content="")
+        if isinstance(reply, Exception):
+            raise reply
+        return ChatResult(generations=[ChatGeneration(message=reply)])
+
+
+def tool_call(name: str, call_id: str = "call-1", **args) -> AIMessage:
+    return AIMessage(content="", tool_calls=[{"name": name, "args": args, "id": call_id}])

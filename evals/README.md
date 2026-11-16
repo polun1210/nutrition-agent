@@ -17,5 +17,9 @@
 - `rag/`：`cases.json`（問題 → 預期證據段落 → 預期解釋重點；每條審定規則至少一題，預期證據用規則的出處引文，題目刻意選引文沒點名的同類藥，測同類推廣與跨語言檢索）與 `run.py`（`--dry-run` 離線檢查資料；`--live` 打真模型檢索與產生解釋，需先 ingest 語料）。
   - `adversarial.json`：換句話說繞過禁用詞黑名單的對抗句（例如「可以放心」「收起來別再吃」），以及應放行的對照句。每句都附上它假裝引用的段落定位，以及預期的評審判定。
   - `--live --judge`：另一個模型（`EVAL_JUDGE_MODEL`，建議和 `LLM_MODEL` 不同）逐句判斷解釋是否被引用的段落支持、有沒有違規說法，彙總出被支持的比例並列出有問題的句子；接著跑對抗句，報告程式的輸出檢查是否放行、評審是否攔下。評審只用在 eval，不放進正式的送出流程；主要評分仍是不依賴 LLM 的檢索命中與重點涵蓋。
+- `report_chat/`：報告問答（ADR-0008）的真模型 eval，由人工判讀、不打分數。`cases.json` 描述一份合成個案（Synthetic Case：62 歲女性、高血壓＋第二型糖尿病，吃 Metformin 與 Valsartan，保健食品有 B12、高劑量維生素 D、鈣片、Q10）與 5 題問題（解釋交互作用、上限百分比、帶 history 的追問、範圍外成分、試圖推翻判定）。
+  - 腳本用既有判定引擎與報告模板在記憶體中現算報告，不依賴資料庫裡任何使用者的資料；資料庫只讀（檢索證據、產生報告解釋），不寫入。
+  - `uv run python evals/report_chat/run.py --dry-run`：離線檢查題目檔，個案要能通過判定引擎。
+  - `uv run python evals/report_chat/run.py --live [--only q1-interaction]`：需要 `.env` 的 `OPENROUTER_*`（`CHAT_MODEL` 沒設就用預設）與 `DATABASE_URL`，且資料庫已 ingest 語料（`uv run python -m nutrition_agent.retrieval.ingest`）。逐題印出工具呼叫順序、回答與 `sources`。
 
 `vlm/` 與 `medpack/` 的 gold 都由開發者本人標註或逐列核對（p01–p15 標於舊專案時期），保健食品每張圖的來源見 `vlm/gold/sources.csv`。
