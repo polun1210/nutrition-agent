@@ -1,6 +1,5 @@
 """測試夾具：本機測試資料庫、每個測試獨立的交易、假模型閘道。"""
 
-import os
 from collections.abc import Callable, Iterator
 
 import psycopg
@@ -12,6 +11,7 @@ from botocore.exceptions import EndpointConnectionError
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from moto import mock_aws
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from psycopg import conninfo, sql
 
 from nutrition_agent.api.app import create_app
@@ -21,10 +21,17 @@ from nutrition_agent.photos import PhotoStore, make_s3_client
 from nutrition_agent.reference.drug_names import load_sample_drug_names
 from tests.fakes import FakeGateway
 
-TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL",
-    "postgresql://nutrition:nutrition@127.0.0.1:55432/nutrition_test",
-)
+
+
+class _TestDatabase(BaseSettings):
+    """環境變數優先，其次 .env（本機 DB_PORT 可能因 Windows 保留埠而改過），最後才用預設埠。"""
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    test_database_url: str = "postgresql://nutrition:nutrition@127.0.0.1:55432/nutrition_test"
+
+
+TEST_DATABASE_URL = _TestDatabase().test_database_url
 TEST_S3_ENDPOINT = "http://seaweedfs.test:8333"
 TEST_BUCKET = "photos"
 TEST_PUBLIC_S3_ENDPOINT = "http://localhost:8333"
